@@ -15,6 +15,8 @@ const gapAnalysisCriteria: CompletionCriteria = {
     { id: "evidence_required_for_compliant", description: "", severity: "required" as const, message_template: "" },
     { id: "assessor_metadata_present", description: "", severity: "required" as const, message_template: "" },
     { id: "evidence_has_date", description: "", severity: "warning" as const, message_template: "" },
+    { id: "gap_description_quality", description: "", severity: "warning" as const, message_template: "" },
+    { id: "exemption_basis_quality", description: "", severity: "warning" as const, message_template: "" },
   ],
   soft_warnings: [],
 };

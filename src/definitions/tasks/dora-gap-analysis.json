@@ -293,28 +293,21 @@
         "description": "Evidence records should include review/approval dates",
         "severity": "warning",
         "message_template": "Evidence '{reference}' has no date"
+      },
+      {
+        "id": "gap_description_quality",
+        "description": "Gap descriptions should be detailed enough for audit (minimum 10 words)",
+        "severity": "warning",
+        "message_template": "Gap description for '{provision_ref}' is too brief"
+      },
+      {
+        "id": "exemption_basis_quality",
+        "description": "Exemption basis should cite specific legal basis (minimum 5 words)",
+        "severity": "warning",
+        "message_template": "Exemption basis for '{provision_ref}' is too brief"
       }
     ],
     "soft_warnings": []
   },
-  "quality_rubric": {
-    "sections": {
-      "per_item": {
-        "provisions": {
-          "per_item": {
-            "gaps": {
-              "min_words": 10,
-              "severity": "warning",
-              "message": "Gap description for '{provision_ref}' is too brief (minimum 10 words expected for audit trail)"
-            },
-            "exemption_basis": {
-              "min_words": 5,
-              "severity": "warning",
-              "message": "Exemption basis for '{provision_ref}' should cite specific legal basis (minimum 5 words)"
-            }
-          }
-        }
-      }
-    }
-  }
+  "quality_rubric": {}
 }

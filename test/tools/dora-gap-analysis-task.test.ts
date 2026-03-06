@@ -43,11 +43,11 @@ describe("DORA gap analysis task definition", () => {
     expect(secTool!.when).toBe("evidence_gathering");
   });
 
-  it("has completion criteria with all 6 gap analysis rules", () => {
+  it("has completion criteria with all 8 gap analysis rules", () => {
     const def = getTaskById("dora_gap_analysis");
     expect(def).toBeDefined();
     const rules = def!.completion_criteria.rules;
-    expect(rules).toHaveLength(6);
+    expect(rules).toHaveLength(8);
     const ruleIds = rules.map((r) => r.id);
     expect(ruleIds).toContain("all_provisions_assessed");
     expect(ruleIds).toContain("gaps_required_for_non_compliant");
@@ -55,6 +55,8 @@ describe("DORA gap analysis task definition", () => {
     expect(ruleIds).toContain("evidence_required_for_compliant");
     expect(ruleIds).toContain("assessor_metadata_present");
     expect(ruleIds).toContain("evidence_has_date");
+    expect(ruleIds).toContain("gap_description_quality");
+    expect(ruleIds).toContain("exemption_basis_quality");
   });
 
   it("has scoping schema with DORA entity types", () => {
@@ -128,18 +130,10 @@ describe("DORA gap analysis task definition", () => {
     expect(counts.pillar_5_information_sharing).toBe(3);
   });
 
-  it("quality rubric has min_words rules for gaps and exemption_basis", () => {
+  it("quality rubric is empty (min_words enforced via structural rules)", () => {
     const def = getTaskById("dora_gap_analysis");
     expect(def).toBeDefined();
     const rubric = def!.quality_rubric as Record<string, unknown>;
-    expect(rubric.sections).toBeDefined();
-    const sectionsRubric = rubric.sections as Record<string, unknown>;
-    const perItem = sectionsRubric.per_item as Record<string, unknown>;
-    const provisionsRubric = perItem.provisions as Record<string, unknown>;
-    const provPerItem = provisionsRubric.per_item as Record<string, unknown>;
-    const gapsRule = provPerItem.gaps as Record<string, unknown>;
-    const exemptionRule = provPerItem.exemption_basis as Record<string, unknown>;
-    expect(gapsRule.min_words).toBe(10);
-    expect(exemptionRule.min_words).toBe(5);
+    expect(Object.keys(rubric)).toHaveLength(0);
   });
 });

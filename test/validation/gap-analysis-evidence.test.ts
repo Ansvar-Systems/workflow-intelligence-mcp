@@ -3,6 +3,7 @@ import {
   checkGapsRequiredForNonCompliant,
   checkEvidenceRequiredForCompliant,
   checkEvidenceHasDate,
+  checkGapDescriptionQuality,
 } from "../../src/validation/rules/gap-analysis-evidence.js";
 import type { GapAnalysisStageState } from "../../src/types/gap-analysis.js";
 import completeFixture from "../fixtures/gap-analysis-complete.json";
@@ -95,5 +96,71 @@ describe("checkEvidenceHasDate", () => {
     expect(failures).toHaveLength(1);
     expect(failures[0].severity).toBe("warning");
     expect(failures[0].rule).toBe("evidence_has_date");
+  });
+});
+
+describe("checkGapDescriptionQuality", () => {
+  it("passes when gap descriptions have enough words", () => {
+    const failures = checkGapDescriptionQuality(
+      completeFixture as unknown as GapAnalysisStageState,
+    );
+    // Complete fixture has ~25-word gap descriptions
+    expect(failures).toHaveLength(0);
+  });
+
+  it("warns when gap description is too brief", () => {
+    const state: GapAnalysisStageState = {
+      scoping: {},
+      sections: [
+        {
+          section_id: "test",
+          section_name: "Test",
+          provisions: [
+            {
+              provision_ref: "Test Art. 1",
+              regulation_source: "test",
+              status: "non_compliant",
+              evidence: [],
+              gaps: "Too short",
+              exemption_basis: null,
+              assessed_by: "Tester",
+              assessed_at: "2026-03-06T00:00:00Z",
+            },
+          ],
+        },
+      ],
+    };
+    const failures = checkGapDescriptionQuality(state);
+    expect(failures).toHaveLength(1);
+    expect(failures[0].severity).toBe("warning");
+    expect(failures[0].rule).toBe("gap_description_quality");
+  });
+
+  it("skips provisions with null gaps", () => {
+    const state: GapAnalysisStageState = {
+      scoping: {},
+      sections: [
+        {
+          section_id: "test",
+          section_name: "Test",
+          provisions: [
+            {
+              provision_ref: "Test Art. 1",
+              regulation_source: "test",
+              status: "compliant",
+              evidence: [
+                { type: "policy", reference: "Policy ABC", date: "2026-01-01" },
+              ],
+              gaps: null,
+              exemption_basis: null,
+              assessed_by: "Tester",
+              assessed_at: "2026-03-06T00:00:00Z",
+            },
+          ],
+        },
+      ],
+    };
+    const failures = checkGapDescriptionQuality(state);
+    expect(failures).toHaveLength(0);
   });
 });

@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   checkExemptionBasisRequired,
   checkAssessorMetadataPresent,
+  checkExemptionBasisQuality,
 } from "../../src/validation/rules/gap-analysis-consistency.js";
 import type { GapAnalysisStageState } from "../../src/types/gap-analysis.js";
 import completeFixture from "../fixtures/gap-analysis-complete.json";
@@ -121,6 +122,72 @@ describe("checkAssessorMetadataPresent", () => {
       ],
     };
     const failures = checkAssessorMetadataPresent(state);
+    expect(failures).toHaveLength(0);
+  });
+});
+
+describe("checkExemptionBasisQuality", () => {
+  it("passes when exemption basis has enough words", () => {
+    const failures = checkExemptionBasisQuality(
+      completeFixture as unknown as GapAnalysisStageState,
+    );
+    // Complete fixture has ~30-word exemption basis
+    expect(failures).toHaveLength(0);
+  });
+
+  it("warns when exemption basis is too brief", () => {
+    const state: GapAnalysisStageState = {
+      scoping: {},
+      sections: [
+        {
+          section_id: "test",
+          section_name: "Test",
+          provisions: [
+            {
+              provision_ref: "Test Art. 1",
+              regulation_source: "test",
+              status: "not_applicable",
+              evidence: [],
+              gaps: null,
+              exemption_basis: "Art 16",
+              assessed_by: "Tester",
+              assessed_at: "2026-03-06T00:00:00Z",
+            },
+          ],
+        },
+      ],
+    };
+    const failures = checkExemptionBasisQuality(state);
+    expect(failures).toHaveLength(1);
+    expect(failures[0].severity).toBe("warning");
+    expect(failures[0].rule).toBe("exemption_basis_quality");
+  });
+
+  it("skips provisions with null exemption_basis", () => {
+    const state: GapAnalysisStageState = {
+      scoping: {},
+      sections: [
+        {
+          section_id: "test",
+          section_name: "Test",
+          provisions: [
+            {
+              provision_ref: "Test Art. 1",
+              regulation_source: "test",
+              status: "compliant",
+              evidence: [
+                { type: "policy", reference: "Policy ABC", date: "2026-01-01" },
+              ],
+              gaps: null,
+              exemption_basis: null,
+              assessed_by: "Tester",
+              assessed_at: "2026-03-06T00:00:00Z",
+            },
+          ],
+        },
+      ],
+    };
+    const failures = checkExemptionBasisQuality(state);
     expect(failures).toHaveLength(0);
   });
 });

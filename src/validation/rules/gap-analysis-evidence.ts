@@ -67,3 +67,31 @@ export function checkEvidenceHasDate(
 
   return failures;
 }
+
+const GAP_MIN_WORDS = 10;
+
+export function checkGapDescriptionQuality(
+  state: GapAnalysisStageState,
+): RuleFailure[] {
+  const failures: RuleFailure[] = [];
+
+  for (const section of state.sections) {
+    for (const provision of section.provisions) {
+      if (provision.gaps && provision.gaps.trim()) {
+        const wordCount = provision.gaps
+          .trim()
+          .split(/\s+/)
+          .filter((w) => w.length > 0).length;
+        if (wordCount < GAP_MIN_WORDS) {
+          failures.push({
+            rule: "gap_description_quality",
+            severity: "warning",
+            details: `Gap description for '${provision.provision_ref}' has ${wordCount} words (minimum ${GAP_MIN_WORDS} expected for audit trail)`,
+          });
+        }
+      }
+    }
+  }
+
+  return failures;
+}
