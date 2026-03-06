@@ -9,6 +9,7 @@
  */
 
 import type { DfdStageState } from "../types/dfd.js";
+import type { GapAnalysisStageState } from "../types/gap-analysis.js";
 import type {
   CompletionCriteria,
   QualityRubricEntry,
@@ -21,6 +22,16 @@ import type {
 } from "../types/validation.js";
 
 import { evaluateFieldPresence } from "./rules/field-presence.js";
+import { checkAllProvisionsAssessed } from "./rules/gap-analysis-completeness.js";
+import {
+  checkExemptionBasisRequired,
+  checkAssessorMetadataPresent,
+} from "./rules/gap-analysis-consistency.js";
+import {
+  checkGapsRequiredForNonCompliant,
+  checkEvidenceRequiredForCompliant,
+  checkEvidenceHasDate,
+} from "./rules/gap-analysis-evidence.js";
 import { evaluateQualityRubric } from "./rules/quality-rubric.js";
 import {
   checkBoundaryReferencesValid,
@@ -101,6 +112,22 @@ registerStructuralRule("no_direct_external_to_datastore", (state) =>
 registerStructuralRule("every_external_entity_crosses_boundary", (state) =>
   checkEveryExternalEntityCrossesBoundary(asDfd(state)),
 );
+
+/** Helper: wrap a GapAnalysisStageState rule as a generic StructuralRuleImpl. */
+function asGapAnalysis(
+  impl: (state: GapAnalysisStageState) => RuleFailure[],
+): StructuralRuleImpl {
+  return (state: Record<string, unknown>) =>
+    impl(state as unknown as GapAnalysisStageState);
+}
+
+// Gap analysis rules
+registerStructuralRule("all_provisions_assessed", asGapAnalysis(checkAllProvisionsAssessed));
+registerStructuralRule("gaps_required_for_non_compliant", asGapAnalysis(checkGapsRequiredForNonCompliant));
+registerStructuralRule("exemption_basis_required", asGapAnalysis(checkExemptionBasisRequired));
+registerStructuralRule("evidence_required_for_compliant", asGapAnalysis(checkEvidenceRequiredForCompliant));
+registerStructuralRule("assessor_metadata_present", asGapAnalysis(checkAssessorMetadataPresent));
+registerStructuralRule("evidence_has_date", asGapAnalysis(checkEvidenceHasDate));
 
 // ---------------------------------------------------------------------------
 // Engine
