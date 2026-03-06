@@ -4,6 +4,7 @@ import { listTasks } from "./list-tasks.js";
 import { getTaskDefinition } from "./get-task-definition.js";
 import { checkStageCompleteness } from "./check-stage-completeness.js";
 import { suggestTrustBoundaries } from "./suggest-trust-boundaries.js";
+import { generateGapSummary } from "./generate-gap-summary.js";
 import { about, listSources } from "./meta.js";
 
 export interface ToolResult {
@@ -20,6 +21,7 @@ export const TOOL_HANDLERS: Record<string, ToolHandler> = {
   get_task_definition: getTaskDefinition,
   check_stage_completeness: checkStageCompleteness,
   suggest_trust_boundaries: suggestTrustBoundaries,
+  generate_gap_summary: generateGapSummary,
   about,
   list_sources: listSources,
 };
@@ -111,6 +113,27 @@ export const TOOL_DEFINITIONS = [
         },
       },
       required: ["processes", "data_stores", "external_entities", "data_flows"],
+    },
+  },
+  {
+    name: "generate_gap_summary",
+    description:
+      "Generate a structured compliance gap summary from a completed regulatory gap analysis. Returns per-section compliance counts, prioritized gap inventory ranked by regulatory weight, and export-ready metadata. Deterministic output, no LLM calls.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        task_id: {
+          type: "string",
+          description:
+            "The gap analysis task ID (e.g., 'dora_gap_analysis')",
+        },
+        stage_state: {
+          type: "object",
+          description:
+            "The completed GapAnalysisStageState with scoping and section assessments",
+        },
+      },
+      required: ["task_id", "stage_state"],
     },
   },
   {

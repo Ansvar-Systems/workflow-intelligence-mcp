@@ -74,6 +74,22 @@ export async function listSources(): Promise<ToolResult> {
                   "Rule-based architectural patterns for suggesting trust boundary placement in data flow diagrams.",
                 update_frequency: "Per release",
               },
+              {
+                id: "dora-gap-analysis-structure",
+                name: "DORA Gap Analysis Structure",
+                type: "internal",
+                description:
+                  "Pillar-to-provision mapping for DORA (Regulation (EU) 2022/2554) covering 103 provisions across 5 pillars. Provision text fetched from eu-regulations-mcp at runtime.",
+                update_frequency: "Per release",
+              },
+              {
+                id: "gap-analysis-validation-rules",
+                name: "Gap Analysis Validation Rules",
+                type: "internal",
+                description:
+                  "6 validation rules for regulatory gap analyses: completeness, evidence quality, exemption basis, assessor metadata, consistency checks.",
+                update_frequency: "Per release",
+              },
             ],
             _meta: {
               server: META.server,
