@@ -128,6 +128,21 @@
           "topic": "ICT asset inventory and classification"
         },
         {
+          "ref": "DORA Art. 8(5)",
+          "source": "dora",
+          "topic": "Documentation of ICT third-party dependencies"
+        },
+        {
+          "ref": "DORA Art. 8(6)",
+          "source": "dora",
+          "topic": "Maintenance and periodic update of ICT asset inventories"
+        },
+        {
+          "ref": "DORA Art. 8(7)",
+          "source": "dora",
+          "topic": "ICT risk assessment of legacy ICT systems"
+        },
+        {
           "ref": "DORA Art. 9(1)",
           "source": "dora",
           "topic": "Protection and prevention measures"
@@ -156,6 +171,16 @@
           "ref": "DORA Art. 10(2)",
           "source": "dora",
           "topic": "Monitoring and detection capabilities"
+        },
+        {
+          "ref": "DORA Art. 10(3)",
+          "source": "dora",
+          "topic": "Resources and capabilities for monitoring user activity and ICT anomalies"
+        },
+        {
+          "ref": "DORA Art. 10(4)",
+          "source": "dora",
+          "topic": "Trade report completeness checks (data reporting service providers)"
         },
         {
           "ref": "DORA Art. 11(1)",
@@ -218,6 +243,31 @@
           "topic": "Restoration and recovery procedures"
         },
         {
+          "ref": "DORA Art. 12(3)",
+          "source": "dora",
+          "topic": "Physically and logically segregated backup restoration systems"
+        },
+        {
+          "ref": "DORA Art. 12(4)",
+          "source": "dora",
+          "topic": "Redundant ICT capacities for business continuity"
+        },
+        {
+          "ref": "DORA Art. 12(5)",
+          "source": "dora",
+          "topic": "Secondary processing site (central securities depositories)"
+        },
+        {
+          "ref": "DORA Art. 12(6)",
+          "source": "dora",
+          "topic": "Recovery time and recovery point objectives"
+        },
+        {
+          "ref": "DORA Art. 12(7)",
+          "source": "dora",
+          "topic": "Checks and reconciliations when recovering from ICT incidents"
+        },
+        {
           "ref": "DORA Art. 13(1)",
           "source": "dora",
           "topic": "Learning and evolving from ICT incidents"
@@ -236,6 +286,21 @@
           "ref": "DORA Art. 13(4)",
           "source": "dora",
           "topic": "ICT security training for staff"
+        },
+        {
+          "ref": "DORA Art. 13(5)",
+          "source": "dora",
+          "topic": "Annual reporting of ICT risk findings to management body"
+        },
+        {
+          "ref": "DORA Art. 13(6)",
+          "source": "dora",
+          "topic": "ICT security awareness programmes and digital resilience training"
+        },
+        {
+          "ref": "DORA Art. 13(7)",
+          "source": "dora",
+          "topic": "Monitoring of relevant technological developments"
         },
         {
           "ref": "DORA Art. 14(1)",
@@ -1382,6 +1447,12 @@
         "description": "Exemption basis should cite specific legal basis (minimum 5 words)",
         "severity": "warning",
         "message_template": "Exemption basis for '{provision_ref}' is too brief"
+      },
+      {
+        "id": "evidence_reference_quality",
+        "description": "Evidence references should be identifiable documents (minimum 2 words)",
+        "severity": "warning",
+        "message_template": "Evidence reference on '{provision_ref}' is too brief to be useful"
       }
     ],
     "soft_warnings": []

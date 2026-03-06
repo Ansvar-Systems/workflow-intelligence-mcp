@@ -32,6 +32,7 @@ import {
   checkGapsRequiredForNonCompliant,
   checkEvidenceRequiredForCompliant,
   checkEvidenceHasDate,
+  checkEvidenceReferenceQuality,
   checkGapDescriptionQuality,
 } from "./rules/gap-analysis-evidence.js";
 import { evaluateQualityRubric } from "./rules/quality-rubric.js";
@@ -132,6 +133,7 @@ registerStructuralRule("assessor_metadata_present", asGapAnalysis(checkAssessorM
 registerStructuralRule("evidence_has_date", asGapAnalysis(checkEvidenceHasDate));
 registerStructuralRule("gap_description_quality", asGapAnalysis(checkGapDescriptionQuality));
 registerStructuralRule("exemption_basis_quality", asGapAnalysis(checkExemptionBasisQuality));
+registerStructuralRule("evidence_reference_quality", asGapAnalysis(checkEvidenceReferenceQuality));
 
 // ---------------------------------------------------------------------------
 // Engine

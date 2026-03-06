@@ -68,6 +68,34 @@ export function checkEvidenceHasDate(
   return failures;
 }
 
+const EVIDENCE_REF_MIN_WORDS = 2;
+
+export function checkEvidenceReferenceQuality(
+  state: GapAnalysisStageState,
+): RuleFailure[] {
+  const failures: RuleFailure[] = [];
+
+  for (const section of state.sections) {
+    for (const provision of section.provisions) {
+      for (const evidence of provision.evidence) {
+        const wordCount = evidence.reference
+          .trim()
+          .split(/\s+/)
+          .filter((w) => w.length > 0).length;
+        if (wordCount < EVIDENCE_REF_MIN_WORDS) {
+          failures.push({
+            rule: "evidence_reference_quality",
+            severity: "warning",
+            details: `Evidence reference '${evidence.reference}' on provision '${provision.provision_ref}' has ${wordCount} word(s) (minimum ${EVIDENCE_REF_MIN_WORDS} expected)`,
+          });
+        }
+      }
+    }
+  }
+
+  return failures;
+}
+
 const GAP_MIN_WORDS = 10;
 
 export function checkGapDescriptionQuality(

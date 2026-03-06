@@ -33,6 +33,7 @@
 | `evidence_has_date` | warning | Evidence records should include review/approval dates |
 | `gap_description_quality` | warning | Gap descriptions must be at least 10 words |
 | `exemption_basis_quality` | warning | Exemption basis must be at least 5 words |
+| `evidence_reference_quality` | warning | Evidence references must be at least 2 words |
 
 ### Quality Rubrics
 
@@ -51,11 +52,11 @@
 
 ### DORA Coverage
 
-218 provisions across 5 pillars of Regulation (EU) 2022/2554 and all 10 implementing technical standards (8 RTS + 2 ITS):
+231 provisions across 5 pillars of Regulation (EU) 2022/2554 and all 10 implementing technical standards (8 RTS + 2 ITS):
 
 | Pillar | Level 1 Sources | RTS/ITS Sources | Provisions |
 |--------|----------------|-----------------|------------|
-| Pillar 1: ICT Risk Management | DORA Arts 5-16 | RTS ICT Risk (41 arts) | 85 |
+| Pillar 1: ICT Risk Management | DORA Arts 5-16 | RTS ICT Risk (41 arts) | 98 |
 | Pillar 2: ICT Incident Reporting | DORA Arts 17-23 | RTS Incident Class (12), RTS Incident Reporting (6), ITS Incident Forms (8) | 39 |
 | Pillar 3: Resilience Testing | DORA Arts 24-27 | RTS TLPT (15) | 35 |
 | Pillar 4: Third-Party Risk | DORA Arts 28-44 | RTS ICT Services (10), RTS Critical Provider (6), RTS Oversight (6), RTS Oversight Fees (6), ITS Register (5) | 56 |

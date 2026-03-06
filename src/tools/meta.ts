@@ -79,7 +79,7 @@ export async function listSources(): Promise<ToolResult> {
                 name: "DORA Gap Analysis Structure",
                 type: "internal",
                 description:
-                  "Pillar-to-provision mapping for DORA (Regulation (EU) 2022/2554) covering 103 provisions across 5 pillars. Provision text fetched from eu-regulations-mcp at runtime.",
+                  "Pillar-to-provision mapping for DORA (Regulation (EU) 2022/2554) and all 10 implementing standards (8 RTS + 2 ITS) covering 231 provisions across 5 pillars. Provision text fetched from eu-regulations-mcp at runtime.",
                 update_frequency: "Per release",
               },
               {

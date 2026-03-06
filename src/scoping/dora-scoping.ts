@@ -95,21 +95,21 @@ const TLPT_PROVISIONS: string[] = [
  * Arts 28-41 (simplified framework) instead of Arts 1-27 (full).
  */
 const MICRO_SIMPLIFIED_PROVISIONS: string[] = [
-  // Level 1 DORA: Arts 6(5)-13(6)
+  // Level 1 DORA: Arts 6(5)-13(7)
+  // Art 7 has no numbered paragraphs — (a)-(d) sub-items only
   "DORA Art. 6(5)",
   "DORA Art. 6(6)",
   "DORA Art. 6(7)",
   "DORA Art. 6(8)",
   "DORA Art. 7(1)",
   "DORA Art. 7(2)",
-  "DORA Art. 7(3)",
-  "DORA Art. 7(4)",
   "DORA Art. 8(1)",
   "DORA Art. 8(2)",
   "DORA Art. 8(3)",
   "DORA Art. 8(4)",
   "DORA Art. 8(5)",
   "DORA Art. 8(6)",
+  "DORA Art. 8(7)",
   "DORA Art. 9(1)",
   "DORA Art. 9(2)",
   "DORA Art. 9(3)",
@@ -118,7 +118,6 @@ const MICRO_SIMPLIFIED_PROVISIONS: string[] = [
   "DORA Art. 10(2)",
   "DORA Art. 10(3)",
   "DORA Art. 10(4)",
-  "DORA Art. 10(5)",
   "DORA Art. 11(1)",
   "DORA Art. 11(2)",
   "DORA Art. 11(3)",
@@ -134,12 +133,15 @@ const MICRO_SIMPLIFIED_PROVISIONS: string[] = [
   "DORA Art. 12(3)",
   "DORA Art. 12(4)",
   "DORA Art. 12(5)",
+  "DORA Art. 12(6)",
+  "DORA Art. 12(7)",
   "DORA Art. 13(1)",
   "DORA Art. 13(2)",
   "DORA Art. 13(3)",
   "DORA Art. 13(4)",
   "DORA Art. 13(5)",
   "DORA Art. 13(6)",
+  "DORA Art. 13(7)",
   // RTS ICT Risk: Full framework (Arts 1-27) excluded for microenterprises.
   // They use simplified framework (Arts 28-41) instead.
   "RTS ICT Risk Art. 1",

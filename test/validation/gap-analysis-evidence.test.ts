@@ -3,6 +3,7 @@ import {
   checkGapsRequiredForNonCompliant,
   checkEvidenceRequiredForCompliant,
   checkEvidenceHasDate,
+  checkEvidenceReferenceQuality,
   checkGapDescriptionQuality,
 } from "../../src/validation/rules/gap-analysis-evidence.js";
 import type { GapAnalysisStageState } from "../../src/types/gap-analysis.js";
@@ -162,5 +163,42 @@ describe("checkGapDescriptionQuality", () => {
     };
     const failures = checkGapDescriptionQuality(state);
     expect(failures).toHaveLength(0);
+  });
+});
+
+describe("checkEvidenceReferenceQuality", () => {
+  it("passes when evidence references have at least 2 words", () => {
+    const failures = checkEvidenceReferenceQuality(
+      completeFixture as unknown as GapAnalysisStageState,
+    );
+    expect(failures).toHaveLength(0);
+  });
+
+  it("warns when evidence reference is a single word", () => {
+    const state: GapAnalysisStageState = {
+      scoping: {},
+      sections: [
+        {
+          section_id: "test",
+          section_name: "Test",
+          provisions: [
+            {
+              provision_ref: "Test Art. 1",
+              regulation_source: "test",
+              status: "compliant",
+              evidence: [{ type: "policy", reference: "x", date: "2026-01-01" }],
+              gaps: null,
+              exemption_basis: null,
+              assessed_by: "Tester",
+              assessed_at: "2026-03-06T00:00:00Z",
+            },
+          ],
+        },
+      ],
+    };
+    const failures = checkEvidenceReferenceQuality(state);
+    expect(failures).toHaveLength(1);
+    expect(failures[0].severity).toBe("warning");
+    expect(failures[0].rule).toBe("evidence_reference_quality");
   });
 });
