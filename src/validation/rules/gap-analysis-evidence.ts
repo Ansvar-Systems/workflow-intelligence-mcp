@@ -1,0 +1,69 @@
+import type { RuleFailure } from "../../types/validation.js";
+import type { GapAnalysisStageState } from "../../types/gap-analysis.js";
+
+export function checkGapsRequiredForNonCompliant(
+  state: GapAnalysisStageState,
+): RuleFailure[] {
+  const failures: RuleFailure[] = [];
+  const needsGaps = new Set(["partially_compliant", "non_compliant"]);
+
+  for (const section of state.sections) {
+    for (const provision of section.provisions) {
+      if (needsGaps.has(provision.status) && !provision.gaps?.trim()) {
+        failures.push({
+          rule: "gaps_required_for_non_compliant",
+          severity: "required",
+          details: `Provision '${provision.provision_ref}' is ${provision.status} but has no gap description`,
+        });
+      }
+    }
+  }
+
+  return failures;
+}
+
+export function checkEvidenceRequiredForCompliant(
+  state: GapAnalysisStageState,
+): RuleFailure[] {
+  const failures: RuleFailure[] = [];
+  const needsEvidence = new Set(["compliant", "partially_compliant"]);
+
+  for (const section of state.sections) {
+    for (const provision of section.provisions) {
+      if (
+        needsEvidence.has(provision.status) &&
+        provision.evidence.length === 0
+      ) {
+        failures.push({
+          rule: "evidence_required_for_compliant",
+          severity: "required",
+          details: `Provision '${provision.provision_ref}' is ${provision.status} but has no evidence records`,
+        });
+      }
+    }
+  }
+
+  return failures;
+}
+
+export function checkEvidenceHasDate(
+  state: GapAnalysisStageState,
+): RuleFailure[] {
+  const failures: RuleFailure[] = [];
+
+  for (const section of state.sections) {
+    for (const provision of section.provisions) {
+      for (const evidence of provision.evidence) {
+        if (!evidence.date) {
+          failures.push({
+            rule: "evidence_has_date",
+            severity: "warning",
+            details: `Evidence '${evidence.reference}' on provision '${provision.provision_ref}' has no date`,
+          });
+        }
+      }
+    }
+  }
+
+  return failures;
+}
