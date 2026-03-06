@@ -64,7 +64,10 @@ export async function checkStageCompleteness(
   }
 
   // JSON Schema validation
-  const validate = ajv.compile(def.stage_state_schema);
+  // Strip $schema meta-identifier — AJV defaults to draft-07 and cannot
+  // resolve the 2020-12 meta-schema URI at runtime.
+  const { $schema: _strip, ...schemaBody } = def.stage_state_schema as Record<string, unknown>;
+  const validate = ajv.compile(schemaBody);
   const valid = validate(stageState);
   if (!valid) {
     const errors = (validate.errors ?? [])
