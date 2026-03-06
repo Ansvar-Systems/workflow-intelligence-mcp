@@ -1,0 +1,44 @@
+{
+  "processes": [
+    {
+      "id": "proc-001",
+      "name": "API Gateway",
+      "description": "Handles incoming HTTP requests and routes to backend services"
+    }
+  ],
+  "data_stores": [
+    {
+      "id": "ds-001",
+      "name": "User Database",
+      "data_classification": "confidential"
+    }
+  ],
+  "external_entities": [
+    {
+      "id": "ext-001",
+      "name": "Web Browser",
+      "trust_level": "untrusted"
+    }
+  ],
+  "data_flows": [
+    {
+      "id": "df-001",
+      "source_id": "ext-001",
+      "destination_id": "proc-001",
+      "data_description": "HTTP request"
+    },
+    {
+      "id": "df-002",
+      "source_id": "proc-001",
+      "destination_id": "ds-001",
+      "data_description": "User query"
+    }
+  ],
+  "trust_boundaries": [
+    {
+      "id": "tb-001",
+      "name": "Internet Boundary",
+      "enclosed_ids": ["proc-001", "ds-001"]
+    }
+  ]
+}

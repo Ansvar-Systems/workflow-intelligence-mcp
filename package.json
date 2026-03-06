@@ -1,0 +1,33 @@
+{
+  "name": "@ansvar/workflow-intelligence-mcp",
+  "version": "1.0.0",
+  "description": "Workflow definitions, domain intelligence, and quality gates for structured assessments",
+  "type": "module",
+  "main": "dist/server.js",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "start": "node dist/server.js",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "keywords": [
+    "mcp",
+    "workflow",
+    "compliance",
+    "threat-modeling",
+    "dfd"
+  ],
+  "author": "Ansvar Systems",
+  "license": "BUSL-1.1",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.27.1",
+    "ajv": "^8.18.0",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/node": "^25.3.5",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.18"
+  }
+}

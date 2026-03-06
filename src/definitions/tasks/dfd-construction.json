@@ -1,0 +1,191 @@
+{
+  "id": "dfd_construction",
+  "name": "Data Flow Diagram Construction",
+  "category": "threat_modeling",
+  "version": "1.0",
+  "standalone": true,
+  "used_in_workflows": ["stride_threat_model"],
+  "description": "Guided construction of a data flow diagram with processes, data stores, external entities, data flows, and trust boundaries.",
+  "estimated_duration": "15-30 min",
+  "dependencies": [],
+  "mcp_tools": [
+    {
+      "mcp": "security-controls-mcp",
+      "tools": ["get_control", "search_controls"],
+      "when": "trust_boundary_placement",
+      "guidance": "Use to suggest security controls for trust boundary decisions"
+    },
+    {
+      "mcp": "eu-regulations-mcp",
+      "tools": ["get_article"],
+      "when": "data_classification",
+      "guidance": "Use when GDPR/NIS2 data classification is relevant to data flows"
+    }
+  ],
+  "prompting_guidance": "Guide the user through building a DFD step by step. Start by asking about the system's main processes (what does the system do?). Then identify data stores (where is data persisted?). Then external entities (who or what interacts with the system from outside?). Then data flows (how does data move between these elements?). Finally, trust boundaries (where do trust levels change?). After each addition, summarize the current DFD state. Use suggest_trust_boundaries when the user has defined processes, stores, entities, and flows but hasn't placed boundaries yet.",
+  "stage_state_schema": {
+    "type": "object",
+    "properties": {
+      "processes": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "string", "pattern": "^proc-[0-9]+$" },
+            "name": { "type": "string", "minLength": 1 },
+            "description": { "type": "string" }
+          },
+          "required": ["id", "name"],
+          "additionalProperties": false
+        }
+      },
+      "data_stores": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "string", "pattern": "^ds-[0-9]+$" },
+            "name": { "type": "string", "minLength": 1 },
+            "description": { "type": "string" },
+            "data_classification": {
+              "type": "string",
+              "enum": ["public", "internal", "confidential", "restricted"]
+            }
+          },
+          "required": ["id", "name"],
+          "additionalProperties": false
+        }
+      },
+      "external_entities": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "string", "pattern": "^ext-[0-9]+$" },
+            "name": { "type": "string", "minLength": 1 },
+            "trust_level": {
+              "type": "string",
+              "enum": ["trusted", "semi_trusted", "untrusted"]
+            }
+          },
+          "required": ["id", "name"],
+          "additionalProperties": false
+        }
+      },
+      "data_flows": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "string", "pattern": "^df-[0-9]+$" },
+            "source_id": { "type": "string" },
+            "destination_id": { "type": "string" },
+            "data_description": { "type": "string" },
+            "protocol": { "type": "string" }
+          },
+          "required": ["id", "source_id", "destination_id"],
+          "additionalProperties": false
+        }
+      },
+      "trust_boundaries": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "string", "pattern": "^tb-[0-9]+$" },
+            "name": { "type": "string", "minLength": 1 },
+            "enclosed_ids": {
+              "type": "array",
+              "items": { "type": "string" },
+              "minItems": 1
+            }
+          },
+          "required": ["id", "name", "enclosed_ids"],
+          "additionalProperties": false
+        }
+      }
+    },
+    "required": ["processes", "data_stores", "external_entities", "data_flows", "trust_boundaries"],
+    "additionalProperties": false
+  },
+  "completion_criteria": {
+    "required_fields": [
+      { "field": "processes", "rule": "min_count", "value": 1, "message": "At least one process is required" },
+      { "field": "data_stores", "rule": "min_count", "value": 1, "message": "At least one data store is required" },
+      { "field": "external_entities", "rule": "min_count", "value": 1, "message": "At least one external entity is required" },
+      { "field": "trust_boundaries", "rule": "min_count", "value": 1, "message": "At least one trust boundary is required" },
+      { "field": "data_flows", "rule": "min_count", "value": 1, "message": "At least one data flow is required" }
+    ],
+    "rules": [
+      {
+        "id": "every_process_has_at_least_one_flow",
+        "description": "Every process must have at least one incoming or outgoing data flow",
+        "severity": "required",
+        "message_template": "Process '{name}' ({id}) has no data flows"
+      },
+      {
+        "id": "no_orphan_data_stores",
+        "description": "Every data store must be connected to at least one process via a data flow",
+        "severity": "required",
+        "message_template": "Data store '{name}' ({id}) is not connected to any process"
+      },
+      {
+        "id": "flow_references_valid",
+        "description": "All source_id and destination_id values in data_flows must reference existing element IDs",
+        "severity": "required",
+        "message_template": "Data flow '{id}' references unknown element '{invalid_ref}'"
+      },
+      {
+        "id": "boundary_references_valid",
+        "description": "All IDs in trust_boundary enclosed_ids must reference existing element IDs",
+        "severity": "required",
+        "message_template": "Trust boundary '{name}' references unknown element '{invalid_ref}'"
+      },
+      {
+        "id": "no_direct_external_to_datastore",
+        "description": "External entities should not connect directly to data stores (should route through a process)",
+        "severity": "warning",
+        "message_template": "External entity '{source_name}' connects directly to data store '{dest_name}' -- route through a process"
+      },
+      {
+        "id": "every_external_entity_crosses_boundary",
+        "description": "Every external entity should be separated from internal components by a trust boundary",
+        "severity": "warning",
+        "message_template": "External entity '{name}' is not separated by a trust boundary from internal components"
+      }
+    ],
+    "soft_warnings": [
+      { "field": "data_flows", "rule": "min_count", "value": 3, "message": "Most systems have more than 2 data flows -- consider whether the diagram is complete" },
+      { "field": "trust_boundaries", "rule": "min_count", "value": 2, "message": "Most systems have at least 2 trust boundaries (e.g., internet/DMZ, DMZ/internal)" }
+    ]
+  },
+  "quality_rubric": {
+    "processes": {
+      "per_item": {
+        "description": {
+          "min_words": 5,
+          "severity": "warning",
+          "message": "Process '{name}' has a vague description. Specify what it does and what data it handles."
+        }
+      }
+    },
+    "data_stores": {
+      "per_item": {
+        "description": {
+          "min_words": 3,
+          "severity": "warning",
+          "message": "Data store '{name}' lacks a description. Specify what data it stores."
+        }
+      }
+    },
+    "data_flows": {
+      "per_item": {
+        "data_description": {
+          "min_words": 2,
+          "severity": "warning",
+          "message": "Data flow '{id}' ({source_id} -> {destination_id}) lacks a data description. Specify what data moves through this flow."
+        }
+      }
+    }
+  }
+}

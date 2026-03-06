@@ -1,0 +1,174 @@
+{
+  "processes": [
+    {
+      "id": "proc-001",
+      "name": "API Gateway",
+      "description": "Routes incoming HTTP and HTTPS requests to the appropriate backend microservice"
+    },
+    {
+      "id": "proc-002",
+      "name": "Auth Service",
+      "description": "Validates user credentials and issues signed JWT tokens for session management"
+    },
+    {
+      "id": "proc-003",
+      "name": "Payment Processor",
+      "description": "Processes credit card charges and refunds through the external payment gateway"
+    },
+    {
+      "id": "proc-004",
+      "name": "Notification Service",
+      "description": "Generates and dispatches transactional email and push notifications to users"
+    },
+    {
+      "id": "proc-005",
+      "name": "Order Manager",
+      "description": "Manages order lifecycle from creation through fulfillment and completion"
+    }
+  ],
+  "data_stores": [
+    {
+      "id": "ds-001",
+      "name": "User Database",
+      "description": "Stores user accounts, credentials, and profile information",
+      "data_classification": "confidential"
+    },
+    {
+      "id": "ds-002",
+      "name": "Transaction Log",
+      "description": "Append-only log of all payment transactions and refunds",
+      "data_classification": "restricted"
+    },
+    {
+      "id": "ds-003",
+      "name": "Session Cache",
+      "description": "In-memory cache for active user sessions and JWT tokens",
+      "data_classification": "internal"
+    }
+  ],
+  "external_entities": [
+    {
+      "id": "ext-001",
+      "name": "Web Browser",
+      "trust_level": "untrusted"
+    },
+    {
+      "id": "ext-002",
+      "name": "Mobile App",
+      "trust_level": "untrusted"
+    },
+    {
+      "id": "ext-003",
+      "name": "Payment Gateway API",
+      "trust_level": "semi_trusted"
+    },
+    {
+      "id": "ext-004",
+      "name": "Email Service",
+      "trust_level": "trusted"
+    }
+  ],
+  "data_flows": [
+    {
+      "id": "df-001",
+      "source_id": "ext-001",
+      "destination_id": "proc-001",
+      "data_description": "HTTPS request with authentication headers",
+      "protocol": "HTTPS"
+    },
+    {
+      "id": "df-002",
+      "source_id": "ext-002",
+      "destination_id": "proc-001",
+      "data_description": "Mobile API request with bearer token",
+      "protocol": "HTTPS"
+    },
+    {
+      "id": "df-003",
+      "source_id": "proc-001",
+      "destination_id": "proc-002",
+      "data_description": "Forwarded authentication credentials for validation",
+      "protocol": "gRPC"
+    },
+    {
+      "id": "df-004",
+      "source_id": "proc-002",
+      "destination_id": "ds-001",
+      "data_description": "User credential lookup query",
+      "protocol": "PostgreSQL"
+    },
+    {
+      "id": "df-005",
+      "source_id": "proc-002",
+      "destination_id": "ds-003",
+      "data_description": "Session token storage entry",
+      "protocol": "Redis"
+    },
+    {
+      "id": "df-006",
+      "source_id": "proc-001",
+      "destination_id": "proc-005",
+      "data_description": "Validated order creation request",
+      "protocol": "gRPC"
+    },
+    {
+      "id": "df-007",
+      "source_id": "proc-005",
+      "destination_id": "proc-003",
+      "data_description": "Payment charge request with amount",
+      "protocol": "gRPC"
+    },
+    {
+      "id": "df-008",
+      "source_id": "proc-003",
+      "destination_id": "ext-003",
+      "data_description": "Tokenized card charge request",
+      "protocol": "HTTPS"
+    },
+    {
+      "id": "df-009",
+      "source_id": "proc-003",
+      "destination_id": "ds-002",
+      "data_description": "Transaction record with payment result",
+      "protocol": "PostgreSQL"
+    },
+    {
+      "id": "df-010",
+      "source_id": "proc-005",
+      "destination_id": "proc-004",
+      "data_description": "Order confirmation notification payload",
+      "protocol": "AMQP"
+    },
+    {
+      "id": "df-011",
+      "source_id": "proc-004",
+      "destination_id": "ext-004",
+      "data_description": "Rendered email message for delivery",
+      "protocol": "SMTP"
+    },
+    {
+      "id": "df-012",
+      "source_id": "proc-005",
+      "destination_id": "ds-002",
+      "data_description": "Order state transition audit entry",
+      "protocol": "PostgreSQL"
+    }
+  ],
+  "trust_boundaries": [
+    {
+      "id": "tb-001",
+      "name": "Internet Boundary",
+      "enclosed_ids": ["ext-001", "ext-002"]
+    },
+    {
+      "id": "tb-002",
+      "name": "Application Tier",
+      "enclosed_ids": ["proc-001", "proc-002", "proc-003", "proc-004", "proc-005", "ds-003"]
+    },
+    {
+      "id": "tb-003",
+      "name": "Data Tier",
+      "enclosed_ids": ["ds-001", "ds-002"]
+    }
+  ]
+}
