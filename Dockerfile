@@ -13,6 +13,7 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev
 COPY --from=builder /app/dist/ dist/
+COPY --from=builder /app/src/definitions/ dist/definitions/
 
 USER node
-ENTRYPOINT ["node", "dist/server.js"]
+ENTRYPOINT ["node", "dist/http-server.js"]
