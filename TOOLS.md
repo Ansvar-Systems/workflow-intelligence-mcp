@@ -149,3 +149,87 @@ Deterministic heuristics for DFD trust boundary placement. Analyzes existing ele
 3. **DMZ boundary** — identifies processes that sit between external entities and internal components
 
 **Limitations:** Rule-based only. Cannot detect application-specific trust boundaries (e.g., microservice isolation, tenant separation). Agent should ask the user about domain-specific boundaries after presenting suggestions.
+
+---
+
+## generate_gap_summary
+
+Generate a structured compliance gap summary from a completed regulatory gap analysis. Returns per-section compliance counts, a prioritized gap inventory ranked by regulatory weight, and export-ready metadata. Deterministic output, no LLM calls.
+
+**Parameters:**
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| `task_id` | string | Yes | The gap analysis task ID (e.g., `dora_gap_analysis`) |
+| `stage_state` | object | Yes | The completed `GapAnalysisStageState` with scoping and section assessments |
+
+**Returns:**
+```json
+{
+  "regulation": "DORA — Digital Operational Resilience Act (Regulation (EU) 2022/2554)",
+  "entity": {
+    "name": "Acme Bank",
+    "type": "credit_institution",
+    "scoping_summary": "credit_institution, AT, supervised by FMA"
+  },
+  "assessment_date": "2026-03-06",
+  "assessors": ["jane.doe@acme.eu"],
+  "overall_status": "gaps_identified",
+  "summary_by_section": [
+    {
+      "section_id": "pillar_1_ict_risk_management",
+      "section_name": "Pillar 1: ICT Risk Management",
+      "compliant_count": 30,
+      "partially_compliant_count": 5,
+      "non_compliant_count": 3,
+      "not_applicable_count": 6,
+      "total_applicable": 38,
+      "compliance_ratio": "30/38",
+      "critical_gaps": [
+        {
+          "rank": 1,
+          "provision_ref": "DORA Art. 5(1)",
+          "regulation_source": "dora",
+          "gap_description": "No formal ICT risk management framework documented",
+          "regulatory_weight": "critical",
+          "weight_reasoning": "Pillar 1 core article (ICT Risk Management, Arts 5-16)"
+        }
+      ]
+    }
+  ],
+  "remediation_ranking": [
+    {
+      "rank": 1,
+      "provision_ref": "DORA Art. 5(1)",
+      "regulation_source": "dora",
+      "gap_description": "No formal ICT risk management framework documented",
+      "regulatory_weight": "critical",
+      "weight_reasoning": "Pillar 1 core article (ICT Risk Management, Arts 5-16)"
+    }
+  ],
+  "export_metadata": {
+    "format_hint": "structured_json",
+    "sections_for_export": [
+      "executive_summary",
+      "summary_by_section",
+      "remediation_ranking",
+      "assessor_details",
+      "scoping"
+    ]
+  }
+}
+```
+
+**Overall status values:**
+- `fully_compliant` — all provisions assessed as compliant or not_applicable
+- `gaps_identified` — at least one provision is non_compliant or partially_compliant
+- `assessment_incomplete` — at least one provision still has status `not_assessed`
+
+**Priority derivation (regulatory_weight):**
+- `critical` — Core DORA Pillar 1 (Arts 5-16) and Pillar 2 (Arts 17-23)
+- `high` — Core DORA articles in other pillars (Arts 24-45)
+- `medium` — RTS implementing standards (regulation_source starts with `dora-rts`)
+- `low` — ITS templates and forms (regulation_source starts with `dora-its`)
+
+Gaps are sorted by weight (critical first) and assigned sequential rank numbers.
+
+**Limitations:** The summary is generated from self-assessed data provided in the stage_state. It does not independently verify compliance claims. It is not a substitute for a formal regulatory assessment by qualified professionals.
