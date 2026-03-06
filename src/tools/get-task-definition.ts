@@ -15,7 +15,7 @@ function ensureLoaded(): void {
   if (taskCache.size > 0) return;
 
   // In production, scan the directory. For Phase 1, we have one known task.
-  const knownTasks = ["dfd-construction.json"];
+  const knownTasks = ["dfd-construction.json", "dora-gap-analysis.json"];
   for (const file of knownTasks) {
     try {
       const raw = readFileSync(join(DEFINITIONS_DIR, file), "utf-8");

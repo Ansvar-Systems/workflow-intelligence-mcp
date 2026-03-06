@@ -5,10 +5,13 @@ describe("list_tasks", () => {
   it("returns DFD construction task", async () => {
     const result = await listTasks({});
     const data = JSON.parse(result.content[0].text);
-    expect(data.tasks).toHaveLength(1);
-    expect(data.tasks[0].id).toBe("dfd_construction");
-    expect(data.tasks[0].standalone).toBe(true);
-    expect(data.tasks[0].version).toBe("1.0");
+    expect(data.tasks).toHaveLength(2);
+    const ids = data.tasks.map((t: Record<string, unknown>) => t.id);
+    expect(ids).toContain("dfd_construction");
+    expect(ids).toContain("dora_gap_analysis");
+    const dfd = data.tasks.find((t: Record<string, unknown>) => t.id === "dfd_construction");
+    expect(dfd.standalone).toBe(true);
+    expect(dfd.version).toBe("1.0");
   });
 
   it("filters by category", async () => {
