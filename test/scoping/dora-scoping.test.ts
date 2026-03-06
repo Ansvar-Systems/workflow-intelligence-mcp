@@ -77,14 +77,23 @@ describe("applyDoraScoping", () => {
       designated_for_tlpt: false,
     });
 
+    // TLPT exclusions include both Level 1 and RTS
     const tlptExclusions = result.excluded_provisions.filter(
-      (e) => e.provision_ref.startsWith("DORA Art. 26") || e.provision_ref.startsWith("DORA Art. 27"),
+      (e) =>
+        e.provision_ref.startsWith("DORA Art. 26") ||
+        e.provision_ref.startsWith("DORA Art. 27") ||
+        e.provision_ref.startsWith("RTS TLPT"),
     );
     const microExclusions = result.excluded_provisions.filter((e) =>
       e.reason.includes("microenterprise"),
     );
-    expect(tlptExclusions.length).toBeGreaterThan(0);
+    expect(tlptExclusions).toHaveLength(26);
     expect(microExclusions.length).toBeGreaterThan(0);
+    // Micro exclusions include RTS ICT Risk full framework (Arts 1-27)
+    const rtsIctRiskExclusions = microExclusions.filter((e) =>
+      e.provision_ref.startsWith("RTS ICT Risk"),
+    );
+    expect(rtsIctRiskExclusions).toHaveLength(27);
   });
 
   it("does not exclude TLPT provisions when entity is designated", () => {
@@ -95,7 +104,10 @@ describe("applyDoraScoping", () => {
       designated_for_tlpt: true,
     });
     const tlptExclusions = result.excluded_provisions.filter(
-      (e) => e.provision_ref.startsWith("DORA Art. 26") || e.provision_ref.startsWith("DORA Art. 27"),
+      (e) =>
+        e.provision_ref.startsWith("DORA Art. 26") ||
+        e.provision_ref.startsWith("DORA Art. 27") ||
+        e.provision_ref.startsWith("RTS TLPT"),
     );
     expect(tlptExclusions).toHaveLength(0);
   });
@@ -140,17 +152,27 @@ describe("applyDoraScoping", () => {
       is_microenterprise: false,
       designated_for_tlpt: false,
     });
-    const tlptRefs = result.excluded_provisions
+    // Level 1: DORA Arts 26(1)-26(8) and 27(1)-27(3) = 11
+    const doraRefs = result.excluded_provisions
       .filter(
         (e) => e.provision_ref.startsWith("DORA Art. 26") || e.provision_ref.startsWith("DORA Art. 27"),
       )
       .map((e) => e.provision_ref);
-    // Articles 26(1)-26(8) and 27(1)-27(3) = 11 provisions
-    expect(tlptRefs).toHaveLength(11);
-    expect(tlptRefs).toContain("DORA Art. 26(1)");
-    expect(tlptRefs).toContain("DORA Art. 26(8)");
-    expect(tlptRefs).toContain("DORA Art. 27(1)");
-    expect(tlptRefs).toContain("DORA Art. 27(3)");
+    expect(doraRefs).toHaveLength(11);
+    expect(doraRefs).toContain("DORA Art. 26(1)");
+    expect(doraRefs).toContain("DORA Art. 26(8)");
+    expect(doraRefs).toContain("DORA Art. 27(3)");
+
+    // RTS TLPT: Arts 2-16 = 15 substantive articles
+    const rtsRefs = result.excluded_provisions
+      .filter((e) => e.provision_ref.startsWith("RTS TLPT"))
+      .map((e) => e.provision_ref);
+    expect(rtsRefs).toHaveLength(15);
+    expect(rtsRefs).toContain("RTS TLPT Art. 2");
+    expect(rtsRefs).toContain("RTS TLPT Art. 16");
+
+    // Total TLPT exclusions = 26
+    expect(doraRefs.length + rtsRefs.length).toBe(26);
   });
 
   it("scoping_summary reflects microenterprise status", () => {
