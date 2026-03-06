@@ -87,7 +87,7 @@ describe("applyDoraScoping", () => {
     const microExclusions = result.excluded_provisions.filter((e) =>
       e.reason.includes("microenterprise"),
     );
-    expect(tlptExclusions).toHaveLength(26);
+    expect(tlptExclusions).toHaveLength(29);
     expect(microExclusions.length).toBeGreaterThan(0);
     // Micro exclusions include RTS ICT Risk full framework (Arts 1-27)
     const rtsIctRiskExclusions = microExclusions.filter((e) =>
@@ -152,15 +152,15 @@ describe("applyDoraScoping", () => {
       is_microenterprise: false,
       designated_for_tlpt: false,
     });
-    // Level 1: DORA Arts 26(1)-26(8) and 27(1)-27(3) = 11
+    // Level 1: DORA Arts 26(1)-26(11) and 27(1)-27(3) = 14
     const doraRefs = result.excluded_provisions
       .filter(
         (e) => e.provision_ref.startsWith("DORA Art. 26") || e.provision_ref.startsWith("DORA Art. 27"),
       )
       .map((e) => e.provision_ref);
-    expect(doraRefs).toHaveLength(11);
+    expect(doraRefs).toHaveLength(14);
     expect(doraRefs).toContain("DORA Art. 26(1)");
-    expect(doraRefs).toContain("DORA Art. 26(8)");
+    expect(doraRefs).toContain("DORA Art. 26(11)");
     expect(doraRefs).toContain("DORA Art. 27(3)");
 
     // RTS TLPT: Arts 2-16 = 15 substantive articles
@@ -171,8 +171,8 @@ describe("applyDoraScoping", () => {
     expect(rtsRefs).toContain("RTS TLPT Art. 2");
     expect(rtsRefs).toContain("RTS TLPT Art. 16");
 
-    // Total TLPT exclusions = 26
-    expect(doraRefs.length + rtsRefs.length).toBe(26);
+    // Total TLPT exclusions = 29
+    expect(doraRefs.length + rtsRefs.length).toBe(29);
   });
 
   it("scoping_summary reflects microenterprise status", () => {

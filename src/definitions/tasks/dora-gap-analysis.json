@@ -40,287 +40,312 @@
         {
           "ref": "DORA Art. 5(1)",
           "source": "dora",
-          "topic": "ICT risk management framework"
+          "topic": "ICT risk management governance and organisation"
         },
         {
           "ref": "DORA Art. 5(2)",
           "source": "dora",
-          "topic": "ICT risk management framework documentation"
+          "topic": "ICT risk management governance and organisation"
         },
         {
           "ref": "DORA Art. 5(3)",
           "source": "dora",
-          "topic": "Internal audit of ICT risk management"
+          "topic": "ICT risk management governance and organisation"
         },
         {
           "ref": "DORA Art. 5(4)",
           "source": "dora",
-          "topic": "Follow-up and remediation of ICT audit findings"
+          "topic": "ICT risk management governance and organisation"
         },
         {
           "ref": "DORA Art. 6(1)",
           "source": "dora",
-          "topic": "ICT systems, protocols and tools requirements"
+          "topic": "ICT risk management framework"
         },
         {
           "ref": "DORA Art. 6(2)",
           "source": "dora",
-          "topic": "ICT systems resilience and availability"
+          "topic": "ICT risk management framework"
         },
         {
           "ref": "DORA Art. 6(3)",
           "source": "dora",
-          "topic": "ICT systems integrity and confidentiality"
+          "topic": "ICT risk management framework"
         },
         {
           "ref": "DORA Art. 6(4)",
           "source": "dora",
-          "topic": "Learning from ICT incidents"
+          "topic": "ICT risk management framework"
         },
         {
           "ref": "DORA Art. 6(5)",
           "source": "dora",
-          "topic": "ICT risk management tools and processes"
+          "topic": "ICT risk management framework"
         },
         {
           "ref": "DORA Art. 6(6)",
           "source": "dora",
-          "topic": "Strategies for digital operational resilience"
+          "topic": "ICT risk management framework"
         },
         {
           "ref": "DORA Art. 6(7)",
           "source": "dora",
-          "topic": "Business continuity policy"
+          "topic": "ICT risk management framework"
         },
         {
           "ref": "DORA Art. 6(8)",
           "source": "dora",
-          "topic": "ICT risk management framework review"
+          "topic": "ICT risk management framework"
         },
         {
-          "ref": "DORA Art. 7(1)",
+          "ref": "DORA Art. 6(9)",
           "source": "dora",
-          "topic": "ICT systems and tools documentation"
+          "topic": "ICT risk management framework"
         },
         {
-          "ref": "DORA Art. 7(2)",
+          "ref": "DORA Art. 6(10)",
           "source": "dora",
-          "topic": "ICT asset management"
+          "topic": "ICT risk management framework"
+        },
+        {
+          "ref": "DORA Art. 7",
+          "source": "dora",
+          "topic": "ICT systems, protocols and tools"
         },
         {
           "ref": "DORA Art. 8(1)",
           "source": "dora",
-          "topic": "Identification of ICT-supported business functions and risks"
+          "topic": "Identification"
         },
         {
           "ref": "DORA Art. 8(2)",
           "source": "dora",
-          "topic": "ICT risk assessment frequency"
+          "topic": "Identification"
         },
         {
           "ref": "DORA Art. 8(3)",
           "source": "dora",
-          "topic": "ICT risk scenarios identification"
+          "topic": "Identification"
         },
         {
           "ref": "DORA Art. 8(4)",
           "source": "dora",
-          "topic": "ICT asset inventory and classification"
+          "topic": "Identification"
         },
         {
           "ref": "DORA Art. 8(5)",
           "source": "dora",
-          "topic": "Documentation of ICT third-party dependencies"
+          "topic": "Identification"
         },
         {
           "ref": "DORA Art. 8(6)",
           "source": "dora",
-          "topic": "Maintenance and periodic update of ICT asset inventories"
+          "topic": "Identification"
         },
         {
           "ref": "DORA Art. 8(7)",
           "source": "dora",
-          "topic": "ICT risk assessment of legacy ICT systems"
+          "topic": "Identification"
         },
         {
           "ref": "DORA Art. 9(1)",
           "source": "dora",
-          "topic": "Protection and prevention measures"
+          "topic": "Protection and prevention"
         },
         {
           "ref": "DORA Art. 9(2)",
           "source": "dora",
-          "topic": "ICT security policies"
+          "topic": "Protection and prevention"
         },
         {
           "ref": "DORA Art. 9(3)",
           "source": "dora",
-          "topic": "Network security management"
+          "topic": "Protection and prevention"
         },
         {
           "ref": "DORA Art. 9(4)",
           "source": "dora",
-          "topic": "Security awareness and training"
+          "topic": "Protection and prevention"
         },
         {
           "ref": "DORA Art. 10(1)",
           "source": "dora",
-          "topic": "Detection of anomalous activities"
+          "topic": "Detection"
         },
         {
           "ref": "DORA Art. 10(2)",
           "source": "dora",
-          "topic": "Monitoring and detection capabilities"
+          "topic": "Detection"
         },
         {
           "ref": "DORA Art. 10(3)",
           "source": "dora",
-          "topic": "Resources and capabilities for monitoring user activity and ICT anomalies"
+          "topic": "Detection"
         },
         {
           "ref": "DORA Art. 10(4)",
           "source": "dora",
-          "topic": "Trade report completeness checks (data reporting service providers)"
+          "topic": "Detection"
         },
         {
           "ref": "DORA Art. 11(1)",
           "source": "dora",
-          "topic": "Response and recovery plans"
+          "topic": "Response and recovery"
         },
         {
           "ref": "DORA Art. 11(2)",
           "source": "dora",
-          "topic": "Business continuity management"
+          "topic": "Response and recovery"
         },
         {
           "ref": "DORA Art. 11(3)",
           "source": "dora",
-          "topic": "Disaster recovery capabilities"
+          "topic": "Response and recovery"
         },
         {
           "ref": "DORA Art. 11(4)",
           "source": "dora",
-          "topic": "ICT business continuity policy"
+          "topic": "Response and recovery"
         },
         {
           "ref": "DORA Art. 11(5)",
           "source": "dora",
-          "topic": "Business impact analysis"
+          "topic": "Response and recovery"
         },
         {
           "ref": "DORA Art. 11(6)",
           "source": "dora",
-          "topic": "BCP and DRP testing"
+          "topic": "Response and recovery"
         },
         {
           "ref": "DORA Art. 11(7)",
           "source": "dora",
-          "topic": "Crisis communication"
+          "topic": "Response and recovery"
         },
         {
           "ref": "DORA Art. 11(8)",
           "source": "dora",
-          "topic": "Changes after ICT incidents"
+          "topic": "Response and recovery"
         },
         {
           "ref": "DORA Art. 11(9)",
           "source": "dora",
-          "topic": "Reporting on BCP testing to competent authority"
+          "topic": "Response and recovery"
         },
         {
           "ref": "DORA Art. 11(10)",
           "source": "dora",
-          "topic": "BCP testing scope and frequency"
+          "topic": "Response and recovery"
+        },
+        {
+          "ref": "DORA Art. 11(11)",
+          "source": "dora",
+          "topic": "Response and recovery"
         },
         {
           "ref": "DORA Art. 12(1)",
           "source": "dora",
-          "topic": "Backup policies and procedures"
+          "topic": "Backup policies, restoration and recovery"
         },
         {
           "ref": "DORA Art. 12(2)",
           "source": "dora",
-          "topic": "Restoration and recovery procedures"
+          "topic": "Backup policies, restoration and recovery"
         },
         {
           "ref": "DORA Art. 12(3)",
           "source": "dora",
-          "topic": "Physically and logically segregated backup restoration systems"
+          "topic": "Backup policies, restoration and recovery"
         },
         {
           "ref": "DORA Art. 12(4)",
           "source": "dora",
-          "topic": "Redundant ICT capacities for business continuity"
+          "topic": "Backup policies, restoration and recovery"
         },
         {
           "ref": "DORA Art. 12(5)",
           "source": "dora",
-          "topic": "Secondary processing site (central securities depositories)"
+          "topic": "Backup policies, restoration and recovery"
         },
         {
           "ref": "DORA Art. 12(6)",
           "source": "dora",
-          "topic": "Recovery time and recovery point objectives"
+          "topic": "Backup policies, restoration and recovery"
         },
         {
           "ref": "DORA Art. 12(7)",
           "source": "dora",
-          "topic": "Checks and reconciliations when recovering from ICT incidents"
+          "topic": "Backup policies, restoration and recovery"
         },
         {
           "ref": "DORA Art. 13(1)",
           "source": "dora",
-          "topic": "Learning and evolving from ICT incidents"
+          "topic": "Learning and evolving"
         },
         {
           "ref": "DORA Art. 13(2)",
           "source": "dora",
-          "topic": "Post-incident reviews"
+          "topic": "Learning and evolving"
         },
         {
           "ref": "DORA Art. 13(3)",
           "source": "dora",
-          "topic": "Monitoring effectiveness of digital resilience strategy"
+          "topic": "Learning and evolving"
         },
         {
           "ref": "DORA Art. 13(4)",
           "source": "dora",
-          "topic": "ICT security training for staff"
+          "topic": "Learning and evolving"
         },
         {
           "ref": "DORA Art. 13(5)",
           "source": "dora",
-          "topic": "Annual reporting of ICT risk findings to management body"
+          "topic": "Learning and evolving"
         },
         {
           "ref": "DORA Art. 13(6)",
           "source": "dora",
-          "topic": "ICT security awareness programmes and digital resilience training"
+          "topic": "Learning and evolving"
         },
         {
           "ref": "DORA Art. 13(7)",
           "source": "dora",
-          "topic": "Monitoring of relevant technological developments"
+          "topic": "Learning and evolving"
         },
         {
           "ref": "DORA Art. 14(1)",
           "source": "dora",
-          "topic": "Communication policies"
+          "topic": "Communication"
         },
         {
           "ref": "DORA Art. 14(2)",
           "source": "dora",
-          "topic": "Disclosure of ICT incidents to clients"
+          "topic": "Communication"
         },
         {
-          "ref": "DORA Art. 15(1)",
+          "ref": "DORA Art. 14(3)",
           "source": "dora",
-          "topic": "ICT risk management simplification for smaller entities"
+          "topic": "Communication"
+        },
+        {
+          "ref": "DORA Art. 15",
+          "source": "dora",
+          "topic": "Further harmonisation of ICT risk management"
         },
         {
           "ref": "DORA Art. 16(1)",
           "source": "dora",
-          "topic": "Simplified ICT risk management framework for microenterprises"
+          "topic": "Simplified ICT risk management framework"
+        },
+        {
+          "ref": "DORA Art. 16(2)",
+          "source": "dora",
+          "topic": "Simplified ICT risk management framework"
+        },
+        {
+          "ref": "DORA Art. 16(3)",
+          "source": "dora",
+          "topic": "Simplified ICT risk management framework"
         },
         {
           "ref": "RTS ICT Risk Art. 1",
@@ -542,62 +567,107 @@
         {
           "ref": "DORA Art. 17(2)",
           "source": "dora",
-          "topic": "Early warning indicators"
+          "topic": "ICT-related incident management process"
         },
         {
           "ref": "DORA Art. 17(3)",
           "source": "dora",
-          "topic": "Incident root cause analysis"
+          "topic": "ICT-related incident management process"
         },
         {
           "ref": "DORA Art. 18(1)",
           "source": "dora",
-          "topic": "Classification of ICT-related incidents"
+          "topic": "Classification of ICT-related incidents and cyber threats"
         },
         {
           "ref": "DORA Art. 18(2)",
           "source": "dora",
-          "topic": "Criteria for incident classification"
+          "topic": "Classification of ICT-related incidents and cyber threats"
+        },
+        {
+          "ref": "DORA Art. 18(3)",
+          "source": "dora",
+          "topic": "Classification of ICT-related incidents and cyber threats"
+        },
+        {
+          "ref": "DORA Art. 18(4)",
+          "source": "dora",
+          "topic": "Classification of ICT-related incidents and cyber threats"
         },
         {
           "ref": "DORA Art. 19(1)",
           "source": "dora",
-          "topic": "Reporting major ICT incidents"
+          "topic": "Reporting of major ICT-related incidents"
         },
         {
           "ref": "DORA Art. 19(2)",
           "source": "dora",
-          "topic": "Intermediate and final reports"
+          "topic": "Reporting of major ICT-related incidents"
         },
         {
           "ref": "DORA Art. 19(3)",
           "source": "dora",
-          "topic": "Incident notification to clients"
+          "topic": "Reporting of major ICT-related incidents"
         },
         {
           "ref": "DORA Art. 19(4)",
           "source": "dora",
-          "topic": "Significant cyber threats reporting"
+          "topic": "Reporting of major ICT-related incidents"
         },
         {
-          "ref": "DORA Art. 20(1)",
+          "ref": "DORA Art. 19(5)",
           "source": "dora",
-          "topic": "Harmonisation of reporting content"
+          "topic": "Reporting of major ICT-related incidents"
         },
         {
-          "ref": "DORA Art. 20(2)",
+          "ref": "DORA Art. 19(6)",
           "source": "dora",
-          "topic": "Standard forms for reporting"
+          "topic": "Reporting of major ICT-related incidents"
         },
         {
-          "ref": "DORA Art. 23(1)",
+          "ref": "DORA Art. 19(7)",
           "source": "dora",
-          "topic": "Supervisory convergence on incident reporting"
+          "topic": "Reporting of major ICT-related incidents"
         },
         {
-          "ref": "DORA Art. 23(2)",
+          "ref": "DORA Art. 19(8)",
           "source": "dora",
-          "topic": "Joint assessment of incident reports"
+          "topic": "Reporting of major ICT-related incidents"
+        },
+        {
+          "ref": "DORA Art. 20",
+          "source": "dora",
+          "topic": "Harmonisation of reporting content and templates"
+        },
+        {
+          "ref": "DORA Art. 21(1)",
+          "source": "dora",
+          "topic": "Centralisation of reporting"
+        },
+        {
+          "ref": "DORA Art. 21(2)",
+          "source": "dora",
+          "topic": "Centralisation of reporting"
+        },
+        {
+          "ref": "DORA Art. 21(3)",
+          "source": "dora",
+          "topic": "Centralisation of reporting"
+        },
+        {
+          "ref": "DORA Art. 22(1)",
+          "source": "dora",
+          "topic": "Supervisory feedback"
+        },
+        {
+          "ref": "DORA Art. 22(2)",
+          "source": "dora",
+          "topic": "Supervisory feedback"
+        },
+        {
+          "ref": "DORA Art. 23",
+          "source": "dora",
+          "topic": "Operational or security payment-related incidents"
         },
         {
           "ref": "RTS Incident Class Art. 1",
@@ -739,87 +809,102 @@
         {
           "ref": "DORA Art. 24(1)",
           "source": "dora",
-          "topic": "General requirements for resilience testing"
+          "topic": "Digital operational resilience testing requirements"
         },
         {
           "ref": "DORA Art. 24(2)",
           "source": "dora",
-          "topic": "Proportionate testing approach"
+          "topic": "Digital operational resilience testing requirements"
         },
         {
           "ref": "DORA Art. 24(3)",
           "source": "dora",
-          "topic": "Types of resilience tests"
+          "topic": "Digital operational resilience testing requirements"
         },
         {
           "ref": "DORA Art. 24(4)",
           "source": "dora",
-          "topic": "Testing of critical ICT systems"
+          "topic": "Digital operational resilience testing requirements"
         },
         {
           "ref": "DORA Art. 24(5)",
           "source": "dora",
-          "topic": "Testing by independent parties"
+          "topic": "Digital operational resilience testing requirements"
         },
         {
           "ref": "DORA Art. 24(6)",
           "source": "dora",
-          "topic": "Prioritisation and frequency of testing"
+          "topic": "Digital operational resilience testing requirements"
         },
         {
           "ref": "DORA Art. 25(1)",
           "source": "dora",
-          "topic": "Testing ICT tools and systems"
+          "topic": "Testing of ICT tools and systems"
         },
         {
           "ref": "DORA Art. 25(2)",
           "source": "dora",
-          "topic": "Source code reviews"
+          "topic": "Testing of ICT tools and systems"
         },
         {
           "ref": "DORA Art. 25(3)",
           "source": "dora",
-          "topic": "Vulnerability assessments and scans"
+          "topic": "Testing of ICT tools and systems"
         },
         {
           "ref": "DORA Art. 26(1)",
           "source": "dora",
-          "topic": "TLPT \u2014 carrying out advanced testing"
+          "topic": "Advanced testing based on TLPT"
         },
         {
           "ref": "DORA Art. 26(2)",
           "source": "dora",
-          "topic": "TLPT scope and methodology"
+          "topic": "Advanced testing based on TLPT"
         },
         {
           "ref": "DORA Art. 26(3)",
           "source": "dora",
-          "topic": "TLPT frequency"
+          "topic": "Advanced testing based on TLPT"
         },
         {
           "ref": "DORA Art. 26(4)",
           "source": "dora",
-          "topic": "TLPT \u2014 critical functions coverage"
+          "topic": "Advanced testing based on TLPT"
         },
         {
           "ref": "DORA Art. 26(5)",
           "source": "dora",
-          "topic": "TLPT \u2014 use of internal testers"
+          "topic": "Advanced testing based on TLPT"
         },
         {
           "ref": "DORA Art. 26(6)",
           "source": "dora",
-          "topic": "TLPT \u2014 threat intelligence providers"
+          "topic": "Advanced testing based on TLPT"
         },
         {
           "ref": "DORA Art. 26(7)",
           "source": "dora",
-          "topic": "TLPT \u2014 mutual recognition"
+          "topic": "Advanced testing based on TLPT"
         },
         {
           "ref": "DORA Art. 26(8)",
           "source": "dora",
-          "topic": "TLPT \u2014 designation by competent authorities"
+          "topic": "Advanced testing based on TLPT"
+        },
+        {
+          "ref": "DORA Art. 26(9)",
+          "source": "dora",
+          "topic": "Advanced testing based on TLPT"
+        },
+        {
+          "ref": "DORA Art. 26(10)",
+          "source": "dora",
+          "topic": "Advanced testing based on TLPT"
+        },
+        {
+          "ref": "DORA Art. 26(11)",
+          "source": "dora",
+          "topic": "Advanced testing based on TLPT"
         },
         {
           "ref": "DORA Art. 27(1)",
@@ -829,12 +914,12 @@
         {
           "ref": "DORA Art. 27(2)",
           "source": "dora",
-          "topic": "TLPT tester certification and accreditation"
+          "topic": "Requirements for TLPT testers"
         },
         {
           "ref": "DORA Art. 27(3)",
           "source": "dora",
-          "topic": "TLPT tester independence"
+          "topic": "Requirements for TLPT testers"
         },
         {
           "ref": "RTS TLPT Art. 2",
@@ -921,52 +1006,62 @@
         {
           "ref": "DORA Art. 28(1)",
           "source": "dora",
-          "topic": "General principles for ICT third-party risk management"
+          "topic": "Third-party risk management principles"
         },
         {
           "ref": "DORA Art. 28(2)",
           "source": "dora",
-          "topic": "ICT third-party strategy"
+          "topic": "Third-party risk management principles"
         },
         {
           "ref": "DORA Art. 28(3)",
           "source": "dora",
-          "topic": "ICT third-party risk assessment"
+          "topic": "Third-party risk management principles"
         },
         {
           "ref": "DORA Art. 28(4)",
           "source": "dora",
-          "topic": "Register of ICT third-party arrangements"
+          "topic": "Third-party risk management principles"
         },
         {
           "ref": "DORA Art. 28(5)",
           "source": "dora",
-          "topic": "Due diligence on ICT third-party providers"
+          "topic": "Third-party risk management principles"
         },
         {
           "ref": "DORA Art. 28(6)",
           "source": "dora",
-          "topic": "Concentration risk assessment"
+          "topic": "Third-party risk management principles"
         },
         {
           "ref": "DORA Art. 28(7)",
           "source": "dora",
-          "topic": "Sub-outsourcing chains"
+          "topic": "Third-party risk management principles"
         },
         {
           "ref": "DORA Art. 28(8)",
           "source": "dora",
-          "topic": "Intra-group ICT service provisions"
+          "topic": "Third-party risk management principles"
+        },
+        {
+          "ref": "DORA Art. 28(9)",
+          "source": "dora",
+          "topic": "Third-party risk management principles"
+        },
+        {
+          "ref": "DORA Art. 28(10)",
+          "source": "dora",
+          "topic": "Third-party risk management principles"
         },
         {
           "ref": "DORA Art. 29(1)",
           "source": "dora",
-          "topic": "Preliminary assessment of ICT third-party risk"
+          "topic": "ICT concentration risk assessment"
         },
         {
           "ref": "DORA Art. 29(2)",
           "source": "dora",
-          "topic": "Exit strategies"
+          "topic": "ICT concentration risk assessment"
         },
         {
           "ref": "DORA Art. 30(1)",
@@ -976,62 +1071,432 @@
         {
           "ref": "DORA Art. 30(2)",
           "source": "dora",
-          "topic": "Contractual arrangements \u2014 service level descriptions"
+          "topic": "Key contractual provisions"
         },
         {
           "ref": "DORA Art. 30(3)",
           "source": "dora",
-          "topic": "Contractual arrangements \u2014 termination rights"
+          "topic": "Key contractual provisions"
         },
         {
           "ref": "DORA Art. 30(4)",
           "source": "dora",
-          "topic": "Contractual arrangements \u2014 sub-outsourcing conditions"
+          "topic": "Key contractual provisions"
         },
         {
           "ref": "DORA Art. 30(5)",
           "source": "dora",
-          "topic": "Contractual arrangements \u2014 data location"
+          "topic": "Key contractual provisions"
         },
         {
           "ref": "DORA Art. 31(1)",
           "source": "dora",
-          "topic": "Designation of critical ICT third-party providers"
+          "topic": "Designation of critical ICT third-party service providers"
         },
         {
           "ref": "DORA Art. 31(2)",
           "source": "dora",
-          "topic": "Designation criteria"
+          "topic": "Designation of critical ICT third-party service providers"
+        },
+        {
+          "ref": "DORA Art. 31(3)",
+          "source": "dora",
+          "topic": "Designation of critical ICT third-party service providers"
+        },
+        {
+          "ref": "DORA Art. 31(4)",
+          "source": "dora",
+          "topic": "Designation of critical ICT third-party service providers"
+        },
+        {
+          "ref": "DORA Art. 31(5)",
+          "source": "dora",
+          "topic": "Designation of critical ICT third-party service providers"
+        },
+        {
+          "ref": "DORA Art. 31(6)",
+          "source": "dora",
+          "topic": "Designation of critical ICT third-party service providers"
+        },
+        {
+          "ref": "DORA Art. 31(7)",
+          "source": "dora",
+          "topic": "Designation of critical ICT third-party service providers"
+        },
+        {
+          "ref": "DORA Art. 31(8)",
+          "source": "dora",
+          "topic": "Designation of critical ICT third-party service providers"
+        },
+        {
+          "ref": "DORA Art. 31(9)",
+          "source": "dora",
+          "topic": "Designation of critical ICT third-party service providers"
+        },
+        {
+          "ref": "DORA Art. 31(10)",
+          "source": "dora",
+          "topic": "Designation of critical ICT third-party service providers"
+        },
+        {
+          "ref": "DORA Art. 31(11)",
+          "source": "dora",
+          "topic": "Designation of critical ICT third-party service providers"
+        },
+        {
+          "ref": "DORA Art. 31(12)",
+          "source": "dora",
+          "topic": "Designation of critical ICT third-party service providers"
+        },
+        {
+          "ref": "DORA Art. 31(13)",
+          "source": "dora",
+          "topic": "Designation of critical ICT third-party service providers"
+        },
+        {
+          "ref": "DORA Art. 32(1)",
+          "source": "dora",
+          "topic": "Structure of the Oversight Framework"
+        },
+        {
+          "ref": "DORA Art. 32(2)",
+          "source": "dora",
+          "topic": "Structure of the Oversight Framework"
+        },
+        {
+          "ref": "DORA Art. 32(3)",
+          "source": "dora",
+          "topic": "Structure of the Oversight Framework"
+        },
+        {
+          "ref": "DORA Art. 32(4)",
+          "source": "dora",
+          "topic": "Structure of the Oversight Framework"
+        },
+        {
+          "ref": "DORA Art. 32(5)",
+          "source": "dora",
+          "topic": "Structure of the Oversight Framework"
+        },
+        {
+          "ref": "DORA Art. 32(6)",
+          "source": "dora",
+          "topic": "Structure of the Oversight Framework"
+        },
+        {
+          "ref": "DORA Art. 32(7)",
+          "source": "dora",
+          "topic": "Structure of the Oversight Framework"
+        },
+        {
+          "ref": "DORA Art. 32(8)",
+          "source": "dora",
+          "topic": "Structure of the Oversight Framework"
+        },
+        {
+          "ref": "DORA Art. 32(9)",
+          "source": "dora",
+          "topic": "Structure of the Oversight Framework"
         },
         {
           "ref": "DORA Art. 33(1)",
           "source": "dora",
-          "topic": "Oversight tasks of lead overseer"
+          "topic": "Tasks of the Lead Overseer"
+        },
+        {
+          "ref": "DORA Art. 33(2)",
+          "source": "dora",
+          "topic": "Tasks of the Lead Overseer"
+        },
+        {
+          "ref": "DORA Art. 33(3)",
+          "source": "dora",
+          "topic": "Tasks of the Lead Overseer"
+        },
+        {
+          "ref": "DORA Art. 33(4)",
+          "source": "dora",
+          "topic": "Tasks of the Lead Overseer"
+        },
+        {
+          "ref": "DORA Art. 33(5)",
+          "source": "dora",
+          "topic": "Tasks of the Lead Overseer"
+        },
+        {
+          "ref": "DORA Art. 34(1)",
+          "source": "dora",
+          "topic": "Operational coordination between Lead Overseers"
+        },
+        {
+          "ref": "DORA Art. 34(2)",
+          "source": "dora",
+          "topic": "Operational coordination between Lead Overseers"
+        },
+        {
+          "ref": "DORA Art. 34(3)",
+          "source": "dora",
+          "topic": "Operational coordination between Lead Overseers"
         },
         {
           "ref": "DORA Art. 35(1)",
           "source": "dora",
-          "topic": "General investigation powers"
+          "topic": "Powers of the Lead Overseer"
+        },
+        {
+          "ref": "DORA Art. 35(2)",
+          "source": "dora",
+          "topic": "Powers of the Lead Overseer"
+        },
+        {
+          "ref": "DORA Art. 35(3)",
+          "source": "dora",
+          "topic": "Powers of the Lead Overseer"
+        },
+        {
+          "ref": "DORA Art. 35(4)",
+          "source": "dora",
+          "topic": "Powers of the Lead Overseer"
+        },
+        {
+          "ref": "DORA Art. 35(5)",
+          "source": "dora",
+          "topic": "Powers of the Lead Overseer"
+        },
+        {
+          "ref": "DORA Art. 35(6)",
+          "source": "dora",
+          "topic": "Powers of the Lead Overseer"
+        },
+        {
+          "ref": "DORA Art. 35(7)",
+          "source": "dora",
+          "topic": "Powers of the Lead Overseer"
+        },
+        {
+          "ref": "DORA Art. 35(8)",
+          "source": "dora",
+          "topic": "Powers of the Lead Overseer"
+        },
+        {
+          "ref": "DORA Art. 35(9)",
+          "source": "dora",
+          "topic": "Powers of the Lead Overseer"
+        },
+        {
+          "ref": "DORA Art. 35(10)",
+          "source": "dora",
+          "topic": "Powers of the Lead Overseer"
+        },
+        {
+          "ref": "DORA Art. 35(11)",
+          "source": "dora",
+          "topic": "Powers of the Lead Overseer"
         },
         {
           "ref": "DORA Art. 36(1)",
           "source": "dora",
-          "topic": "General inspection powers"
+          "topic": "Exercise of Lead Overseer powers outside the Union"
+        },
+        {
+          "ref": "DORA Art. 36(2)",
+          "source": "dora",
+          "topic": "Exercise of Lead Overseer powers outside the Union"
+        },
+        {
+          "ref": "DORA Art. 36(3)",
+          "source": "dora",
+          "topic": "Exercise of Lead Overseer powers outside the Union"
         },
         {
           "ref": "DORA Art. 37(1)",
           "source": "dora",
-          "topic": "Ongoing oversight"
+          "topic": "Request for information"
+        },
+        {
+          "ref": "DORA Art. 37(2)",
+          "source": "dora",
+          "topic": "Request for information"
+        },
+        {
+          "ref": "DORA Art. 37(3)",
+          "source": "dora",
+          "topic": "Request for information"
+        },
+        {
+          "ref": "DORA Art. 37(4)",
+          "source": "dora",
+          "topic": "Request for information"
+        },
+        {
+          "ref": "DORA Art. 37(5)",
+          "source": "dora",
+          "topic": "Request for information"
+        },
+        {
+          "ref": "DORA Art. 38(1)",
+          "source": "dora",
+          "topic": "General investigations"
+        },
+        {
+          "ref": "DORA Art. 38(2)",
+          "source": "dora",
+          "topic": "General investigations"
+        },
+        {
+          "ref": "DORA Art. 38(3)",
+          "source": "dora",
+          "topic": "General investigations"
+        },
+        {
+          "ref": "DORA Art. 38(4)",
+          "source": "dora",
+          "topic": "General investigations"
+        },
+        {
+          "ref": "DORA Art. 38(5)",
+          "source": "dora",
+          "topic": "General investigations"
+        },
+        {
+          "ref": "DORA Art. 39(1)",
+          "source": "dora",
+          "topic": "Inspections"
+        },
+        {
+          "ref": "DORA Art. 39(2)",
+          "source": "dora",
+          "topic": "Inspections"
+        },
+        {
+          "ref": "DORA Art. 39(3)",
+          "source": "dora",
+          "topic": "Inspections"
+        },
+        {
+          "ref": "DORA Art. 39(4)",
+          "source": "dora",
+          "topic": "Inspections"
+        },
+        {
+          "ref": "DORA Art. 39(5)",
+          "source": "dora",
+          "topic": "Inspections"
+        },
+        {
+          "ref": "DORA Art. 39(6)",
+          "source": "dora",
+          "topic": "Inspections"
+        },
+        {
+          "ref": "DORA Art. 39(7)",
+          "source": "dora",
+          "topic": "Inspections"
         },
         {
           "ref": "DORA Art. 40(1)",
+          "source": "dora",
+          "topic": "Ongoing oversight"
+        },
+        {
+          "ref": "DORA Art. 40(2)",
+          "source": "dora",
+          "topic": "Ongoing oversight"
+        },
+        {
+          "ref": "DORA Art. 40(3)",
+          "source": "dora",
+          "topic": "Ongoing oversight"
+        },
+        {
+          "ref": "DORA Art. 40(4)",
+          "source": "dora",
+          "topic": "Ongoing oversight"
+        },
+        {
+          "ref": "DORA Art. 41(1)",
+          "source": "dora",
+          "topic": "Harmonisation of oversight activities"
+        },
+        {
+          "ref": "DORA Art. 41(2)",
+          "source": "dora",
+          "topic": "Harmonisation of oversight activities"
+        },
+        {
+          "ref": "DORA Art. 42(1)",
+          "source": "dora",
+          "topic": "Follow-up by competent authorities"
+        },
+        {
+          "ref": "DORA Art. 42(2)",
+          "source": "dora",
+          "topic": "Follow-up by competent authorities"
+        },
+        {
+          "ref": "DORA Art. 42(3)",
+          "source": "dora",
+          "topic": "Follow-up by competent authorities"
+        },
+        {
+          "ref": "DORA Art. 42(4)",
+          "source": "dora",
+          "topic": "Follow-up by competent authorities"
+        },
+        {
+          "ref": "DORA Art. 42(5)",
+          "source": "dora",
+          "topic": "Follow-up by competent authorities"
+        },
+        {
+          "ref": "DORA Art. 42(6)",
+          "source": "dora",
+          "topic": "Follow-up by competent authorities"
+        },
+        {
+          "ref": "DORA Art. 42(7)",
+          "source": "dora",
+          "topic": "Follow-up by competent authorities"
+        },
+        {
+          "ref": "DORA Art. 42(8)",
+          "source": "dora",
+          "topic": "Follow-up by competent authorities"
+        },
+        {
+          "ref": "DORA Art. 42(9)",
+          "source": "dora",
+          "topic": "Follow-up by competent authorities"
+        },
+        {
+          "ref": "DORA Art. 42(10)",
+          "source": "dora",
+          "topic": "Follow-up by competent authorities"
+        },
+        {
+          "ref": "DORA Art. 42(11)",
+          "source": "dora",
+          "topic": "Follow-up by competent authorities"
+        },
+        {
+          "ref": "DORA Art. 43(1)",
+          "source": "dora",
+          "topic": "Oversight fees"
+        },
+        {
+          "ref": "DORA Art. 43(2)",
           "source": "dora",
           "topic": "Oversight fees"
         },
         {
           "ref": "DORA Art. 44(1)",
           "source": "dora",
-          "topic": "ICT risk management for non-covered entities"
+          "topic": "International cooperation"
+        },
+        {
+          "ref": "DORA Art. 44(2)",
+          "source": "dora",
+          "topic": "International cooperation"
         },
         {
           "ref": "RTS ICT Services Art. 1",
@@ -1208,17 +1673,17 @@
         {
           "ref": "DORA Art. 45(1)",
           "source": "dora",
-          "topic": "Information sharing arrangements"
+          "topic": "Information-sharing arrangements"
         },
         {
           "ref": "DORA Art. 45(2)",
           "source": "dora",
-          "topic": "Information sharing conditions"
+          "topic": "Information-sharing arrangements"
         },
         {
           "ref": "DORA Art. 45(3)",
           "source": "dora",
-          "topic": "Notification of information sharing to competent authorities"
+          "topic": "Information-sharing arrangements"
         }
       ]
     }

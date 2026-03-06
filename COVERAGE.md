@@ -52,15 +52,17 @@
 
 ### DORA Coverage
 
-231 provisions across 5 pillars of Regulation (EU) 2022/2554 and all 10 implementing technical standards (8 RTS + 2 ITS):
+324 provisions across 5 pillars of Regulation (EU) 2022/2554 and all 10 implementing technical standards (8 RTS + 2 ITS). All Level 1 provision references verified against the EU Regulations MCP article text:
 
 | Pillar | Level 1 Sources | RTS/ITS Sources | Provisions |
 |--------|----------------|-----------------|------------|
-| Pillar 1: ICT Risk Management | DORA Arts 5-16 | RTS ICT Risk (41 arts) | 98 |
-| Pillar 2: ICT Incident Reporting | DORA Arts 17-23 | RTS Incident Class (12), RTS Incident Reporting (6), ITS Incident Forms (8) | 39 |
-| Pillar 3: Resilience Testing | DORA Arts 24-27 | RTS TLPT (15) | 35 |
-| Pillar 4: Third-Party Risk | DORA Arts 28-44 | RTS ICT Services (10), RTS Critical Provider (6), RTS Oversight (6), RTS Oversight Fees (6), ITS Register (5) | 56 |
-| Pillar 5: Information Sharing | DORA Art 45 | (none) | 3 |
+| Pillar 1: ICT Risk Management | DORA Arts 5-16 (62 L1) | RTS ICT Risk (41 arts) | 103 |
+| Pillar 2: ICT Incident Reporting | DORA Arts 17-23 (22 L1) | RTS Incident Class (12), RTS Incident Reporting (6), ITS Incident Forms (8) | 48 |
+| Pillar 3: Resilience Testing | DORA Arts 24-27 (23 L1) | RTS TLPT (15) | 38 |
+| Pillar 4: Third-Party Risk | DORA Arts 28-44 (99 L1) | RTS ICT Services (10), RTS Critical Provider (6), RTS Oversight (6), RTS Oversight Fees (6), ITS Register (5) | 132 |
+| Pillar 5: Information Sharing | DORA Art 45 (3 L1) | (none) | 3 |
+
+Single-paragraph articles (Arts 7, 15, 20, 23) are represented as "DORA Art. N" without paragraph numbers, matching the Official Journal text structure.
 
 Entity scoping applies proportionality rules: microenterprise exemptions (Article 16) exclude detailed provisions in Articles 6-13 and RTS ICT Risk Arts 1-27 (full framework), and TLPT provisions (DORA Articles 26-27 plus entire RTS TLPT) only apply to entities designated by their competent authority.
 

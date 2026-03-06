@@ -105,7 +105,7 @@ describe("DORA gap analysis task definition", () => {
     expect(data._meta.server).toBe("workflow-intelligence-mcp");
   });
 
-  it("has 231 total provisions across all pillars (Level 1 + 8 RTS + 2 ITS)", () => {
+  it("has 324 total provisions across all pillars (Level 1 + 8 RTS + 2 ITS)", () => {
     const def = getTaskById("dora_gap_analysis");
     expect(def).toBeDefined();
     const sections = (def as Record<string, unknown>).sections_definition as Array<Record<string, unknown>>;
@@ -113,7 +113,7 @@ describe("DORA gap analysis task definition", () => {
       (sum, section) => sum + (section.provisions as unknown[]).length,
       0,
     );
-    expect(totalProvisions).toBe(231);
+    expect(totalProvisions).toBe(324);
   });
 
   it("pillar provision counts match expected distribution", () => {
@@ -124,10 +124,10 @@ describe("DORA gap analysis task definition", () => {
     for (const section of sections) {
       counts[section.id as string] = (section.provisions as unknown[]).length;
     }
-    expect(counts.pillar_1_ict_risk_management).toBe(98);
-    expect(counts.pillar_2_incident_reporting).toBe(39);
-    expect(counts.pillar_3_resilience_testing).toBe(35);
-    expect(counts.pillar_4_third_party_risk).toBe(56);
+    expect(counts.pillar_1_ict_risk_management).toBe(103);
+    expect(counts.pillar_2_incident_reporting).toBe(48);
+    expect(counts.pillar_3_resilience_testing).toBe(38);
+    expect(counts.pillar_4_third_party_risk).toBe(132);
     expect(counts.pillar_5_information_sharing).toBe(3);
   });
 

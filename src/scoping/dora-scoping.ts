@@ -49,7 +49,7 @@ const DORA_PILLARS: string[] = [
 ];
 
 /**
- * TLPT provisions: DORA Art. 26(1)-(8), Art. 27(1)-(3), and the
+ * TLPT provisions: DORA Art. 26(1)-(11), Art. 27(1)-(3), and the
  * entire RTS TLPT (15 substantive articles).  These advanced
  * threat-led penetration testing requirements only apply to entities
  * explicitly designated by their competent authority.
@@ -66,6 +66,9 @@ const TLPT_PROVISIONS: string[] = [
   "DORA Art. 26(6)",
   "DORA Art. 26(7)",
   "DORA Art. 26(8)",
+  "DORA Art. 26(9)",
+  "DORA Art. 26(10)",
+  "DORA Art. 26(11)",
   "DORA Art. 27(1)",
   "DORA Art. 27(2)",
   "DORA Art. 27(3)",
@@ -96,13 +99,14 @@ const TLPT_PROVISIONS: string[] = [
  */
 const MICRO_SIMPLIFIED_PROVISIONS: string[] = [
   // Level 1 DORA: Arts 6(5)-13(7)
-  // Art 7 has no numbered paragraphs — (a)-(d) sub-items only
+  // Art 7 is a single-paragraph article (no numbered paragraphs)
   "DORA Art. 6(5)",
   "DORA Art. 6(6)",
   "DORA Art. 6(7)",
   "DORA Art. 6(8)",
-  "DORA Art. 7(1)",
-  "DORA Art. 7(2)",
+  "DORA Art. 6(9)",
+  "DORA Art. 6(10)",
+  "DORA Art. 7",
   "DORA Art. 8(1)",
   "DORA Art. 8(2)",
   "DORA Art. 8(3)",
@@ -128,6 +132,7 @@ const MICRO_SIMPLIFIED_PROVISIONS: string[] = [
   "DORA Art. 11(8)",
   "DORA Art. 11(9)",
   "DORA Art. 11(10)",
+  "DORA Art. 11(11)",
   "DORA Art. 12(1)",
   "DORA Art. 12(2)",
   "DORA Art. 12(3)",
