@@ -49,13 +49,15 @@ const DORA_PILLARS: string[] = [
 ];
 
 /**
- * TLPT provisions: DORA Art. 26(1)-(8) and Art. 27(1)-(3).
- * These advanced threat-led penetration testing requirements only
- * apply to entities explicitly designated by their competent
- * authority.  Non-designated entities still perform basic testing
- * under Articles 24-25.
+ * TLPT provisions: DORA Art. 26(1)-(8), Art. 27(1)-(3), and the
+ * entire RTS TLPT (15 substantive articles).  These advanced
+ * threat-led penetration testing requirements only apply to entities
+ * explicitly designated by their competent authority.
+ * Non-designated entities still perform basic testing under
+ * Articles 24-25.
  */
 const TLPT_PROVISIONS: string[] = [
+  // Level 1 DORA
   "DORA Art. 26(1)",
   "DORA Art. 26(2)",
   "DORA Art. 26(3)",
@@ -67,44 +69,56 @@ const TLPT_PROVISIONS: string[] = [
   "DORA Art. 27(1)",
   "DORA Art. 27(2)",
   "DORA Art. 27(3)",
+  // RTS TLPT (all substantive articles)
+  "RTS TLPT Art. 2",
+  "RTS TLPT Art. 3",
+  "RTS TLPT Art. 4",
+  "RTS TLPT Art. 5",
+  "RTS TLPT Art. 6",
+  "RTS TLPT Art. 7",
+  "RTS TLPT Art. 8",
+  "RTS TLPT Art. 9",
+  "RTS TLPT Art. 10",
+  "RTS TLPT Art. 11",
+  "RTS TLPT Art. 12",
+  "RTS TLPT Art. 13",
+  "RTS TLPT Art. 14",
+  "RTS TLPT Art. 15",
+  "RTS TLPT Art. 16",
 ];
 
 /**
  * Detailed ICT risk management provisions that microenterprises are
  * exempt from under DORA Article 16.  Microenterprises follow the
  * simplified ICT risk management framework instead of the full
- * requirements in Articles 6-13.
+ * requirements in Articles 6-13.  At the RTS level, they use
+ * Arts 28-41 (simplified framework) instead of Arts 1-27 (full).
  */
 const MICRO_SIMPLIFIED_PROVISIONS: string[] = [
-  // Art. 6(5)-(8): detailed ICT risk management framework elements
+  // Level 1 DORA: Arts 6(5)-13(6)
   "DORA Art. 6(5)",
   "DORA Art. 6(6)",
   "DORA Art. 6(7)",
   "DORA Art. 6(8)",
-  // Art. 7: ICT systems, protocols and tools
   "DORA Art. 7(1)",
   "DORA Art. 7(2)",
   "DORA Art. 7(3)",
   "DORA Art. 7(4)",
-  // Art. 8: identification of ICT assets and risks
   "DORA Art. 8(1)",
   "DORA Art. 8(2)",
   "DORA Art. 8(3)",
   "DORA Art. 8(4)",
   "DORA Art. 8(5)",
   "DORA Art. 8(6)",
-  // Art. 9: protection and prevention
   "DORA Art. 9(1)",
   "DORA Art. 9(2)",
   "DORA Art. 9(3)",
   "DORA Art. 9(4)",
-  // Art. 10: detection
   "DORA Art. 10(1)",
   "DORA Art. 10(2)",
   "DORA Art. 10(3)",
   "DORA Art. 10(4)",
   "DORA Art. 10(5)",
-  // Art. 11: response and recovery
   "DORA Art. 11(1)",
   "DORA Art. 11(2)",
   "DORA Art. 11(3)",
@@ -115,19 +129,46 @@ const MICRO_SIMPLIFIED_PROVISIONS: string[] = [
   "DORA Art. 11(8)",
   "DORA Art. 11(9)",
   "DORA Art. 11(10)",
-  // Art. 12: backup policies and recovery methods
   "DORA Art. 12(1)",
   "DORA Art. 12(2)",
   "DORA Art. 12(3)",
   "DORA Art. 12(4)",
   "DORA Art. 12(5)",
-  // Art. 13: learning and evolving
   "DORA Art. 13(1)",
   "DORA Art. 13(2)",
   "DORA Art. 13(3)",
   "DORA Art. 13(4)",
   "DORA Art. 13(5)",
   "DORA Art. 13(6)",
+  // RTS ICT Risk: Full framework (Arts 1-27) excluded for microenterprises.
+  // They use simplified framework (Arts 28-41) instead.
+  "RTS ICT Risk Art. 1",
+  "RTS ICT Risk Art. 2",
+  "RTS ICT Risk Art. 3",
+  "RTS ICT Risk Art. 4",
+  "RTS ICT Risk Art. 5",
+  "RTS ICT Risk Art. 6",
+  "RTS ICT Risk Art. 7",
+  "RTS ICT Risk Art. 8",
+  "RTS ICT Risk Art. 9",
+  "RTS ICT Risk Art. 10",
+  "RTS ICT Risk Art. 11",
+  "RTS ICT Risk Art. 12",
+  "RTS ICT Risk Art. 13",
+  "RTS ICT Risk Art. 14",
+  "RTS ICT Risk Art. 15",
+  "RTS ICT Risk Art. 16",
+  "RTS ICT Risk Art. 17",
+  "RTS ICT Risk Art. 18",
+  "RTS ICT Risk Art. 19",
+  "RTS ICT Risk Art. 20",
+  "RTS ICT Risk Art. 21",
+  "RTS ICT Risk Art. 22",
+  "RTS ICT Risk Art. 23",
+  "RTS ICT Risk Art. 24",
+  "RTS ICT Risk Art. 25",
+  "RTS ICT Risk Art. 26",
+  "RTS ICT Risk Art. 27",
 ];
 
 // ---------------------------------------------------------------------------

@@ -28,8 +28,8 @@ describe("DORA gap analysis task definition", () => {
     expect(def).toBeDefined();
     const euRegTool = def!.mcp_tools.find((t) => t.mcp === "eu-regulations-mcp");
     expect(euRegTool).toBeDefined();
-    expect(euRegTool!.tools).toContain("get_provision");
-    expect(euRegTool!.tools).toContain("search_legislation");
+    expect(euRegTool!.tools).toContain("get_article");
+    expect(euRegTool!.tools).toContain("search_regulations");
     expect(euRegTool!.when).toBe("always");
   });
 
@@ -104,7 +104,7 @@ describe("DORA gap analysis task definition", () => {
     expect(data._meta.server).toBe("workflow-intelligence-mcp");
   });
 
-  it("has 103 total provisions across all pillars", () => {
+  it("has 218 total provisions across all pillars (Level 1 + 8 RTS + 2 ITS)", () => {
     const def = getTaskById("dora_gap_analysis");
     expect(def).toBeDefined();
     const sections = (def as Record<string, unknown>).sections_definition as Array<Record<string, unknown>>;
@@ -112,7 +112,7 @@ describe("DORA gap analysis task definition", () => {
       (sum, section) => sum + (section.provisions as unknown[]).length,
       0,
     );
-    expect(totalProvisions).toBe(103);
+    expect(totalProvisions).toBe(218);
   });
 
   it("pillar provision counts match expected distribution", () => {
@@ -123,10 +123,10 @@ describe("DORA gap analysis task definition", () => {
     for (const section of sections) {
       counts[section.id as string] = (section.provisions as unknown[]).length;
     }
-    expect(counts.pillar_1_ict_risk_management).toBe(44);
-    expect(counts.pillar_2_incident_reporting).toBe(13);
-    expect(counts.pillar_3_resilience_testing).toBe(20);
-    expect(counts.pillar_4_third_party_risk).toBe(23);
+    expect(counts.pillar_1_ict_risk_management).toBe(85);
+    expect(counts.pillar_2_incident_reporting).toBe(39);
+    expect(counts.pillar_3_resilience_testing).toBe(35);
+    expect(counts.pillar_4_third_party_risk).toBe(56);
     expect(counts.pillar_5_information_sharing).toBe(3);
   });
 
