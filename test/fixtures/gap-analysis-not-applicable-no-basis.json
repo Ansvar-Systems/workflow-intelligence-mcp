@@ -1,0 +1,118 @@
+{
+  "scoping": {
+    "entity_name": "Test Bank AG",
+    "entity_type": "credit_institution",
+    "is_microenterprise": false,
+    "designated_for_tlpt": true,
+    "member_state": "DE",
+    "competent_authority": "BaFin"
+  },
+  "sections": [
+    {
+      "section_id": "pillar_1_ict_risk_management",
+      "section_name": "Pillar 1: ICT Risk Management",
+      "provisions": [
+        {
+          "provision_ref": "DORA Art. 5(1)",
+          "regulation_source": "dora",
+          "status": "compliant",
+          "evidence": [
+            {
+              "type": "policy",
+              "reference": "ICT Risk Management Framework v3.2",
+              "date": "2025-11-15",
+              "note": "Approved by the management body, covers all ICT risk tolerance levels and governance structure"
+            }
+          ],
+          "gaps": null,
+          "exemption_basis": null,
+          "assessed_by": "J. Smith",
+          "assessed_at": "2026-01-10T09:30:00Z"
+        },
+        {
+          "provision_ref": "DORA Art. 5(2)",
+          "regulation_source": "dora",
+          "status": "partially_compliant",
+          "evidence": [
+            {
+              "type": "procedure",
+              "reference": "ICT Risk Review Procedure PR-ICT-007",
+              "date": "2024-12-01",
+              "note": "Procedure exists but last management body review was conducted over 14 months ago"
+            }
+          ],
+          "gaps": "Annual review of the ICT risk management framework by the management body is overdue by two months. The last documented review was December 2024.",
+          "exemption_basis": null,
+          "assessed_by": "J. Smith",
+          "assessed_at": "2026-01-10T10:15:00Z"
+        },
+        {
+          "provision_ref": "RTS ICT Risk Art. 1(1)",
+          "regulation_source": "dora-rts-ict-risk",
+          "status": "non_compliant",
+          "evidence": [],
+          "gaps": "No documented ICT risk appetite statement exists. The entity has not defined quantitative thresholds for acceptable ICT risk levels as required by the RTS.",
+          "exemption_basis": null,
+          "assessed_by": "A. Mueller",
+          "assessed_at": "2026-01-11T14:00:00Z"
+        }
+      ]
+    },
+    {
+      "section_id": "pillar_2_incident_reporting",
+      "section_name": "Pillar 2: Incident Reporting",
+      "provisions": [
+        {
+          "provision_ref": "DORA Art. 17(1)",
+          "regulation_source": "dora",
+          "status": "compliant",
+          "evidence": [
+            {
+              "type": "procedure",
+              "reference": "Incident Management Procedure PR-INC-001",
+              "date": "2025-09-20",
+              "note": "Covers detection, classification, escalation, and notification to BaFin within prescribed timeframes"
+            },
+            {
+              "type": "config",
+              "reference": "SIEM Alert Rules — ICT Incident Detection Ruleset v2.1",
+              "date": "2025-10-05",
+              "note": "Automated detection configured for all major incident categories defined in DORA Art. 17"
+            }
+          ],
+          "gaps": null,
+          "exemption_basis": null,
+          "assessed_by": "A. Mueller",
+          "assessed_at": "2026-01-11T15:30:00Z"
+        },
+        {
+          "provision_ref": "DORA Art. 17(2)",
+          "regulation_source": "dora",
+          "status": "not_applicable",
+          "evidence": [],
+          "gaps": null,
+          "exemption_basis": null,
+          "assessed_by": "J. Smith",
+          "assessed_at": "2026-01-12T09:00:00Z"
+        },
+        {
+          "provision_ref": "RTS Incident Class Art. 1(1)",
+          "regulation_source": "dora-rts-incident-class",
+          "status": "compliant",
+          "evidence": [
+            {
+              "type": "procedure",
+              "reference": "Incident Classification Matrix DOC-CLASS-003",
+              "date": "2025-08-12",
+              "note": "Maps all RTS classification criteria to internal severity levels with clear escalation thresholds"
+            }
+          ],
+          "gaps": null,
+          "exemption_basis": null,
+          "assessed_by": "A. Mueller",
+          "assessed_at": "2026-01-12T10:45:00Z"
+        }
+      ]
+    }
+  ]
+}

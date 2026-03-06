@@ -1,0 +1,84 @@
+{
+  "scoping": {
+    "entity_name": "Test Bank AG",
+    "entity_type": "credit_institution",
+    "is_microenterprise": false,
+    "designated_for_tlpt": true,
+    "member_state": "DE",
+    "competent_authority": "BaFin"
+  },
+  "sections": [
+    {
+      "section_id": "pillar_1_ict_risk_management",
+      "section_name": "Pillar 1: ICT Risk Management",
+      "provisions": [
+        {
+          "provision_ref": "DORA Art. 5(1)",
+          "regulation_source": "dora",
+          "status": "not_assessed",
+          "evidence": [],
+          "gaps": null,
+          "exemption_basis": null,
+          "assessed_by": "",
+          "assessed_at": ""
+        },
+        {
+          "provision_ref": "DORA Art. 5(2)",
+          "regulation_source": "dora",
+          "status": "not_assessed",
+          "evidence": [],
+          "gaps": null,
+          "exemption_basis": null,
+          "assessed_by": "",
+          "assessed_at": ""
+        },
+        {
+          "provision_ref": "RTS ICT Risk Art. 1(1)",
+          "regulation_source": "dora-rts-ict-risk",
+          "status": "not_assessed",
+          "evidence": [],
+          "gaps": null,
+          "exemption_basis": null,
+          "assessed_by": "",
+          "assessed_at": ""
+        }
+      ]
+    },
+    {
+      "section_id": "pillar_2_incident_reporting",
+      "section_name": "Pillar 2: Incident Reporting",
+      "provisions": [
+        {
+          "provision_ref": "DORA Art. 17(1)",
+          "regulation_source": "dora",
+          "status": "not_assessed",
+          "evidence": [],
+          "gaps": null,
+          "exemption_basis": null,
+          "assessed_by": "",
+          "assessed_at": ""
+        },
+        {
+          "provision_ref": "DORA Art. 17(2)",
+          "regulation_source": "dora",
+          "status": "not_assessed",
+          "evidence": [],
+          "gaps": null,
+          "exemption_basis": null,
+          "assessed_by": "",
+          "assessed_at": ""
+        },
+        {
+          "provision_ref": "RTS Incident Class Art. 1(1)",
+          "regulation_source": "dora-rts-incident-class",
+          "status": "not_assessed",
+          "evidence": [],
+          "gaps": null,
+          "exemption_basis": null,
+          "assessed_by": "",
+          "assessed_at": ""
+        }
+      ]
+    }
+  ]
+}
