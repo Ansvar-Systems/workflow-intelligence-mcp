@@ -5,6 +5,13 @@ import { getTaskDefinition } from "./get-task-definition.js";
 import { checkStageCompleteness } from "./check-stage-completeness.js";
 import { suggestTrustBoundaries } from "./suggest-trust-boundaries.js";
 import { about, listSources } from "./meta.js";
+import {
+  wkflStoreState,
+  wkflLoadState,
+  wkflListStates,
+  wkflDeleteAssessment,
+} from "./state.js";
+import { wkflExportReport } from "./export-report.js";
 
 export interface ToolResult {
   content: Array<{ type: "text"; text: string }>;
@@ -20,6 +27,11 @@ export const TOOL_HANDLERS: Record<string, ToolHandler> = {
   get_task_definition: getTaskDefinition,
   check_stage_completeness: checkStageCompleteness,
   suggest_trust_boundaries: suggestTrustBoundaries,
+  wkfl_store_state: wkflStoreState,
+  wkfl_load_state: wkflLoadState,
+  wkfl_list_states: wkflListStates,
+  wkfl_delete_assessment: wkflDeleteAssessment,
+  wkfl_export_report: wkflExportReport,
   about,
   list_sources: listSources,
 };
@@ -70,6 +82,10 @@ export const TOOL_DEFINITIONS = [
           type: "string",
           description: "The stage identifier (same as task_id for standalone tasks).",
         },
+        phase_id: {
+          type: "string",
+          description: "Optional phase identifier for multi-phase tasks. When provided, validates against the phase-specific completion criteria.",
+        },
         definition_version: {
           type: "string",
           description: "Version from get_task_definition, for version negotiation.",
@@ -111,6 +127,94 @@ export const TOOL_DEFINITIONS = [
         },
       },
       required: ["processes", "data_stores", "external_entities", "data_flows"],
+    },
+  },
+  {
+    name: "wkfl_store_state",
+    description:
+      "Persist assessment state (phase outputs, completed domain groups, matrix slices) to disk. Enables context window management for large assessments and session resume after timeout.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        assessment_id: {
+          type: "string",
+          description:
+            "Unique assessment identifier. Use a stable ID so state can be resumed across sessions.",
+        },
+        key: {
+          type: "string",
+          description:
+            'State key (e.g., "phase_1_scoping", "group_access_control", "phase_2_requirements"). Alphanumeric, hyphens, underscores, dots.',
+        },
+        data: {
+          description: "The data to persist (any JSON-serializable value).",
+        },
+      },
+      required: ["assessment_id", "key", "data"],
+    },
+  },
+  {
+    name: "wkfl_load_state",
+    description:
+      "Load previously stored assessment state by assessment_id and key. Use to retrieve completed domain groups, phase outputs, or resume an interrupted assessment.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        assessment_id: {
+          type: "string",
+          description: "Assessment identifier.",
+        },
+        key: {
+          type: "string",
+          description: "State key to load.",
+        },
+      },
+      required: ["assessment_id", "key"],
+    },
+  },
+  {
+    name: "wkfl_list_states",
+    description:
+      "List all stored state keys for an assessment. Use to check progress, find completed domain groups, or determine resume point after a session interruption.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        assessment_id: {
+          type: "string",
+          description: "Assessment identifier.",
+        },
+      },
+      required: ["assessment_id"],
+    },
+  },
+  {
+    name: "wkfl_export_report",
+    description:
+      "Assemble a formatted compliance assessment report from stored state. Loads all domain group results, coverage statistics, scope/methodology, and evidence references, then renders a structured Markdown document with: executive summary, compliance matrix table, gap analysis, evidence register, and client attestations. Call this in Phase 4 after all domain groups are stored.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        assessment_id: {
+          type: "string",
+          description: "Assessment identifier to export.",
+        },
+      },
+      required: ["assessment_id"],
+    },
+  },
+  {
+    name: "wkfl_delete_assessment",
+    description:
+      "Delete all stored state for an assessment. Use for cleanup after delivery.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        assessment_id: {
+          type: "string",
+          description: "Assessment identifier to delete.",
+        },
+      },
+      required: ["assessment_id"],
     },
   },
   {

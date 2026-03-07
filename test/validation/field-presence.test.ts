@@ -67,4 +67,75 @@ describe("field-presence", () => {
     expect(failures).toHaveLength(1);
     expect(failures[0].details).toContain("more than 2");
   });
+
+  describe("exists rule", () => {
+    it("passes when field is present", () => {
+      const rules: FieldRule[] = [
+        { field: "org_profile", rule: "exists", message: "org_profile is required" },
+      ];
+      const failures = evaluateFieldPresence({ org_profile: { name: "Acme" } }, rules);
+      expect(failures).toHaveLength(0);
+    });
+
+    it("passes when field is falsy but not null/undefined", () => {
+      const rules: FieldRule[] = [
+        { field: "count", rule: "exists", message: "count is required" },
+      ];
+      expect(evaluateFieldPresence({ count: 0 }, rules)).toHaveLength(0);
+      expect(evaluateFieldPresence({ count: "" }, rules)).toHaveLength(0);
+      expect(evaluateFieldPresence({ count: false }, rules)).toHaveLength(0);
+    });
+
+    it("fails when field is undefined", () => {
+      const rules: FieldRule[] = [
+        { field: "org_profile", rule: "exists", message: "org_profile is required" },
+      ];
+      const failures = evaluateFieldPresence({}, rules);
+      expect(failures).toHaveLength(1);
+      expect(failures[0].details).toBe("org_profile is required");
+    });
+
+    it("fails when field is null", () => {
+      const rules: FieldRule[] = [
+        { field: "org_profile", rule: "exists", message: "org_profile is required" },
+      ];
+      const failures = evaluateFieldPresence({ org_profile: null }, rules);
+      expect(failures).toHaveLength(1);
+    });
+  });
+
+  describe("equals rule", () => {
+    it("passes when field equals expected value", () => {
+      const rules: FieldRule[] = [
+        { field: "report_ready", rule: "equals", value: true, message: "report must be ready" },
+      ];
+      const failures = evaluateFieldPresence({ report_ready: true }, rules);
+      expect(failures).toHaveLength(0);
+    });
+
+    it("fails when field has different value", () => {
+      const rules: FieldRule[] = [
+        { field: "report_ready", rule: "equals", value: true, message: "report must be ready" },
+      ];
+      const failures = evaluateFieldPresence({ report_ready: false }, rules);
+      expect(failures).toHaveLength(1);
+      expect(failures[0].details).toBe("report must be ready");
+    });
+
+    it("fails when field is missing", () => {
+      const rules: FieldRule[] = [
+        { field: "status", rule: "equals", value: "complete", message: "status must be complete" },
+      ];
+      const failures = evaluateFieldPresence({}, rules);
+      expect(failures).toHaveLength(1);
+    });
+
+    it("uses strict equality", () => {
+      const rules: FieldRule[] = [
+        { field: "count", rule: "equals", value: 5, message: "count must be 5" },
+      ];
+      expect(evaluateFieldPresence({ count: 5 }, rules)).toHaveLength(0);
+      expect(evaluateFieldPresence({ count: "5" }, rules)).toHaveLength(1);
+    });
+  });
 });

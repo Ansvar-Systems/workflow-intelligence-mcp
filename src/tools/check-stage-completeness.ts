@@ -1,7 +1,7 @@
 import Ajv from "ajv";
 import type { ToolResult } from "./index.js";
 import { getTaskById } from "./get-task-definition.js";
-import { evaluateCompleteness } from "../validation/engine.js";
+import { evaluateCompleteness, evaluatePhaseCompleteness } from "../validation/engine.js";
 
 const ajv = new Ajv({ allErrors: true });
 
@@ -93,12 +93,21 @@ export async function checkStageCompleteness(
     };
   }
 
-  // Run validation engine
-  const result = evaluateCompleteness(
-    stageState,
-    def.completion_criteria,
-    def.quality_rubric,
-  );
+  // Run validation engine — phase-aware if phase_id provided and task has phases
+  const phaseId = args.phase_id as string | undefined;
+  const result = phaseId && def.phases
+    ? evaluatePhaseCompleteness(
+        stageState,
+        def.phases,
+        phaseId,
+        def.completion_criteria,
+        def.quality_rubric,
+      )
+    : evaluateCompleteness(
+        stageState,
+        def.completion_criteria,
+        def.quality_rubric,
+      );
 
   return {
     content: [

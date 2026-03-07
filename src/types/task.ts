@@ -15,12 +15,10 @@ export interface TaskDependency {
   description: string;
 }
 
-export interface FieldRule {
-  field: string;
-  rule: "min_count";
-  value: number;
-  message: string;
-}
+export type FieldRule =
+  | { field: string; rule: "min_count"; value: number; message: string }
+  | { field: string; rule: "exists"; message: string }
+  | { field: string; rule: "equals"; value: unknown; message: string };
 
 export interface StructuralRule {
   id: string;
@@ -49,6 +47,14 @@ export interface CompletionCriteria {
   soft_warnings: FieldRule[];
 }
 
+export interface PhaseDefinition {
+  id: string;
+  name: string;
+  description: string;
+  completion_criteria: CompletionCriteria;
+  quality_rubric: Record<string, QualityRubricEntry>;
+}
+
 export interface TaskDefinition {
   id: string;
   name: string;
@@ -64,4 +70,6 @@ export interface TaskDefinition {
   stage_state_schema: Record<string, unknown>;
   completion_criteria: CompletionCriteria;
   quality_rubric: Record<string, QualityRubricEntry>;
+  /** Optional linear phases for multi-phase tasks (e.g., compliance assessment). */
+  phases?: PhaseDefinition[];
 }

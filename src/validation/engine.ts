@@ -11,6 +11,7 @@
 import type { DfdStageState } from "../types/dfd.js";
 import type {
   CompletionCriteria,
+  PhaseDefinition,
   QualityRubricEntry,
   StructuralRule,
 } from "../types/task.js";
@@ -32,6 +33,14 @@ import {
   checkNoDirectExternalToDatastore,
   checkNoOrphanDataStores,
 } from "./rules/structural.js";
+import {
+  checkEveryRequirementHasVerdict,
+  checkEveryCompliantHasEvidence,
+  checkEveryPartialHasGap,
+  checkNoHighConfidenceWithoutQuote,
+  checkIntakeResponsesComplete,
+  checkFrameworkVersionRecorded,
+} from "./rules/compliance.js";
 
 // ---------------------------------------------------------------------------
 // Rule registry
@@ -101,6 +110,14 @@ registerStructuralRule("no_direct_external_to_datastore", (state) =>
 registerStructuralRule("every_external_entity_crosses_boundary", (state) =>
   checkEveryExternalEntityCrossesBoundary(asDfd(state)),
 );
+
+// Compliance assessment rules
+registerStructuralRule("every_requirement_has_verdict", checkEveryRequirementHasVerdict);
+registerStructuralRule("every_compliant_has_evidence", checkEveryCompliantHasEvidence);
+registerStructuralRule("every_partial_has_gap", checkEveryPartialHasGap);
+registerStructuralRule("no_high_confidence_without_quote", checkNoHighConfidenceWithoutQuote);
+registerStructuralRule("intake_responses_complete", checkIntakeResponsesComplete);
+registerStructuralRule("framework_version_recorded", checkFrameworkVersionRecorded);
 
 // ---------------------------------------------------------------------------
 // Engine
@@ -231,4 +248,25 @@ export function evaluateCompleteness(
   const summary = buildSummary(status, missing, warnings);
 
   return { status, missing, warnings, summary };
+}
+
+/**
+ * Evaluate completeness for a specific phase of a multi-phase task.
+ * Falls back to top-level criteria if the phase has no phases array
+ * or the requested phase_id is not found.
+ */
+export function evaluatePhaseCompleteness(
+  state: Record<string, unknown>,
+  phases: PhaseDefinition[] | undefined,
+  phaseId: string,
+  fallbackCriteria: CompletionCriteria,
+  fallbackRubric: Record<string, QualityRubricEntry>,
+): StageCompletionResult {
+  if (phases) {
+    const phase = phases.find((p) => p.id === phaseId);
+    if (phase) {
+      return evaluateCompleteness(state, phase.completion_criteria, phase.quality_rubric);
+    }
+  }
+  return evaluateCompleteness(state, fallbackCriteria, fallbackRubric);
 }
