@@ -41,6 +41,12 @@ import {
   checkIntakeResponsesComplete,
   checkFrameworkVersionRecorded,
 } from "./rules/compliance.js";
+import {
+  checkStrideCoverageComplete,
+  checkEveryThreatHasCvss,
+  checkNoDuplicateThreatIds,
+  checkHighCriticalThreatsHaveControls,
+} from "./rules/stride.js";
 
 // ---------------------------------------------------------------------------
 // Rule registry
@@ -118,6 +124,12 @@ registerStructuralRule("every_partial_has_gap", checkEveryPartialHasGap);
 registerStructuralRule("no_high_confidence_without_quote", checkNoHighConfidenceWithoutQuote);
 registerStructuralRule("intake_responses_complete", checkIntakeResponsesComplete);
 registerStructuralRule("framework_version_recorded", checkFrameworkVersionRecorded);
+
+// STRIDE threat model rules
+registerStructuralRule("stride_coverage_complete", checkStrideCoverageComplete);
+registerStructuralRule("every_threat_has_cvss", checkEveryThreatHasCvss);
+registerStructuralRule("no_duplicate_threat_ids", checkNoDuplicateThreatIds);
+registerStructuralRule("high_critical_threats_have_controls", checkHighCriticalThreatsHaveControls);
 
 // ---------------------------------------------------------------------------
 // Engine
