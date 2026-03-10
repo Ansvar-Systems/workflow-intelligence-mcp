@@ -15,8 +15,8 @@ export interface ThreatEntry {
   cvss_score?: number;
   severity: string;
   confidence?: string;
-  document_citations?: string[];
-  pattern_citations?: string[];
+  document_citations?: Array<{ document?: string; section?: string; verbatim_quote?: string; evidence_type?: string }>;
+  pattern_citations?: Array<{ source?: string; pattern_id?: string; cwe_id?: string; tool_call?: string }>;
 }
 
 export interface MitigationEntry {
@@ -264,7 +264,7 @@ export function buildStrideReport(
       // Count unknown severities under info
       severityCounts["info"]++;
     }
-    if (t.mcp_source) {
+    if (t.mcp_source && t.mcp_source !== "llm-reasoned") {
       mcpGrounded++;
     }
   }

@@ -83,7 +83,7 @@ export function checkEveryThreatHasCvss(
   state: Record<string, unknown>,
 ): RuleFailure[] {
   const s = asStride(state);
-  const threats = s.threats ?? [];
+  const threats = s.threats ?? s.stride_threats ?? [];
   const failures: RuleFailure[] = [];
 
   for (const threat of threats) {
@@ -106,7 +106,7 @@ export function checkNoDuplicateThreatIds(
   state: Record<string, unknown>,
 ): RuleFailure[] {
   const s = asStride(state);
-  const threats = s.threats ?? [];
+  const threats = s.threats ?? s.stride_threats ?? [];
   const seen = new Set<string>();
   const failures: RuleFailure[] = [];
 
