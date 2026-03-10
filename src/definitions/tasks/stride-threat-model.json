@@ -75,7 +75,7 @@
             "type": { "type": "string", "enum": ["process", "data_store", "external_entity"] },
             "trust_zone": { "type": "string" },
             "technology": { "type": "string" },
-            "confidence": { "type": "string", "enum": ["high", "medium", "low"] }
+            "confidence": { "type": "string", "enum": ["confirmed", "inferred", "ambiguous"] }
           },
           "required": ["id", "name", "type"]
         }
@@ -90,8 +90,8 @@
             "to": { "type": "string" },
             "data": { "type": "string" },
             "protocol": { "type": "string" },
-            "encrypted": { "type": "boolean" },
-            "authenticated": { "type": "boolean" },
+            "encrypted": { "type": ["boolean", "string"] },
+            "authenticated": { "type": "string" },
             "crosses_boundary": { "type": "boolean" }
           },
           "required": ["id", "from", "to"]
@@ -476,6 +476,10 @@
               "message": "Threat '{threat_id}' has an empty controls array. Every mapped threat should have at least one control with implementation guidance."
             }
           }
+        },
+        "mitigation_coverage": {
+          "severity": "required",
+          "message": "Every high/critical threat must have >= 1 control mapping"
         }
       }
     },
@@ -491,7 +495,12 @@
         "rules": [],
         "soft_warnings": []
       },
-      "quality_rubric": {},
+      "quality_rubric": {
+        "coverage_completeness": {
+          "severity": "required",
+          "message": "Every component must have all 6 STRIDE categories assessed"
+        }
+      },
       "deliverable": {
         "format": "markdown",
         "tool": "wkfl_export_report",
