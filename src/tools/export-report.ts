@@ -1,7 +1,14 @@
-/** Export a formatted compliance assessment report from stored state. */
+/** Export a formatted compliance or STRIDE assessment report from stored state. */
 
 import type { ToolResult } from "./index.js";
 import { loadState, listStates } from "../state/store.js";
+import {
+  buildStrideReport,
+  type ThreatEntry,
+  type MitigationEntry,
+  type ComponentEntry,
+  type GapEntry,
+} from "./export-report-stride.js";
 
 interface OrgProfile {
   name?: string;
@@ -339,6 +346,46 @@ export async function wkflExportReport(
     const entry = loadState(assessmentId, key);
     return entry?.data ?? null;
   };
+
+  // Detect STRIDE report format: explicit argument or presence of stride-specific state keys
+  const reportFormat = args.report_format as string | undefined;
+  const storedKeys = new Set(listing.entries.map((e) => e.key));
+  const isStride =
+    reportFormat === "stride" ||
+    storedKeys.has("stride_threats") ||
+    storedKeys.has("coverage_matrix");
+
+  if (isStride) {
+    const systemName = (load("system_name") ?? "Unknown System") as string;
+    const components = (load("components") ?? []) as ComponentEntry[];
+    const threats = (load("stride_threats") ?? []) as ThreatEntry[];
+    const mitigations = (load("threat_mitigations") ?? []) as MitigationEntry[];
+    const gaps = (load("gaps") ?? []) as GapEntry[];
+    const dfdMarkdown = (load("dfd_markdown") ?? null) as string | null;
+    const documentsReviewed = (load("documents_reviewed") ?? []) as string[];
+
+    const report = buildStrideReport(
+      assessmentId,
+      systemName,
+      components,
+      threats,
+      mitigations,
+      gaps,
+      dfdMarkdown,
+      documentsReviewed,
+    );
+
+    return {
+      content: [
+        {
+          type: "text",
+          text: report,
+        },
+      ],
+    };
+  }
+
+  // --- Compliance report path ---
 
   const orgProfile = (load("org_profile") ?? {}) as OrgProfile;
   const documents = (load("documents") ?? []) as Array<{

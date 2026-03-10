@@ -190,13 +190,19 @@ export const TOOL_DEFINITIONS = [
   {
     name: "wkfl_export_report",
     description:
-      "Assemble a formatted compliance assessment report from stored state. Loads all domain group results, coverage statistics, scope/methodology, and evidence references, then renders a structured Markdown document with: executive summary, compliance matrix table, gap analysis, evidence register, and client attestations. Call this in Phase 4 after all domain groups are stored.",
+      'Assemble a formatted assessment report from stored state. Supports two formats: compliance (default) and STRIDE threat model. For compliance: loads domain groups, coverage stats, scope/methodology, evidence refs — renders executive summary, compliance matrix, gap analysis, evidence register. For STRIDE: loads components, threats, mitigations, gaps, DFD — renders scope, DFD, threats by STRIDE category, risk matrix, mitigations, gaps register. Format auto-detected from stored state keys, or set report_format explicitly.',
     inputSchema: {
       type: "object" as const,
       properties: {
         assessment_id: {
           type: "string",
           description: "Assessment identifier to export.",
+        },
+        report_format: {
+          type: "string",
+          enum: ["compliance", "stride"],
+          description:
+            'Report format. "stride" for STRIDE threat model, "compliance" for compliance assessment. Auto-detected from stored state if omitted.',
         },
       },
       required: ["assessment_id"],
