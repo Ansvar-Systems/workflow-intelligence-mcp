@@ -42,11 +42,27 @@ import {
   checkFrameworkVersionRecorded,
 } from "./rules/compliance.js";
 import {
+  checkAttackPathsReferenceKnownThreats,
+  checkEvidenceManifestReady,
   checkStrideCoverageComplete,
   checkEveryThreatHasCvss,
+  checkEveryThreatHasBusinessContext,
+  checkEveryThreatHasSeverity,
   checkNoDuplicateThreatIds,
   checkHighCriticalThreatsHaveControls,
+  checkMcpGroundingSufficient,
+  checkDocumentEvidenceHasCitationDetails,
+  checkDomainChallengeCoherence,
+  checkLargeThreatModelsUseBatching,
+  checkSeverityDistributionHasSignal,
+  checkVerificationTestsReferenceKnownThreats,
 } from "./rules/stride.js";
+import {
+  checkScopeReadinessRecorded,
+  checkBlockingClientQuestionsResolved,
+  checkBlockingGapsHaveResolutionPath,
+  checkClientQuestionTraceability,
+} from "./rules/gap-analysis.js";
 
 // ---------------------------------------------------------------------------
 // Rule registry
@@ -127,9 +143,25 @@ registerStructuralRule("framework_version_recorded", checkFrameworkVersionRecord
 
 // STRIDE threat model rules
 registerStructuralRule("stride_coverage_complete", checkStrideCoverageComplete);
+registerStructuralRule("evidence_manifest_ready", checkEvidenceManifestReady);
 registerStructuralRule("every_threat_has_cvss", checkEveryThreatHasCvss);
+registerStructuralRule("every_threat_has_business_context", checkEveryThreatHasBusinessContext);
+registerStructuralRule("every_threat_has_severity", checkEveryThreatHasSeverity);
 registerStructuralRule("no_duplicate_threat_ids", checkNoDuplicateThreatIds);
 registerStructuralRule("high_critical_threats_have_controls", checkHighCriticalThreatsHaveControls);
+registerStructuralRule("mcp_grounding_sufficient", checkMcpGroundingSufficient);
+registerStructuralRule("document_evidence_has_citation_details", checkDocumentEvidenceHasCitationDetails);
+registerStructuralRule("severity_distribution_has_signal", checkSeverityDistributionHasSignal);
+registerStructuralRule("attack_paths_reference_known_threats", checkAttackPathsReferenceKnownThreats);
+registerStructuralRule("verification_tests_reference_known_threats", checkVerificationTestsReferenceKnownThreats);
+registerStructuralRule("large_threat_models_use_batching", checkLargeThreatModelsUseBatching);
+registerStructuralRule("domain_challenge_coherence", checkDomainChallengeCoherence);
+
+// Generic scope-gap / client-question rules
+registerStructuralRule("scope_readiness_recorded", checkScopeReadinessRecorded);
+registerStructuralRule("blocking_client_questions_resolved", checkBlockingClientQuestionsResolved);
+registerStructuralRule("blocking_gaps_have_resolution_path", checkBlockingGapsHaveResolutionPath);
+registerStructuralRule("client_question_traceability", checkClientQuestionTraceability);
 
 // ---------------------------------------------------------------------------
 // Engine
