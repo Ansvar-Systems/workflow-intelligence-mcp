@@ -2,13 +2,49 @@
 
 import type { ToolResult } from "./index.js";
 import { loadState, listStates } from "../state/store.js";
+import { getTaskById } from "./get-task-definition.js";
+import { evaluateCompleteness } from "../validation/engine.js";
 import {
   buildStrideReport,
   type ThreatEntry,
   type MitigationEntry,
   type ComponentEntry,
+  type DataFlowEntry,
+  type TrustBoundaryEntry,
+  type ExistingControlEntry,
   type GapEntry,
+  type ScopeReadinessEntry,
+  type ClientQuestionEntry,
+  type ClientAttestationEntry,
+  type AttackPathEntry,
+  type VerificationTestEntry,
+  type RedFlagEntry,
+  type EvidenceManifestEntry,
 } from "./export-report-stride.js";
+
+interface StrideDocumentCitation {
+  document?: string;
+  doc_id?: string;
+}
+
+interface ScopeAndDfdState {
+  system_name?: string;
+  components?: ComponentEntry[];
+  data_flows?: DataFlowEntry[];
+  trust_boundaries?: TrustBoundaryEntry[];
+  existing_controls?: ExistingControlEntry[];
+  dfd_markdown?: string | null;
+  documents_reviewed?: string[];
+  document_citations?: StrideDocumentCitation[];
+  gaps?: GapEntry[];
+}
+
+interface ScopeGapAnalysisState {
+  scope_readiness?: ScopeReadinessEntry;
+  client_questions?: ClientQuestionEntry[];
+  client_attestations?: ClientAttestationEntry[];
+  gaps?: GapEntry[];
+}
 
 interface OrgProfile {
   name?: string;
@@ -68,6 +104,44 @@ function esc(s: string | undefined): string {
 function pct(n: number, total: number): string {
   if (total === 0) return "0";
   return ((n / total) * 100).toFixed(1);
+}
+
+function isStringArray(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((item) => typeof item === "string");
+}
+
+function isObjectArray<T extends object>(value: unknown): value is T[] {
+  return Array.isArray(value) && value.every((item) => typeof item === "object" && item !== null);
+}
+
+function uniqueStrings(values: Array<string | undefined>): string[] {
+  const seen = new Set<string>();
+  const result: string[] = [];
+
+  for (const value of values) {
+    if (!value) continue;
+    if (seen.has(value)) continue;
+    seen.add(value);
+    result.push(value);
+  }
+
+  return result;
+}
+
+function documentNamesFromCitations(citations: StrideDocumentCitation[]): string[] {
+  return uniqueStrings(citations.map((citation) => citation.document || citation.doc_id));
+}
+
+function validateStrideReportState(state: Record<string, unknown>) {
+  const definition = getTaskById("stride_threat_model");
+  if (!definition) {
+    return null;
+  }
+  return evaluateCompleteness(
+    state,
+    definition.completion_criteria,
+    definition.quality_rubric,
+  );
 }
 
 function buildReport(
@@ -352,28 +426,179 @@ export async function wkflExportReport(
   const storedKeys = new Set(listing.entries.map((e) => e.key));
   const isStride =
     reportFormat === "stride" ||
+    storedKeys.has("scope_and_dfd") ||
     storedKeys.has("stride_threats") ||
-    storedKeys.has("coverage_matrix");
+    storedKeys.has("coverage_matrix") ||
+    storedKeys.has("threat_mitigations");
 
   if (isStride) {
-    const systemName = (load("system_name") ?? "Unknown System") as string;
-    const components = (load("components") ?? []) as ComponentEntry[];
-    const threats = (load("stride_threats") ?? []) as ThreatEntry[];
-    const mitigations = (load("threat_mitigations") ?? []) as MitigationEntry[];
-    const gaps = (load("gaps") ?? []) as GapEntry[];
-    const dfdMarkdown = (load("dfd_markdown") ?? null) as string | null;
-    const documentsReviewed = (load("documents_reviewed") ?? []) as string[];
+    const evidenceManifest = (load("evidence_manifest") ?? {}) as EvidenceManifestEntry;
+    const scopeAndDfd = (load("scope_and_dfd") ?? {}) as ScopeAndDfdState;
+    const scopeGapAnalysis = (load("scope_gap_analysis") ?? {}) as ScopeGapAnalysisState;
+    const topLevelComponents = load("components");
+    const storedThreats = load("threats");
+    const legacyStrideThreats = load("stride_threats");
+    const storedMitigations = load("threat_mitigations");
+    const storedCoverageMatrix = load("coverage_matrix");
+    const storedGaps = load("gaps");
+    const storedScopeReadiness = load("scope_readiness");
+    const storedClientQuestions = load("client_questions");
+    const storedClientAttestations = load("client_attestations");
+    const storedDfdMarkdown = load("dfd_markdown");
+    const storedDocumentsReviewed = load("documents_reviewed");
+    const storedDocumentCitations = load("document_citations");
+    const storedAttackPaths = load("attack_paths");
+    const storedVerificationTests = load("verification_tests");
+    const storedRedFlags = load("red_flags");
+    const storedSystemName = load("system_name");
+    const storedDetectedDomains = load("detected_domains");
+    const storedDomainExpertsUsed = load("domain_experts_used");
+    const storedDomainFindings = load("domain_findings");
+    const storedDomainAttestations = load("domain_attestations");
 
-    const report = buildStrideReport(
+    const systemName: string =
+      typeof storedSystemName === "string"
+        ? storedSystemName
+        : typeof scopeAndDfd.system_name === "string"
+          ? scopeAndDfd.system_name
+          : "Unknown System";
+    const components = isObjectArray<ComponentEntry>(topLevelComponents)
+      ? topLevelComponents
+      : (scopeAndDfd.components ?? []);
+    const dataFlows = isObjectArray<DataFlowEntry>(scopeAndDfd.data_flows)
+      ? scopeAndDfd.data_flows
+      : [];
+    const trustBoundaries = isObjectArray<TrustBoundaryEntry>(scopeAndDfd.trust_boundaries)
+      ? scopeAndDfd.trust_boundaries
+      : [];
+    const existingControls = isObjectArray<ExistingControlEntry>(scopeAndDfd.existing_controls)
+      ? scopeAndDfd.existing_controls
+      : [];
+    const threats = isObjectArray<ThreatEntry>(storedThreats)
+      ? storedThreats
+      : isObjectArray<ThreatEntry>(legacyStrideThreats)
+        ? legacyStrideThreats
+        : [];
+    const mitigations = isObjectArray<MitigationEntry>(storedMitigations)
+      ? storedMitigations
+      : [];
+    const coverageMatrix =
+      storedCoverageMatrix && typeof storedCoverageMatrix === "object"
+        ? (storedCoverageMatrix as Record<string, Record<string, boolean>>)
+        : {};
+    const gaps = isObjectArray<GapEntry>(storedGaps)
+      ? storedGaps
+      : [
+          ...(scopeAndDfd.gaps ?? []),
+          ...(scopeGapAnalysis.gaps ?? []),
+        ];
+    const scopeReadiness =
+      storedScopeReadiness && typeof storedScopeReadiness === "object"
+        ? (storedScopeReadiness as ScopeReadinessEntry)
+        : (scopeGapAnalysis.scope_readiness ?? null);
+    const clientQuestions = isObjectArray<ClientQuestionEntry>(storedClientQuestions)
+      ? storedClientQuestions
+      : (scopeGapAnalysis.client_questions ?? []);
+    const clientAttestations = isObjectArray<ClientAttestationEntry>(storedClientAttestations)
+      ? storedClientAttestations
+      : (scopeGapAnalysis.client_attestations ?? []);
+    const dfdMarkdown =
+      (typeof storedDfdMarkdown === "string" ? storedDfdMarkdown : null) ??
+      scopeAndDfd.dfd_markdown ??
+      null;
+    const documentCitations = isObjectArray<StrideDocumentCitation>(storedDocumentCitations)
+      ? storedDocumentCitations
+      : (scopeAndDfd.document_citations ?? []);
+    const documentsReviewed = isStringArray(storedDocumentsReviewed)
+      ? uniqueStrings([
+          ...storedDocumentsReviewed,
+          ...(scopeAndDfd.documents_reviewed ?? []),
+          ...documentNamesFromCitations(documentCitations),
+        ])
+      : uniqueStrings([
+          ...(scopeAndDfd.documents_reviewed ?? []),
+          ...documentNamesFromCitations(documentCitations),
+        ]);
+    const attackPaths = isObjectArray<AttackPathEntry>(storedAttackPaths)
+      ? storedAttackPaths
+      : [];
+    const verificationTests = isObjectArray<VerificationTestEntry>(storedVerificationTests)
+      ? storedVerificationTests
+      : [];
+    const redFlags = isObjectArray<RedFlagEntry>(storedRedFlags)
+      ? storedRedFlags
+      : [];
+    const detectedDomains = isStringArray(storedDetectedDomains)
+      ? storedDetectedDomains
+      : [];
+    const domainExpertsUsed = isObjectArray<{ agent_id: string; status: string }>(storedDomainExpertsUsed)
+      ? storedDomainExpertsUsed
+      : [];
+    const domainFindings = isObjectArray<{ id: string; domain: string; title: string; description: string; status: string }>(storedDomainFindings)
+      ? storedDomainFindings
+      : [];
+    const domainAttestations = isStringArray(storedDomainAttestations)
+      ? storedDomainAttestations
+      : [];
+    const validation = validateStrideReportState({
+      system_name: systemName,
+      evidence_manifest: evidenceManifest,
+      components,
+      data_flows: dataFlows,
+      trust_boundaries: trustBoundaries,
+      scope_readiness: scopeReadiness ?? undefined,
+      client_questions: clientQuestions,
+      client_attestations: clientAttestations,
+      threats,
+      coverage_matrix: coverageMatrix,
+      attack_paths: attackPaths,
+      verification_tests: verificationTests,
+      threat_mitigations: mitigations,
+      gaps,
+      report_markdown: "__pending_export__",
+    });
+
+    if (validation && validation.status === "incomplete") {
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({
+              error: "incomplete_stride_state",
+              message: "STRIDE report export blocked because required state is incomplete.",
+              missing: validation.missing,
+            }),
+          },
+        ],
+        isError: true,
+      };
+    }
+
+    const report = buildStrideReport({
       assessmentId,
       systemName,
+      evidenceManifest,
       components,
+      dataFlows,
+      trustBoundaries,
+      existingControls,
       threats,
       mitigations,
       gaps,
       dfdMarkdown,
       documentsReviewed,
-    );
+      scopeReadiness,
+      clientQuestions,
+      clientAttestations,
+      attackPaths,
+      verificationTests,
+      redFlags,
+      qualityWarnings: validation?.warnings.map((warning) => warning.details) ?? [],
+      detectedDomains,
+      domainExpertsUsed,
+      domainFindings,
+      domainAttestations,
+    });
 
     return {
       content: [

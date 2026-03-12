@@ -48,4 +48,30 @@ describe("get_task_definition", () => {
     expect(data.mcp_tools[0].tools).toContain("search_controls");
     expect(data.mcp_tools[0].guidance).toBeDefined();
   });
+
+  it("exposes the expanded STRIDE workflow backbone and MCP grounding surface", async () => {
+    const result = await getTaskDefinition({ task_id: "stride_threat_model" });
+    expect(result.isError).toBeUndefined();
+    const data = JSON.parse(result.content[0].text);
+
+    const phaseIds = data.phases.map((phase: { id: string }) => phase.id);
+    expect(phaseIds).toContain("phase_0_evidence_manifest");
+    expect(phaseIds).toContain("phase_2b_domain_challenge");
+    expect(phaseIds).toContain("phase_3b_threat_enrichment");
+    expect(phaseIds).toContain("phase_3c_risk_calibration");
+    expect(phaseIds).toContain("phase_4a_attack_path_synthesis");
+    expect(phaseIds).toContain("phase_4b_verification_test_generation");
+    expect(phaseIds).toContain("phase_5_mitigation_mapping");
+    expect(phaseIds).toContain("phase_6_report_assembly");
+
+    const threatIntel = data.mcp_tools.find((tool: { mcp: string }) => tool.mcp === "threat-intel-mcp");
+    expect(threatIntel.tools).toContain("search_d3fend_defenses");
+    expect(threatIntel.tools).toContain("search_atlas_techniques");
+
+    const pentestKnowledge = data.mcp_tools.find((tool: { mcp: string }) => tool.mcp === "pentest-knowledge-mcp");
+    expect(pentestKnowledge.tools).toContain("pt_get_attack_surface");
+
+    const securityControls = data.mcp_tools.find((tool: { mcp: string }) => tool.mcp === "security-controls-mcp");
+    expect(securityControls.tools).toContain("map_frameworks");
+  });
 });

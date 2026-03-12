@@ -40,8 +40,9 @@ function interpolate(
  *
  * For each field in the rubric:
  * - If the rubric entry has `min_words`, check the string field's word count.
+ * - If the rubric entry has `min_count`, check the array field length.
  * - If the rubric entry has `per_item`, iterate array items and check
- *   each nested field rule (currently supports `min_words`).
+ *   each nested field rule (currently supports `min_words` and `min_count`).
  *
  * All failures have severity "warning".
  */
@@ -64,6 +65,20 @@ export function evaluateQualityRubric(
         const message =
           entry.message ??
           `Field '${field}' has ${words} words, minimum is ${entry.min_words}`;
+        failures.push({
+          rule: "quality_rubric",
+          severity: "warning",
+          details: message,
+          field,
+        });
+      }
+    }
+
+    if (entry.min_count !== undefined && Array.isArray(value)) {
+      if (value.length < entry.min_count) {
+        const message =
+          entry.message ??
+          `Field '${field}' has ${value.length} item(s), minimum is ${entry.min_count}`;
         failures.push({
           rule: "quality_rubric",
           severity: "warning",
@@ -107,6 +122,18 @@ export function evaluateQualityRubric(
                   field: `${field}[${i}].${itemField}`,
                 });
               }
+            }
+          }
+
+          if (itemRule.min_count !== undefined) {
+            if (!Array.isArray(itemValue) || itemValue.length < itemRule.min_count) {
+              const message = interpolate(itemRule.message, item);
+              failures.push({
+                rule: "quality_rubric",
+                severity: "warning",
+                details: message,
+                field: `${field}[${i}].${itemField}`,
+              });
             }
           }
         }

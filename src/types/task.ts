@@ -29,12 +29,14 @@ export interface StructuralRule {
 
 export interface QualityRubricFieldRule {
   min_words?: number;
+  min_count?: number;
   severity: "warning";
   message: string;
 }
 
 export interface QualityRubricEntry {
   min_words?: number;
+  min_count?: number;
   must_mention_any?: string[];
   severity?: "warning";
   message?: string;
