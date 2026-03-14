@@ -66,12 +66,19 @@ interface MatrixRow {
   req_id: string;
   requirement_text?: string;
   framework?: string;
+  authority_id?: string;
+  authority_type?: string;
+  authority_title?: string;
+  source_kind?: string;
+  source_ref?: string;
+  language?: string;
   verdict: string;
   confidence?: string;
   evidence_refs?: EvidenceRef[];
   verbatim_quote?: string;
   evidence_summary?: string;
   gap_description?: string;
+  remediation_guidance?: string;
   requires_human_review?: boolean;
   search_queries_used?: string[];
 }
@@ -80,10 +87,13 @@ interface CoverageStats {
   total_requirements?: number;
   compliant?: number;
   partial?: number;
+  documented?: number;
+  partially_documented?: number;
   not_found?: number;
   contradicted?: number;
   not_applicable?: number;
   requires_human_review?: number;
+  requires_human_assessment?: number;
   coverage_percentage?: number;
 }
 
@@ -152,6 +162,8 @@ function buildReport(
   stats: CoverageStats,
   scope: ScopeMethodology,
   documents: Array<{ filename: string; doc_id?: string }>,
+  assumptions: Array<{ assumption: string; confidence_impact?: string }>,
+  expertsUsed: Array<{ agent_id: string; display_name?: string; status: string; entries_count?: number }>,
 ): string {
   const lines: string[] = [];
   const date = scope.assessment_date || new Date().toISOString().split("T")[0];
@@ -179,14 +191,25 @@ function buildReport(
   lines.push("");
   lines.push("### Compliance Posture");
   lines.push("");
+
+  const documented = stats.documented ?? stats.compliant ?? 0;
+  const partiallyDocumented = stats.partially_documented ?? stats.partial ?? 0;
+  const humanReview = stats.requires_human_assessment ?? stats.requires_human_review ?? 0;
+
+  // Use new-style labels when new-style stats are present, otherwise old-style
+  const useNewLabels = stats.documented != null || stats.partially_documented != null || stats.requires_human_assessment != null;
+  const docLabel = useNewLabels ? "Documented" : "Compliant";
+  const partialLabel = useNewLabels ? "Partially Documented" : "Partial";
+  const humanLabel = useNewLabels ? "Requires Human Assessment" : "Requires Human Review";
+
   lines.push("| Metric | Count | % |");
   lines.push("|--------|------:|--:|");
   lines.push(`| Total Requirements | ${total} | — |`);
   lines.push(
-    `| Compliant | ${stats.compliant ?? 0} | ${pct(stats.compliant ?? 0, total)}% |`,
+    `| ${docLabel} | ${documented} | ${pct(documented, total)}% |`,
   );
   lines.push(
-    `| Partial | ${stats.partial ?? 0} | ${pct(stats.partial ?? 0, total)}% |`,
+    `| ${partialLabel} | ${partiallyDocumented} | ${pct(partiallyDocumented, total)}% |`,
   );
   lines.push(
     `| Not Found | ${stats.not_found ?? 0} | ${pct(stats.not_found ?? 0, total)}% |`,
@@ -198,7 +221,7 @@ function buildReport(
     `| Not Applicable | ${stats.not_applicable ?? 0} | ${pct(stats.not_applicable ?? 0, total)}% |`,
   );
   lines.push(
-    `| Requires Human Review | ${stats.requires_human_review ?? 0} | ${pct(stats.requires_human_review ?? 0, total)}% |`,
+    `| ${humanLabel} | ${humanReview} | ${pct(humanReview, total)}% |`,
   );
   lines.push("");
   lines.push(
@@ -254,16 +277,17 @@ function buildReport(
   lines.push("## 3. Compliance Matrix");
   lines.push("");
   lines.push(
-    "| # | Req ID | Framework | Verdict | Confidence | Evidence Summary | Gap |",
+    "| # | Req ID | Framework / Authority | Verdict | Confidence | Evidence Summary | Gap |",
   );
   lines.push(
-    "|--:|--------|-----------|---------|:----------:|-----------------|-----|",
+    "|--:|--------|----------------------|---------|:----------:|-----------------|-----|",
   );
   for (let i = 0; i < matrix.length; i++) {
     const r = matrix[i];
     const flag = r.requires_human_review ? " ⚠️" : "";
+    const fwLabel = r.authority_title || r.authority_id || r.framework || "—";
     lines.push(
-      `| ${i + 1} | ${esc(r.req_id)} | ${esc(r.framework)} | **${r.verdict}**${flag} | ${r.confidence ?? "—"} | ${esc(r.evidence_summary)} | ${esc(r.gap_description)} |`,
+      `| ${i + 1} | ${esc(r.req_id)} | ${esc(fwLabel)} | **${r.verdict}**${flag} | ${r.confidence ?? "—"} | ${esc(r.evidence_summary)} | ${esc(r.gap_description)} |`,
     );
   }
   lines.push("");
@@ -272,8 +296,11 @@ function buildReport(
 
   // Gap Analysis
   const notFound = matrix.filter((r) => r.verdict === "not_found");
-  const partial = matrix.filter((r) => r.verdict === "partial");
+  const partial = matrix.filter((r) => r.verdict === "partial" || r.verdict === "partially_documented");
   const contradicted = matrix.filter((r) => r.verdict === "contradicted");
+
+  const fwForRow = (r: MatrixRow): string =>
+    r.authority_title || r.authority_id || r.framework || "—";
 
   lines.push("## 4. Gap Analysis");
   lines.push("");
@@ -285,18 +312,19 @@ function buildReport(
     lines.push("");
     for (const r of notFound) {
       lines.push(
-        `- **${r.req_id}** (${r.framework ?? "—"}): ${r.requirement_text ?? "—"}`,
+        `- **${r.req_id}** (${fwForRow(r)}): ${r.requirement_text ?? "—"}`,
       );
     }
     lines.push("");
   }
 
   if (partial.length > 0) {
-    lines.push(`### Partial Compliance (${partial.length})`);
+    lines.push(`### Partial / Partially Documented (${partial.length})`);
     lines.push("");
     for (const r of partial) {
-      lines.push(`- **${r.req_id}** (${r.framework ?? "—"})`);
+      lines.push(`- **${r.req_id}** (${fwForRow(r)})`);
       if (r.gap_description) lines.push(`  - Gap: ${r.gap_description}`);
+      if (r.remediation_guidance) lines.push(`  - Remediation: ${r.remediation_guidance}`);
     }
     lines.push("");
   }
@@ -306,14 +334,14 @@ function buildReport(
     lines.push("");
     for (const r of contradicted) {
       lines.push(
-        `- **${r.req_id}** (${r.framework ?? "—"}): ${r.evidence_summary ?? "—"}`,
+        `- **${r.req_id}** (${fwForRow(r)}): ${r.evidence_summary ?? "—"}`,
       );
     }
     lines.push("");
   }
 
   if (notFound.length === 0 && partial.length === 0 && contradicted.length === 0) {
-    lines.push("No gaps identified — all assessed requirements are fully compliant or not applicable.");
+    lines.push("No gaps identified — all assessed requirements are fully documented or not applicable.");
     lines.push("");
   }
 
@@ -366,6 +394,33 @@ function buildReport(
       if (att.impact) lines.push(`**Impact:** ${att.impact}  `);
       lines.push("");
     }
+    lines.push("---");
+    lines.push("");
+  }
+
+  // Assumptions & Limitations
+  if (assumptions.length > 0) {
+    lines.push("## Assumptions & Limitations");
+    lines.push("");
+    for (const a of assumptions) {
+      lines.push(`- ${a.assumption}`);
+      if (a.confidence_impact) lines.push(`  - Confidence impact: ${a.confidence_impact}`);
+    }
+    lines.push("");
+    lines.push("---");
+    lines.push("");
+  }
+
+  // Experts Consulted
+  if (expertsUsed.length > 0) {
+    lines.push("## Experts Consulted");
+    lines.push("");
+    lines.push("| Expert | Status | Entries |");
+    lines.push("|--------|--------|--------:|");
+    for (const e of expertsUsed) {
+      lines.push(`| ${esc(e.display_name || e.agent_id)} | ${e.status} | ${e.entries_count ?? "—"} |`);
+    }
+    lines.push("");
     lines.push("---");
     lines.push("");
   }
@@ -621,32 +676,47 @@ export async function wkflExportReport(
   const coverageStats = (load("coverage_stats") ?? {}) as CoverageStats;
   const scopeMethodology = (load("scope_and_methodology") ?? {}) as ScopeMethodology;
 
-  // Assemble compliance matrix from domain group keys
-  const matrix: MatrixRow[] = [];
-  const groupKeys = listing.entries
-    .map((e) => e.key)
-    .filter((k) => k.startsWith("group_"));
+  const detectedAuthorities = (load("detected_authorities") ?? []) as Array<{
+    authority_id: string;
+    authority_type?: string;
+    authority_title?: string;
+  }>;
+  const assumptions = (load("assumptions") ?? []) as Array<{
+    assumption: string;
+    confidence_impact?: string;
+  }>;
+  const expertsUsed = (load("experts_used") ?? []) as Array<{
+    agent_id: string;
+    display_name?: string;
+    status: string;
+    entries_count?: number;
+  }>;
 
-  for (const gk of groupKeys) {
-    const groupData = load(gk);
-    if (Array.isArray(groupData)) {
-      matrix.push(...(groupData as MatrixRow[]));
-    } else if (
-      groupData &&
-      typeof groupData === "object" &&
-      "matrix" in (groupData as Record<string, unknown>)
-    ) {
-      const rows = (groupData as Record<string, unknown>).matrix;
-      if (Array.isArray(rows)) {
-        matrix.push(...(rows as MatrixRow[]));
+  // Assemble compliance matrix: try new-style single key first, fall back to group_* keys
+  const matrix: MatrixRow[] = [];
+  const preAssembled = load("compliance_matrix");
+  if (Array.isArray(preAssembled) && preAssembled.length > 0) {
+    matrix.push(...(preAssembled as MatrixRow[]));
+  } else {
+    const groupKeys = listing.entries
+      .map((e) => e.key)
+      .filter((k) => k.startsWith("group_"));
+
+    for (const gk of groupKeys) {
+      const groupData = load(gk);
+      if (Array.isArray(groupData)) {
+        matrix.push(...(groupData as MatrixRow[]));
+      } else if (
+        groupData &&
+        typeof groupData === "object" &&
+        "matrix" in (groupData as Record<string, unknown>)
+      ) {
+        const rows = (groupData as Record<string, unknown>).matrix;
+        if (Array.isArray(rows)) {
+          matrix.push(...(rows as MatrixRow[]));
+        }
       }
     }
-  }
-
-  // Also check for a pre-assembled compliance_matrix key
-  const preAssembled = load("compliance_matrix");
-  if (Array.isArray(preAssembled) && matrix.length === 0) {
-    matrix.push(...(preAssembled as MatrixRow[]));
   }
 
   const report = buildReport(
@@ -657,6 +727,8 @@ export async function wkflExportReport(
     coverageStats,
     scopeMethodology,
     documents,
+    assumptions,
+    expertsUsed,
   );
 
   return {

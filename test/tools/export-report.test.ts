@@ -136,7 +136,7 @@ describe("wkfl_export_report", () => {
     // Gap Analysis
     expect(report).toContain("## 4. Gap Analysis");
     expect(report).toContain("Not Found (1)");
-    expect(report).toContain("Partial Compliance (1)");
+    expect(report).toContain("Partial / Partially Documented (1)");
     expect(report).toContain("No defined review schedule");
 
     // Evidence Register
