@@ -8,16 +8,18 @@ export async function wkflStoreState(
 ): Promise<ToolResult> {
   const assessmentId = args.assessment_id as string;
   const key = args.key as string;
-  const data = args.data;
+  // Accept data, value, or state as the payload field — LLMs vary in naming.
+  // If none provided, store an empty object (phase initialization pattern).
+  const data = args.data ?? args.value ?? args.state ?? {};
 
-  if (!assessmentId || !key || data === undefined) {
+  if (!assessmentId || !key) {
     return {
       content: [
         {
           type: "text",
           text: JSON.stringify({
             error: "missing_parameter",
-            message: "assessment_id, key, and data are all required.",
+            message: "assessment_id and key are required.",
           }),
         },
       ],
