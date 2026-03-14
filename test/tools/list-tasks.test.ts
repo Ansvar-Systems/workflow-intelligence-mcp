@@ -8,13 +8,13 @@ describe("list_tasks", () => {
     expect(data.tasks.length).toBeGreaterThanOrEqual(2);
     const ids = data.tasks.map((t: { id: string }) => t.id);
     expect(ids).toContain("dfd_construction");
-    expect(ids).toContain("compliance_assessment");
+    expect(ids).toContain("gap_analysis");
   });
 
   it("filters by category", async () => {
     const result = await listTasks({ category: "threat_modeling" });
     const data = JSON.parse(result.content[0].text);
-    expect(data.tasks).toHaveLength(1);
+    expect(data.tasks).toHaveLength(2);
 
     const empty = await listTasks({ category: "nonexistent" });
     const emptyData = JSON.parse(empty.content[0].text);

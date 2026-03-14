@@ -1,111 +1,144 @@
 {
-  "id": "compliance_assessment",
-  "name": "Compliance Assessment",
+  "id": "gap_analysis",
+  "name": "Gap Analysis",
   "category": "gap_analysis",
-  "version": "1.0",
+  "version": "2.0",
   "standalone": true,
   "used_in_workflows": [],
-  "description": "Universal compliance assessment engine. Produces an exhaustive compliance matrix with verdicts for every requirement, evidence citations back to source documents, and coverage statistics. Framework-agnostic: works with any regulatory MCP (ISO 27001, DORA, NIS2, etc.), custom requirement documents, or direct input.",
-  "estimated_duration": "30-120 min depending on framework scope and document volume",
+  "description": "Authority-agnostic gap analysis. Assesses organizational documentation against any combination of laws, regulations, directives, standards, contracts, policies, or custom uploaded material. The guider orchestrates: indexes documents, detects applicable authorities via heuristic signals, delegates baseline extraction to material-gap-analyst, optionally delegates to domain experts for MCP-grounded challenge, merges all entries into a unified compliance matrix with overlap dedup, and assembles a single report with findings register, remediation plan, and assumptions register. Works in any language. No fixed questionnaires — the guider assesses what was provided and asks only load-bearing questions.",
+  "estimated_duration": "30-120 min depending on authority scope, document volume, and expert availability",
   "dependencies": [],
+  "authority_detection": {
+    "signals": {
+      "NIS2": ["NIS2", "NIS 2", "2022/2555", "netwerk- en informatiebeveiliging", "Cyberbeveiligingswet"],
+      "GDPR": ["GDPR", "AVG", "2016/679", "persoonsgegevens", "data protection", "Datenschutz"],
+      "ISO_27001": ["ISO 27001", "IEC 27001", "ISMS", "information security management"],
+      "DORA": ["DORA", "2022/2554", "digital operational resilience"],
+      "BIO": ["BIO", "Baseline Informatiebeveiliging Overheid"],
+      "NEN_7510": ["NEN 7510", "NEN7510"]
+    },
+    "jurisdiction_signals": {
+      "NL": ["Nederland", "Dutch", "provincie", "gemeente", "rijksoverheid", "BIO", "Archiefwet", "Woo"],
+      "DE": ["Deutschland", "German", "Bundesamt", "BSI", "KRITIS"],
+      "EU": ["European Union", "EU", "Europese Unie"]
+    }
+  },
+  "authority_expert_hints": {
+    "NIS2": ["nis2-expert"],
+    "GDPR": ["gdpr-expert", "privacy-expert"],
+    "DORA": ["dora-expert", "banking-expert"],
+    "ISO_27001": ["controls-mapper", "audit-expert"],
+    "BIO": ["controls-mapper"],
+    "HIPAA": ["healthcare-expert", "us-compliance-expert"],
+    "PCI_DSS": ["banking-expert", "financial-services-expert"],
+    "ISO_21434": ["automotive-expert"]
+  },
+  "common_gap_entry_schema": {
+    "type": "object",
+    "properties": {
+      "authority_id": {
+        "type": "string",
+        "description": "Canonical identifier for the authority (e.g., 'NIS2', 'ISO_27001_2022', 'GDPR', 'Archiefwet', 'client_policy_monitoring_logging'). Stable key for dedup and grouping."
+      },
+      "authority_type": {
+        "type": "string",
+        "enum": ["law", "regulation", "directive", "standard", "contract", "policy", "custom"],
+        "description": "What kind of authority this is. Determines report section ordering and remediation framing."
+      },
+      "authority_title": {
+        "type": "string",
+        "description": "Human-readable title in the authority's original language (e.g., 'Richtlijn (EU) 2022/2555 (NIS2)', 'ISO/IEC 27001:2022')."
+      },
+      "requirement_id": {
+        "type": "string",
+        "description": "Identifier for the specific requirement within the authority (e.g., 'Art. 21(2)(d)', 'A.8.15', 'Section 4.3'). Must be unique within authority_id."
+      },
+      "requirement_text": {
+        "type": "string",
+        "description": "The requirement text, sourced from MCP tool call or uploaded document. Verbatim where possible."
+      },
+      "source_kind": {
+        "type": "string",
+        "enum": ["mcp_grounded", "document_extracted", "user_specified", "assumed"],
+        "description": "How this requirement was sourced. mcp_grounded = from a regulatory/standards MCP. document_extracted = from an uploaded document. user_specified = user named it directly. assumed = inferred by the analyst."
+      },
+      "source_ref": {
+        "type": "string",
+        "description": "Traceability reference — MCP tool name + arguments, or doc_id + section_ref. Enables verification."
+      },
+      "verdict": {
+        "type": "string",
+        "enum": ["documented", "partially_documented", "not_found", "contradicted", "not_applicable", "requires_human_assessment"],
+        "description": "Assessment verdict. 'documented' = evidence found. 'partially_documented' = incomplete evidence. 'not_found' = no evidence after searching. 'contradicted' = evidence contradicts requirement. 'not_applicable' = excluded per scope. 'requires_human_assessment' = needs interviews/observation."
+      },
+      "evidence_refs": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "doc_id": { "type": "string" },
+            "section_ref": { "type": "string" },
+            "filename": { "type": "string" },
+            "verbatim_quote": { "type": "string" },
+            "evidence_type": {
+              "type": "string",
+              "enum": ["policy_evidence", "procedural_evidence", "record_evidence"]
+            }
+          },
+          "required": ["doc_id", "section_ref"]
+        },
+        "description": "Document evidence backing the verdict. Every 'documented' verdict must have at least one entry with a verbatim_quote."
+      },
+      "gap_description": {
+        "type": "string",
+        "description": "For 'partially_documented' and 'not_found' verdicts — what is missing and why it matters. Must be specific and actionable."
+      },
+      "remediation_guidance": {
+        "type": "string",
+        "description": "Concrete remediation recommendation. What to do, not what to think about."
+      },
+      "confidence": {
+        "type": "string",
+        "enum": ["high", "medium", "low"],
+        "description": "Assessment confidence. 'high' = MCP-grounded requirement + verbatim evidence. 'medium' = one side inferred. 'low' = both sides inferred or assumed."
+      },
+      "language": {
+        "type": "string",
+        "description": "ISO 639-1 code for the language of the requirement_text and evidence_refs (e.g., 'nl', 'en', 'de')."
+      },
+      "overlap_keys": {
+        "type": "array",
+        "items": { "type": "string" },
+        "description": "Cross-authority overlap identifiers for dedup. If NIS2 Art 21 overlaps with ISO 27001 A.5.24, both entries carry the same overlap_key. The guider uses these to merge related findings."
+      }
+    },
+    "required": [
+      "authority_id", "authority_type", "authority_title",
+      "requirement_id", "requirement_text",
+      "source_kind", "verdict", "confidence"
+    ],
+    "if": {
+      "properties": { "source_kind": { "enum": ["mcp_grounded", "document_extracted"] } }
+    },
+    "then": {
+      "required": ["source_ref"]
+    }
+  },
   "mcp_tools": [
     {
       "mcp": "document-index-mcp",
       "tools": ["docidx_index_document", "docidx_search", "docidx_get_section", "docidx_get_document", "docidx_list_documents", "docidx_get_surrounding"],
-      "when": "phase_1_scoping, phase_3_evidence",
-      "guidance": "Index all uploaded documents in Phase 1. In Phase 3, search with multiple query variations per requirement (synonyms, abbreviations, related terms). Use get_surrounding when a match needs context from adjacent sections. Always retrieve verbatim quotes for evidence."
-    },
-    {
-      "mcp": "security-controls-mcp",
-      "tools": ["get_framework_controls", "get_security_control", "search_security_controls", "list_security_frameworks", "map_security_frameworks"],
-      "when": "phase_2_enumeration",
-      "guidance": "Use list_security_frameworks to confirm available frameworks. Use get_framework_controls to enumerate complete control lists for ISO 27001, SOC 2, NIST CSF, etc. Use get_security_control for individual control details when building matrix rows."
-    },
-    {
-      "mcp": "eu-regulations-mcp",
-      "tools": ["get_eu_article", "search_eu_regulations", "get_eu_definitions", "list_eu_regulations", "get_eu_recital"],
-      "when": "phase_1_scoping, phase_2_enumeration",
-      "guidance": "Use list_eu_regulations during scoping to identify applicable EU regulations. Use get_eu_article to enumerate requirements during Phase 2. Record regulation version from get_eu_article responses."
-    },
-    {
-      "mcp": "automotive-cybersecurity-mcp",
-      "tools": ["auto_search_requirements", "auto_get_requirement", "auto_list_sources", "map_automotive_controls", "check_r155_compliance"],
-      "when": "phase_2_enumeration",
-      "guidance": "Use for ISO 21434 and UNECE R155 assessments. auto_search_requirements returns full requirement lists by section. Use check_r155_compliance for UNECE R155 specific checks."
+      "when": "phase_1_scope, phase_2_baseline",
+      "guidance": "Index all uploaded documents in Phase 1. In Phase 2, material-gap-analyst uses these tools to search for requirement-like statements, obligations, controls, and policies across all indexed documents. Use get_surrounding when a match needs context from adjacent sections."
     },
     {
       "mcp": "workflow-intelligence-mcp",
-      "tools": ["wkfl_store_state", "wkfl_load_state", "wkfl_list_states", "wkfl_export_report"],
-      "when": "phase_3_evidence, phase_4_validation",
-      "guidance": "Store completed domain groups to disk after Phase 3 processing (key format: group_{name}). In Phase 4, store coverage_stats, scope_and_methodology, org_profile, documents, and applicable_frameworks. Then call wkfl_export_report to assemble the final deliverable report. Use list_states for session resume."
+      "tools": ["wkfl_store_state", "wkfl_load_state", "wkfl_list_states", "wkfl_export_report", "wkfl_get_task_definition", "wkfl_check_stage_completeness"],
+      "when": "all phases",
+      "guidance": "Check wkfl_list_states on every message for session resume. Store state after each phase completion. Use wkfl_check_stage_completeness before advancing phases. Call wkfl_export_report in Phase 5 to assemble the final deliverable."
     }
   ],
-  "intake_question_templates": {
-    "_description": "Framework-keyed curated intake questions. Each question is load-bearing: the answer directly affects N/A exclusions or verdict determination. The agent should use these as a starting set and add context-specific questions based on document content.",
-    "ISO_27001": [
-      {
-        "id": "iso27001_soa_exclusions",
-        "question": "Do you have an existing Statement of Applicability (SoA)? If so, which Annex A controls are marked as not applicable?",
-        "reason": "SoA exclusions directly map to not_applicable verdicts, preventing unnecessary evidence searches",
-        "impact": "Controls listed as excluded will be marked not_applicable with client attestation"
-      },
-      {
-        "id": "iso27001_software_dev",
-        "question": "Does your organization develop software in-house or outsource development?",
-        "reason": "Determines applicability of A.8.25–A.8.33 (secure development lifecycle controls)",
-        "impact": "If no software development, ~9 controls become not_applicable"
-      },
-      {
-        "id": "iso27001_physical_premises",
-        "question": "Does your organization have physical premises, data centres, or server rooms that require physical access controls?",
-        "reason": "Determines applicability of A.7.1–A.7.14 (physical controls)",
-        "impact": "Fully cloud-hosted orgs with no physical infrastructure may exclude physical controls"
-      },
-      {
-        "id": "iso27001_pii_processing",
-        "question": "Does your organization process personally identifiable information (PII) or act as a PII processor for clients?",
-        "reason": "Determines applicability of A.5.34 (privacy and PII protection) and related controls",
-        "impact": "Orgs that process no PII may mark A.5.34 as not_applicable"
-      },
-      {
-        "id": "iso27001_cryptography",
-        "question": "Does your organization use cryptographic controls (encryption, digital signatures, key management)?",
-        "reason": "Determines applicability of A.8.24 (cryptography) and depth of evidence required",
-        "impact": "Affects verdict for A.8.24 and may affect A.5.31 (legal/regulatory requirements)"
-      },
-      {
-        "id": "iso27001_third_party",
-        "question": "Does your organization use third-party suppliers or cloud services that process, store, or transmit information on your behalf?",
-        "reason": "Determines applicability of A.5.19–A.5.23 (supplier relationship controls)",
-        "impact": "Orgs with no third-party suppliers may have reduced scope for supplier controls"
-      },
-      {
-        "id": "iso27001_isms_scope",
-        "question": "Has a formal ISMS scope been defined and documented (clause 4.3)? If yes, what boundaries and applicability does it state?",
-        "reason": "Clause 4.3 is a mandatory certification requirement. Without a defined scope, the entire ISMS is unbounded and no control verdicts are meaningful.",
-        "impact": "Missing scope is the single most common certification blocker. Surfaces it before the Annex A pass."
-      },
-      {
-        "id": "iso27001_risk_assessment",
-        "question": "Has a formal information security risk assessment been conducted (clause 6.1.2)? Is there a documented risk treatment plan?",
-        "reason": "Clause 6.1.2 requires a risk assessment process with defined criteria. The risk treatment plan (6.1.3) determines which Annex A controls are selected and why.",
-        "impact": "Without a risk assessment, Annex A control selection has no justification. This is a mandatory clause — not auditor-discretionary."
-      },
-      {
-        "id": "iso27001_internal_audit",
-        "question": "Has the organization conducted internal audits of the ISMS (clause 9.2)? Is there a management review process (clause 9.3)?",
-        "reason": "Clauses 9.2 and 9.3 are mandatory. Organizations pursuing initial certification almost never have these, but the gap must be surfaced explicitly.",
-        "impact": "Missing internal audit and management review are certification-blocking findings that cannot be discovered during Annex A control mapping."
-      },
-      {
-        "id": "iso27001_top_management",
-        "question": "Has top management established an information security policy (clause 5.2) and assigned ISMS roles and responsibilities (clause 5.3)?",
-        "reason": "Clauses 5.1–5.3 require demonstrated leadership commitment, a policy with objectives, and assigned authorities. These are distinct from Annex A policy controls.",
-        "impact": "Clause 5 non-compliance indicates fundamental ISMS governance gaps that affect every downstream control."
-      }
-    ]
-  },
-  "prompting_guidance": "CRITICAL: NEVER produce findings or a report without completing ALL four phases. Summarizing intake answers is NOT an assessment. Intake responses are INPUT — you must call MCP tools to enumerate controls (Phase 2), search documents for evidence (Phase 3), and assign verdicts before producing output (Phase 4).\n\n**Phase 1 — Scoping & Document Intake:**\nAsk the user what they want assessed and what documents they have. Index all documents via document-index MCP. Build org_profile from document content + user input. Identify applicable frameworks. Generate ONLY load-bearing intake questions. Batch questions in a single round.\n\nFor ISO 27001: intake MUST cover clauses 4–10 (management system requirements) BEFORE Annex A. Clauses 4.3 (scope), 5.2 (policy), 6.1.2 (risk assessment), 6.1.3 (risk treatment plan), 9.2 (internal audit), and 9.3 (management review) are mandatory certification requirements. Ask about them explicitly.\n\nAFTER receiving intake answers: DO NOT produce findings. Proceed immediately to Phase 2.\n\n**Phase 2 — Requirement Enumeration:**\nCall get_framework_controls to get the COMPLETE control list. For ISO 27001: ALL clauses 4–10 AND ALL 93 Annex A controls. Do not sample or abbreviate. Enumerate clauses 4–10 as the FIRST domain group ('Part 1: ISMS Foundation') before Annex A ('Part 2: Control Assessment'). Apply N/A exclusions from intake. Group into domain slices (~15-20 each).\n\nAFTER enumeration: DO NOT produce findings. Proceed immediately to Phase 3.\n\n**Phase 3 — Evidence Assessment:**\nWork through domain groups sequentially. Start with clauses 4–10, then Annex A groups. For EVERY requirement, call docidx_search with at least 2 query variations to find evidence in uploaded documents. Do not rely on intake answers alone. For each requirement: search, retrieve full sections + surrounding context, extract verbatim quotes, determine verdict (compliant/partial/not_found/contradicted/not_applicable), assign confidence. Every finding MUST have a verdict and evidence citations. After completing each domain group, store via wkfl_store_state.\n\nAFTER completing ALL domain groups (clauses 4–10 AND Annex A): proceed to Phase 4.\n\n**Phase 4 — Coverage Validation & Report Delivery:**\nLoad all completed groups via wkfl_load_state. Verify every applicable requirement has a verdict. Calculate coverage statistics. Generate report with: (1) Executive Summary with certification readiness verdict, (2) Part 1: ISMS Foundation (clauses 4–10) with verdicts and evidence, (3) Part 2: Control Assessment (Annex A) with verdicts and evidence, (4) Prioritized Remediation Plan ordered by severity (Tier 1: certification blockers from clauses 4–10, Tier 2: Annex A not_found, Tier 3: partial implementations), (5) Evidence Register. Store final state and call wkfl_export_report.\n\n**Verdict Rules:**\n- compliant: Document section explicitly addresses the requirement. MUST have evidence_refs with verbatim quotes.\n- partial: Some evidence but incomplete. MUST have evidence_refs AND gap_description.\n- not_found: No evidence after searching with 2+ query variations. State which documents were searched.\n- contradicted: Document content contradicts the requirement.\n- not_applicable: Excluded via client attestation.\n\n**Evidence Rules:**\n- Intake answers are NOT evidence. Only document content retrieved via docidx_search counts.\n- Every compliant verdict MUST have evidence_ref with doc_id, section_ref, verbatim quote.\n- Every partial verdict MUST have evidence_refs AND gap_description.\n- Every not_found verdict MUST state which documents were searched and what queries were used.\n- Search with at least 2 query variations before concluding not_found.",
+  "prompting_guidance": "WORKFLOW INSTRUCTIONS FOR GAP ANALYSIS GUIDER:\n\n1. RESUME CHECK: On every message, call wkfl_list_states with the conversation ID. If prior state exists, load the last completed phase and resume from the next phase. Never restart from scratch.\n\n2. SCOPE & DOCUMENT INTAKE (Phase 1): Index all uploaded documents via docidx_index_document. Search document content and the user's request for authority signals using the authority_detection map in this task definition. Detect jurisdiction from organization name, legal references, and language. Build org_profile from document content and user input.\n\n3. CUSTOM AUTHORITY SYNTHESIS: If no authority signals match the detection heuristics, synthesize at least one custom authority from the uploaded material. Set authority_type to 'custom', derive authority_id from the document filename or title (e.g., 'custom_monitoring_logging_policy'). Any uploaded document IS an authority.\n\n4. SCOPE GAP ANALYSIS (Phase 1b): Assess readiness across documents, authorities, organization profile, and scope clarity. If gaps exist, ask up to 5 batched load-bearing questions in one round. If the user says 'just proceed' or gives minimal answers, record each unanswered question as an assumption (answer_source: 'assumed'), lower confidence on affected entries, and proceed. Use proceed_with_assumptions mode. Never block indefinitely waiting for client input.\n\n5. BASELINE EXTRACTION (Phase 2): Always delegate to material-gap-analyst. Pass all indexed document IDs, detected authorities, org profile, and language. Material-gap-analyst returns gap entries with source_kind 'document_extracted'. This runs even when MCP-backed experts are available. The baseline is the foundation.\n\n6. EXPERT CHALLENGE (Phase 3): Discover relevant experts by calling list_delegatable_agents with authority-derived keywords. Cross-reference results with authority_expert_hints from this task definition. Select up to 8 experts total (global cap). Delegate sequentially (v1). Each expert receives the delegation context with challenge_type 'gap_analysis_review', authority scope, org profile, indexed document IDs, and a baseline summary. If an expert fails or times out, log the failure and let baseline entries stand. If no experts match any authority signal, skip Phase 3 entirely.\n\n7. MERGE & VALIDATE (Phase 4): Merge baseline entries and expert entries into the unified compliance_matrix. Expert entries upgrade baseline entries when source_kind is higher (mcp_grounded > document_extracted > user_specified > assumed) or evidence is more specific. Preserve replaced entries in superseded_entries for audit trail. Generate overlap_keys from controls-mapper cross_framework_mappings (if available) or from semantic similarity of requirement_text. Calculate per-authority and overall coverage statistics. Validate via wkfl_check_stage_completeness.\n\n8. REPORT (Phase 5): Assemble one deliverable via wkfl_export_report. One report, one executive summary, one unified findings register, one remediation plan, one assumptions and limitations section. Optional per-authority annexes for authorities with many requirements.\n\n9. LANGUAGE: Respond in the user's language throughout. Render requirement_text and evidence in their source language.\n\n10. VERDICT RULES:\n- documented: Document section addresses the requirement. MUST have evidence_refs with verbatim_quote.\n- partially_documented: Some evidence but incomplete. MUST have evidence_refs AND gap_description.\n- not_found: No evidence after searching with 2+ query variations. State which documents were searched.\n- contradicted: Document content contradicts the requirement.\n- not_applicable: Excluded via scope or client attestation.\n- requires_human_assessment: Requires interviews, observation, or operational records not available in documents.\n\n11. EVIDENCE RULES:\n- Only document content retrieved via docidx_search counts as evidence. Intake answers are context, not evidence.\n- Every documented verdict MUST have evidence_refs with doc_id, section_ref, and verbatim_quote.\n- Every partially_documented verdict MUST have evidence_refs AND gap_description.\n- Every not_found verdict MUST state which documents were searched and what queries were used.\n- Every mcp_grounded or document_extracted entry MUST have source_ref for traceability.",
   "stage_state_schema": {
     "type": "object",
     "properties": {
@@ -133,106 +166,97 @@
           "required": ["doc_id", "filename"]
         }
       },
-      "applicable_frameworks": {
-        "type": "array",
-        "items": { "type": "string" }
-      },
-      "excluded_frameworks": {
+      "detected_authorities": {
         "type": "array",
         "items": {
           "type": "object",
           "properties": {
-            "framework": { "type": "string" },
-            "reason": { "type": "string" }
-          }
+            "authority_id": { "type": "string" },
+            "authority_type": {
+              "type": "string",
+              "enum": ["law", "regulation", "directive", "standard", "contract", "policy", "custom"]
+            },
+            "authority_title": { "type": "string" },
+            "detection_signals": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "confidence": { "type": "string", "enum": ["high", "medium", "low"] }
+          },
+          "required": ["authority_id", "authority_type", "authority_title"]
         }
       },
-      "intake_questions": {
+      "scope_readiness": {
+        "type": "object",
+        "properties": {
+          "overall_status": {
+            "type": "string",
+            "enum": ["ready", "partial", "blocked", "minimal"]
+          },
+          "proceeding_mode": {
+            "type": "string",
+            "enum": ["proceed", "awaiting_client_input", "proceed_with_assumptions"]
+          },
+          "summary": { "type": "string" }
+        }
+      },
+      "client_questions": {
         "type": "array",
         "items": {
           "type": "object",
           "properties": {
             "id": { "type": "string" },
             "question": { "type": "string" },
-            "reason": { "type": "string" },
-            "impact": { "type": "string" }
-          },
-          "required": ["id", "question"]
-        }
-      },
-      "intake_responses": {
-        "type": "array",
-        "items": {
-          "type": "object",
-          "properties": {
-            "question_id": { "type": "string" },
+            "blocking": { "type": "boolean" },
+            "status": {
+              "type": "string",
+              "enum": ["pending", "answered", "assumed", "waived"]
+            },
             "response": { "type": "string" },
-            "timestamp": { "type": "string" }
+            "response_summary": { "type": "string" },
+            "answer_source": {
+              "type": "string",
+              "enum": ["user_attested", "document_evidence", "assumed", "analyst_judgment"]
+            }
           },
-          "required": ["question_id", "response"]
+          "required": ["id", "question", "status"]
         }
       },
-      "document_quality": {
-        "type": "object",
-        "properties": {
-          "overall_signal": { "type": "string", "enum": ["high", "medium", "low"] },
-          "boilerplate_detected": { "type": "boolean" },
-          "specificity_score": { "type": "number" }
-        }
-      },
-      "requirement_register": {
+      "assumptions": {
         "type": "array",
         "items": {
           "type": "object",
           "properties": {
-            "req_id": { "type": "string" },
-            "framework": { "type": "string" },
-            "framework_version": { "type": "string" },
-            "text": { "type": "string" },
-            "source_mcp": { "type": "string" },
-            "domain_group": { "type": "string" },
-            "applicable": { "type": "boolean" },
-            "applicability_reason": { "type": "string" }
+            "id": { "type": "string" },
+            "assumption": { "type": "string" },
+            "confidence_impact": { "type": "string" },
+            "related_question_id": { "type": "string" }
           },
-          "required": ["req_id", "framework", "text", "domain_group", "applicable"]
+          "required": ["id", "assumption"]
         }
       },
-      "domain_groups": {
+      "baseline_entries": {
         "type": "array",
         "items": {
           "type": "object",
           "properties": {
-            "group_id": { "type": "string" },
-            "name": { "type": "string" },
-            "requirement_ids": { "type": "array", "items": { "type": "string" } },
-            "count": { "type": "integer" }
-          },
-          "required": ["group_id", "name", "requirement_ids"]
-        }
-      },
-      "enumeration_metadata": {
-        "type": "object",
-        "properties": {
-          "frameworks_queried": { "type": "array", "items": { "type": "string" } },
-          "total_requirements": { "type": "integer" },
-          "applicable_requirements": { "type": "integer" },
-          "excluded_count": { "type": "integer" },
-          "framework_versions": { "type": "object" }
-        }
-      },
-      "compliance_matrix": {
-        "type": "array",
-        "items": {
-          "type": "object",
-          "properties": {
-            "req_id": { "type": "string" },
+            "authority_id": { "type": "string" },
+            "authority_type": {
+              "type": "string",
+              "enum": ["law", "regulation", "directive", "standard", "contract", "policy", "custom"]
+            },
+            "authority_title": { "type": "string" },
+            "requirement_id": { "type": "string" },
             "requirement_text": { "type": "string" },
-            "framework": { "type": "string" },
+            "source_kind": {
+              "type": "string",
+              "enum": ["mcp_grounded", "document_extracted", "user_specified", "assumed"]
+            },
+            "source_ref": { "type": "string" },
             "verdict": {
               "type": "string",
-              "enum": ["compliant", "partial", "not_found", "contradicted", "not_applicable"]
+              "enum": ["documented", "partially_documented", "not_found", "contradicted", "not_applicable", "requires_human_assessment"]
             },
-            "confidence": { "type": "string", "enum": ["high", "medium", "low"] },
             "evidence_refs": {
               "type": "array",
               "items": {
@@ -240,41 +264,177 @@
                 "properties": {
                   "doc_id": { "type": "string" },
                   "section_ref": { "type": "string" },
-                  "page_start": { "type": "integer" },
-                  "page_end": { "type": "integer" },
-                  "filename": { "type": "string" }
+                  "filename": { "type": "string" },
+                  "verbatim_quote": { "type": "string" },
+                  "evidence_type": {
+                    "type": "string",
+                    "enum": ["policy_evidence", "procedural_evidence", "record_evidence"]
+                  }
                 },
                 "required": ["doc_id", "section_ref"]
               }
             },
-            "verbatim_quote": { "type": "string" },
-            "evidence_summary": { "type": "string" },
             "gap_description": { "type": "string" },
-            "requires_human_review": { "type": "boolean" },
-            "search_queries_used": { "type": "array", "items": { "type": "string" } }
+            "remediation_guidance": { "type": "string" },
+            "confidence": { "type": "string", "enum": ["high", "medium", "low"] },
+            "language": { "type": "string" },
+            "overlap_keys": {
+              "type": "array",
+              "items": { "type": "string" }
+            }
           },
-          "required": ["req_id", "verdict"]
+          "required": [
+            "authority_id", "authority_type", "authority_title",
+            "requirement_id", "requirement_text",
+            "source_kind", "verdict", "confidence"
+          ]
         }
       },
-      "assessment_progress": {
-        "type": "object",
-        "properties": {
-          "groups_completed": { "type": "integer" },
-          "groups_total": { "type": "integer" },
-          "requirements_assessed": { "type": "integer" },
-          "requirements_total": { "type": "integer" }
+      "experts_used": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "agent_id": { "type": "string" },
+            "display_name": { "type": "string" },
+            "authority_ids": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "status": {
+              "type": "string",
+              "enum": ["delegated", "complete", "failed", "skipped"]
+            },
+            "entries_count": { "type": "integer" },
+            "expert_response_status": {
+              "type": "string",
+              "enum": ["structured", "needs_review", "malformed"]
+            }
+          },
+          "required": ["agent_id", "status"]
+        }
+      },
+      "compliance_matrix": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "authority_id": { "type": "string" },
+            "authority_type": {
+              "type": "string",
+              "enum": ["law", "regulation", "directive", "standard", "contract", "policy", "custom"]
+            },
+            "authority_title": { "type": "string" },
+            "requirement_id": { "type": "string" },
+            "requirement_text": { "type": "string" },
+            "source_kind": {
+              "type": "string",
+              "enum": ["mcp_grounded", "document_extracted", "user_specified", "assumed"]
+            },
+            "source_ref": { "type": "string" },
+            "verdict": {
+              "type": "string",
+              "enum": ["documented", "partially_documented", "not_found", "contradicted", "not_applicable", "requires_human_assessment"]
+            },
+            "evidence_refs": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "doc_id": { "type": "string" },
+                  "section_ref": { "type": "string" },
+                  "filename": { "type": "string" },
+                  "verbatim_quote": { "type": "string" },
+                  "evidence_type": {
+                    "type": "string",
+                    "enum": ["policy_evidence", "procedural_evidence", "record_evidence"]
+                  }
+                },
+                "required": ["doc_id", "section_ref"]
+              }
+            },
+            "gap_description": { "type": "string" },
+            "remediation_guidance": { "type": "string" },
+            "confidence": { "type": "string", "enum": ["high", "medium", "low"] },
+            "language": { "type": "string" },
+            "overlap_keys": {
+              "type": "array",
+              "items": { "type": "string" }
+            }
+          },
+          "required": [
+            "authority_id", "authority_type", "authority_title",
+            "requirement_id", "requirement_text",
+            "source_kind", "verdict", "confidence"
+          ]
+        }
+      },
+      "superseded_entries": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "authority_id": { "type": "string" },
+            "authority_type": {
+              "type": "string",
+              "enum": ["law", "regulation", "directive", "standard", "contract", "policy", "custom"]
+            },
+            "authority_title": { "type": "string" },
+            "requirement_id": { "type": "string" },
+            "requirement_text": { "type": "string" },
+            "source_kind": {
+              "type": "string",
+              "enum": ["mcp_grounded", "document_extracted", "user_specified", "assumed"]
+            },
+            "source_ref": { "type": "string" },
+            "verdict": {
+              "type": "string",
+              "enum": ["documented", "partially_documented", "not_found", "contradicted", "not_applicable", "requires_human_assessment"]
+            },
+            "evidence_refs": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "doc_id": { "type": "string" },
+                  "section_ref": { "type": "string" },
+                  "filename": { "type": "string" },
+                  "verbatim_quote": { "type": "string" },
+                  "evidence_type": {
+                    "type": "string",
+                    "enum": ["policy_evidence", "procedural_evidence", "record_evidence"]
+                  }
+                },
+                "required": ["doc_id", "section_ref"]
+              }
+            },
+            "gap_description": { "type": "string" },
+            "remediation_guidance": { "type": "string" },
+            "confidence": { "type": "string", "enum": ["high", "medium", "low"] },
+            "language": { "type": "string" },
+            "overlap_keys": {
+              "type": "array",
+              "items": { "type": "string" }
+            }
+          },
+          "required": [
+            "authority_id", "authority_type", "authority_title",
+            "requirement_id", "requirement_text",
+            "source_kind", "verdict", "confidence"
+          ]
         }
       },
       "coverage_stats": {
         "type": "object",
         "properties": {
-          "total_requirements": { "type": "integer" },
-          "compliant": { "type": "integer" },
-          "partial": { "type": "integer" },
+          "total_entries": { "type": "integer" },
+          "documented": { "type": "integer" },
+          "partially_documented": { "type": "integer" },
           "not_found": { "type": "integer" },
           "contradicted": { "type": "integer" },
           "not_applicable": { "type": "integer" },
-          "requires_human_review": { "type": "integer" },
+          "requires_human_assessment": { "type": "integer" },
+          "per_authority": { "type": "object" },
           "coverage_percentage": { "type": "number" }
         }
       },
@@ -284,39 +444,20 @@
           "assessment_date": { "type": "string" },
           "frameworks_assessed": {
             "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "name": { "type": "string" },
-                "version": { "type": "string" },
-                "source_mcp": { "type": "string" }
-              }
-            }
+            "items": { "type": "string" }
           },
           "documents_analyzed": {
             "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "filename": { "type": "string" },
-                "doc_id": { "type": "string" },
-                "sections_count": { "type": "integer" },
-                "quality_signal": { "type": "string" }
-              }
-            }
+            "items": { "type": "string" }
           },
           "methodology": { "type": "string" },
-          "limitations": { "type": "array", "items": { "type": "string" } },
+          "limitations": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
           "client_attestations": {
             "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "question": { "type": "string" },
-                "response": { "type": "string" },
-                "impact": { "type": "string" }
-              }
-            }
+            "items": { "type": "string" }
           }
         }
       },
@@ -326,170 +467,157 @@
   },
   "completion_criteria": {
     "required_fields": [
-      { "field": "org_profile", "rule": "exists", "message": "Organization profile is required before proceeding" },
       { "field": "documents", "rule": "min_count", "value": 1, "message": "At least one document must be indexed" },
-      { "field": "applicable_frameworks", "rule": "min_count", "value": 1, "message": "At least one framework must be selected" },
-      { "field": "requirement_register", "rule": "min_count", "value": 1, "message": "Requirements must be enumerated" },
-      { "field": "compliance_matrix", "rule": "min_count", "value": 1, "message": "At least one requirement must be assessed" },
+      { "field": "detected_authorities", "rule": "min_count", "value": 1, "message": "At least one authority must be detected or synthesized" },
+      { "field": "compliance_matrix", "rule": "min_count", "value": 1, "message": "At least one gap entry must be in the compliance matrix" },
       { "field": "coverage_stats", "rule": "exists", "message": "Coverage statistics must be calculated" },
-      { "field": "scope_and_methodology", "rule": "exists", "message": "Scope and methodology section is required" },
       { "field": "report_ready", "rule": "equals", "value": true, "message": "Report must be marked as ready" }
     ],
     "rules": [
       {
-        "id": "every_requirement_has_verdict",
-        "description": "Every applicable requirement in the register must have a corresponding compliance matrix entry",
+        "id": "every_documented_has_evidence",
+        "description": "Every 'documented' verdict must have at least one evidence reference with a verbatim quote",
         "severity": "required",
-        "message_template": "Requirement '{req_id}' has no compliance matrix entry"
-      },
-      {
-        "id": "every_compliant_has_evidence",
-        "description": "Every 'compliant' verdict must have at least one evidence reference",
-        "severity": "required",
-        "message_template": "Requirement '{req_id}' is marked compliant but has no evidence references"
+        "message_template": "Entry '{requirement_id}' in '{authority_id}' is marked documented but has no evidence references"
       },
       {
         "id": "every_partial_has_gap",
-        "description": "Every 'partial' verdict must include a gap description",
+        "description": "Every 'partially_documented' verdict must include a gap_description",
         "severity": "required",
-        "message_template": "Requirement '{req_id}' is marked partial but has no gap description"
+        "message_template": "Entry '{requirement_id}' in '{authority_id}' is marked partially_documented but has no gap description"
       },
       {
-        "id": "intake_responses_complete",
-        "description": "Every intake question must have a corresponding response",
+        "id": "source_ref_for_grounded_entries",
+        "description": "Every entry with source_kind 'mcp_grounded' or 'document_extracted' must have a source_ref",
         "severity": "required",
-        "message_template": "Intake question '{id}' has no response"
-      },
-      {
-        "id": "framework_version_recorded",
-        "description": "Every framework in enumeration metadata must have a recorded version",
-        "severity": "required",
-        "message_template": "Framework '{framework}' has no version recorded in enumeration_metadata"
-      },
-      {
-        "id": "no_high_confidence_without_quote",
-        "description": "High-confidence verdicts should include a verbatim quote from the source document",
-        "severity": "warning",
-        "message_template": "Requirement '{req_id}' has high confidence but no verbatim quote"
+        "message_template": "Entry '{requirement_id}' in '{authority_id}' has source_kind '{source_kind}' but no source_ref"
       }
     ],
     "soft_warnings": [
-      { "field": "compliance_matrix", "rule": "min_count", "value": 10, "message": "Most frameworks have more than 10 requirements — verify enumeration is complete" }
+      { "field": "compliance_matrix", "rule": "min_count", "value": 10, "message": "Most authorities have more than 10 requirements — verify enumeration is complete" }
     ]
   },
   "quality_rubric": {
     "compliance_matrix": {
       "per_item": {
-        "evidence_summary": {
+        "gap_description": {
           "min_words": 5,
           "severity": "warning",
-          "message": "Matrix entry for '{req_id}' has a vague evidence summary. Specify what the document says."
+          "message": "Matrix entry for '{requirement_id}' has a vague gap description. Specify what is missing and why it matters."
         }
       }
     }
   },
   "phases": [
     {
-      "id": "phase_1_scoping",
-      "name": "Scoping & Document Intake",
-      "description": "Index documents, build organization profile, identify frameworks, conduct intake interview",
+      "id": "phase_1_scope",
+      "name": "Scope & Document Intake",
+      "description": "Index all uploaded documents, detect applicable authorities via heuristic signals, detect jurisdiction and language, build organization profile. No fixed questionnaire — assess what was provided.",
       "completion_criteria": {
         "required_fields": [
-          { "field": "org_profile", "rule": "exists", "message": "Organization profile is required" },
           { "field": "documents", "rule": "min_count", "value": 1, "message": "At least one document must be indexed" },
-          { "field": "applicable_frameworks", "rule": "min_count", "value": 1, "message": "At least one framework must be selected" }
+          { "field": "detected_authorities", "rule": "min_count", "value": 1, "message": "At least one authority must be detected or synthesized from uploaded material" }
         ],
-        "rules": [
-          {
-            "id": "intake_responses_complete",
-            "description": "Every intake question must have a corresponding response",
-            "severity": "required",
-            "message_template": "Intake question '{id}' has no response"
-          }
-        ],
-        "soft_warnings": []
-      },
-      "quality_rubric": {}
-    },
-    {
-      "id": "phase_2_enumeration",
-      "name": "Requirement Enumeration",
-      "description": "Enumerate all requirements from applicable frameworks, apply exclusions, form domain groups",
-      "completion_criteria": {
-        "required_fields": [
-          { "field": "requirement_register", "rule": "min_count", "value": 1, "message": "At least one requirement must be enumerated" },
-          { "field": "domain_groups", "rule": "min_count", "value": 1, "message": "Requirements must be grouped into domains" },
-          { "field": "enumeration_metadata", "rule": "exists", "message": "Enumeration metadata is required" }
-        ],
-        "rules": [
-          {
-            "id": "framework_version_recorded",
-            "description": "Every framework in enumeration metadata must have a recorded version",
-            "severity": "required",
-            "message_template": "Framework '{framework}' has no version recorded"
-          }
-        ],
+        "rules": [],
         "soft_warnings": [
-          { "field": "requirement_register", "rule": "min_count", "value": 10, "message": "Most frameworks have more than 10 requirements — verify enumeration is complete" }
+          { "field": "org_profile", "rule": "exists", "message": "Organization profile improves scoping accuracy — consider extracting from documents or asking the user" }
         ]
       },
       "quality_rubric": {}
     },
     {
-      "id": "phase_3_evidence",
-      "name": "Evidence Assessment",
-      "description": "Systematically assess every requirement against document evidence, building the compliance matrix",
+      "id": "phase_1b_scope_gap",
+      "name": "Scope Gap Analysis",
+      "description": "Assess scope readiness across documents, authorities, organization profile, and scope clarity. Ask only load-bearing questions. If user says 'just proceed', record assumptions and continue. Never block indefinitely.",
+      "skip_conditions": ["scope_readiness.overall_status == 'ready'"],
       "completion_criteria": {
         "required_fields": [
-          { "field": "compliance_matrix", "rule": "min_count", "value": 1, "message": "At least one requirement must be assessed" }
+          { "field": "scope_readiness", "rule": "exists", "message": "Scope readiness assessment must be recorded" }
         ],
         "rules": [
           {
-            "id": "every_requirement_has_verdict",
-            "description": "Every applicable requirement must have a matrix entry",
+            "id": "scope_readiness_recorded",
+            "description": "Scope readiness assessment (ready/partial/blocked/minimal) must be recorded before proceeding",
             "severity": "required",
-            "message_template": "Requirement '{req_id}' has no compliance matrix entry"
+            "message_template": "Scope readiness has not been assessed"
           },
           {
-            "id": "every_compliant_has_evidence",
-            "description": "Every compliant verdict must have evidence references",
+            "id": "blocking_client_questions_resolved",
+            "description": "All blocking client questions must be answered, assumed, or waived before proceeding",
             "severity": "required",
-            "message_template": "Requirement '{req_id}' marked compliant without evidence"
-          },
-          {
-            "id": "every_partial_has_gap",
-            "description": "Every partial verdict must include a gap description",
-            "severity": "required",
-            "message_template": "Requirement '{req_id}' marked partial without gap description"
-          },
-          {
-            "id": "no_high_confidence_without_quote",
-            "description": "High-confidence verdicts should include a verbatim quote",
-            "severity": "warning",
-            "message_template": "Requirement '{req_id}' has high confidence but no verbatim quote"
+            "message_template": "Blocking question '{id}' is still pending"
           }
         ],
         "soft_warnings": []
       },
-      "quality_rubric": {
-        "compliance_matrix": {
-          "per_item": {
-            "evidence_summary": {
-              "min_words": 5,
-              "severity": "warning",
-              "message": "Matrix entry for '{req_id}' has a vague evidence summary"
-            }
-          }
-        }
-      }
+      "quality_rubric": {}
     },
     {
-      "id": "phase_4_validation",
-      "name": "Coverage Validation & Report Delivery",
-      "description": "Verify complete coverage, calculate statistics, produce scope and methodology, assemble and deliver the final compliance report document",
+      "id": "phase_2_baseline",
+      "name": "Baseline Extraction",
+      "description": "Delegate to material-gap-analyst to extract document-only gap entries for all detected authorities. This always runs, even when MCP-backed experts are available.",
       "completion_criteria": {
         "required_fields": [
-          { "field": "coverage_stats", "rule": "exists", "message": "Coverage statistics must be calculated" },
+          { "field": "baseline_entries", "rule": "min_count", "value": 1, "message": "Material-gap-analyst must return at least one baseline gap entry" }
+        ],
+        "rules": [],
+        "soft_warnings": []
+      },
+      "quality_rubric": {}
+    },
+    {
+      "id": "phase_3_expert_challenge",
+      "name": "Expert Challenge",
+      "description": "Discover relevant experts via list_delegatable_agents, cross-reference with authority_expert_hints, delegate per-authority assessment sequentially. Expert failure does not block — baseline entries stand. Cap at 8 total experts.",
+      "skip_conditions": ["No authority signals matched any available expert"],
+      "completion_criteria": {
+        "required_fields": [],
+        "rules": [],
+        "soft_warnings": [
+          { "field": "experts_used", "rule": "min_count", "value": 1, "message": "No experts were consulted — the assessment relies entirely on document-extracted baseline entries" }
+        ]
+      },
+      "quality_rubric": {}
+    },
+    {
+      "id": "phase_4_merge",
+      "name": "Merge & Validate",
+      "description": "Merge baseline and expert entries into unified compliance matrix. Expert entries upgrade baseline entries when source_kind is higher. Generate overlap_keys for cross-authority dedup. Calculate coverage statistics. Validate completeness.",
+      "completion_criteria": {
+        "required_fields": [
+          { "field": "compliance_matrix", "rule": "min_count", "value": 1, "message": "Compliance matrix must contain at least one merged entry" },
+          { "field": "coverage_stats", "rule": "exists", "message": "Coverage statistics must be calculated" }
+        ],
+        "rules": [
+          {
+            "id": "every_documented_has_evidence",
+            "description": "Every 'documented' verdict must have at least one evidence reference",
+            "severity": "required",
+            "message_template": "Entry '{requirement_id}' in '{authority_id}' is marked documented but has no evidence references"
+          },
+          {
+            "id": "every_partial_has_gap",
+            "description": "Every 'partially_documented' verdict must include a gap_description",
+            "severity": "required",
+            "message_template": "Entry '{requirement_id}' in '{authority_id}' is marked partially_documented but has no gap description"
+          },
+          {
+            "id": "source_ref_for_grounded_entries",
+            "description": "Every entry with source_kind 'mcp_grounded' or 'document_extracted' must have a source_ref",
+            "severity": "required",
+            "message_template": "Entry '{requirement_id}' in '{authority_id}' has source_kind '{source_kind}' but no source_ref"
+          }
+        ],
+        "soft_warnings": []
+      },
+      "quality_rubric": {}
+    },
+    {
+      "id": "phase_5_report",
+      "name": "Report Assembly",
+      "description": "Assemble the final gap analysis report: executive summary, scope and methodology, unified findings register, gap analysis, remediation plan, assumptions and limitations. One report, one deliverable.",
+      "completion_criteria": {
+        "required_fields": [
           { "field": "scope_and_methodology", "rule": "exists", "message": "Scope and methodology section is required" },
           { "field": "report_ready", "rule": "equals", "value": true, "message": "Report must be marked as ready" }
         ],
@@ -501,14 +629,14 @@
         "format": "markdown",
         "tool": "wkfl_export_report",
         "sections": [
-          "Executive Summary — compliance posture, key metrics",
-          "Scope & Methodology — frameworks assessed, documents analyzed, limitations",
-          "Compliance Matrix — full table with req_id, verdict, confidence, evidence, gaps",
-          "Gap Analysis — prioritized not_found, partial, and contradicted findings",
-          "Evidence Register — all document citations mapped to requirements",
-          "Client Attestations — intake responses that affected scoping"
+          "Executive Summary — overall posture, key metrics per authority, critical findings count, confidence assessment",
+          "Scope & Methodology — authorities assessed (with versions and sources), documents analyzed, methodology, limitations, client attestations",
+          "Unified Findings Register — one table across all authorities with authority, requirement ID, requirement text, verdict, confidence, evidence, gap description",
+          "Gap Analysis — critical gaps (contradicted + not_found in laws/regulations), improvement areas (partially_documented), requires human assessment",
+          "Remediation Plan — prioritized by authority type (law > regulation > directive > standard > contract > policy > custom) and gap severity",
+          "Assumptions & Limitations — every assumption from Phase 1b, every limitation, confidence impact per assumption"
         ],
-        "instructions": "Before calling wkfl_export_report, store these keys: org_profile, documents, applicable_frameworks, coverage_stats, scope_and_methodology. Domain groups from Phase 3 must already be stored with keys prefixed 'group_'. The tool assembles everything into a single Markdown report. Present the report to the user as the assessment deliverable."
+        "instructions": "Before calling wkfl_export_report, store these keys: org_profile, documents, detected_authorities, scope_readiness, client_questions, assumptions, compliance_matrix, coverage_stats, scope_and_methodology, experts_used, superseded_entries. The tool assembles everything into a single Markdown report. Present the report to the user as the gap analysis deliverable."
       }
     }
   ]
