@@ -55,13 +55,17 @@ export const TOOL_DEFINITIONS = [
   {
     name: "get_task_definition",
     description:
-      "Get the full definition of a task including its stage-state schema, completion criteria, quality rubrics, dependencies, cross-MCP tool manifest, and prompting guidance.",
+      "Get a task definition. When phase is provided, returns only that phase's criteria plus shared schema and relevant tools (much smaller response). When phase is omitted, returns the full definition. Use phase-scoped calls during execution to stay within context budget.",
     inputSchema: {
       type: "object" as const,
       properties: {
         task_id: {
           type: "string",
-          description: "The task identifier (e.g., dfd_construction).",
+          description: "The task identifier (e.g., dfd_construction, stride_threat_model).",
+        },
+        phase: {
+          type: "string",
+          description: "Optional phase ID (e.g., phase_0_evidence_manifest, phase_2b_domain_challenge). When provided, returns only the specified phase plus shared schema and phase-relevant MCP tools. Omit to get the full definition.",
         },
       },
       required: ["task_id"],
@@ -70,7 +74,7 @@ export const TOOL_DEFINITIONS = [
   {
     name: "check_stage_completeness",
     description:
-      'Validate collected stage data against the task\'s completion criteria and quality rubrics. Returns "incomplete" (blocking issues), "complete_with_quality_warnings" (structure OK but depth issues), or "complete" (all gates pass).',
+      'Validate stage data against task completion criteria and quality rubrics. Returns "incomplete", "complete_with_quality_warnings", or "complete". If stage_state is omitted, loads from stored state using assessment_id.',
     inputSchema: {
       type: "object" as const,
       properties: {
@@ -88,14 +92,18 @@ export const TOOL_DEFINITIONS = [
         },
         definition_version: {
           type: "string",
-          description: "Version from get_task_definition, for version negotiation.",
+          description: "Version from get_task_definition. Defaults to '1.0' if omitted.",
+        },
+        assessment_id: {
+          type: "string",
+          description: "Assessment identifier for loading stored state. Used when stage_state is omitted.",
         },
         stage_state: {
           type: "object",
-          description: "The collected stage data, conforming to the task's stage_state_schema.",
+          description: "The collected stage data. If omitted, the tool loads previously stored state using assessment_id.",
         },
       },
-      required: ["task_id", "stage_id", "definition_version", "stage_state"],
+      required: ["task_id"],
     },
   },
   {
