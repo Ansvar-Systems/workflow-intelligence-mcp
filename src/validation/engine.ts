@@ -40,6 +40,7 @@ import {
   checkNoHighConfidenceWithoutQuote,
   checkIntakeResponsesComplete,
   checkFrameworkVersionRecorded,
+  checkSourceRefForGroundedEntries,
 } from "./rules/compliance.js";
 import {
   checkAttackPathsReferenceKnownThreats,
@@ -140,6 +141,9 @@ registerStructuralRule("every_partial_has_gap", checkEveryPartialHasGap);
 registerStructuralRule("no_high_confidence_without_quote", checkNoHighConfidenceWithoutQuote);
 registerStructuralRule("intake_responses_complete", checkIntakeResponsesComplete);
 registerStructuralRule("framework_version_recorded", checkFrameworkVersionRecorded);
+registerStructuralRule("source_ref_for_grounded_entries", checkSourceRefForGroundedEntries);
+registerStructuralRule("every_documented_has_evidence", checkEveryCompliantHasEvidence);
+registerStructuralRule("every_partially_documented_has_gap", checkEveryPartialHasGap);
 
 // STRIDE threat model rules
 registerStructuralRule("stride_coverage_complete", checkStrideCoverageComplete);
