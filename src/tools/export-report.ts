@@ -63,7 +63,8 @@ interface EvidenceRef {
 }
 
 interface MatrixRow {
-  req_id: string;
+  req_id?: string;
+  requirement_id?: string;
   requirement_text?: string;
   framework?: string;
   authority_id?: string;
@@ -138,6 +139,10 @@ function uniqueStrings(values: Array<string | undefined>): string[] {
   return result;
 }
 
+function getReqId(row: MatrixRow): string {
+  return row.req_id || row.requirement_id || "\u2014";
+}
+
 function documentNamesFromCitations(citations: StrideDocumentCitation[]): string[] {
   return uniqueStrings(citations.map((citation) => citation.document || citation.doc_id));
 }
@@ -164,6 +169,7 @@ function buildReport(
   documents: Array<{ filename: string; doc_id?: string }>,
   assumptions: Array<{ assumption: string; confidence_impact?: string }>,
   expertsUsed: Array<{ agent_id: string; display_name?: string; status: string; entries_count?: number }>,
+  detectedAuthorities: Array<{ authority_id: string; authority_type?: string; authority_title?: string }> = [],
 ): string {
   const lines: string[] = [];
   const date = scope.assessment_date || new Date().toISOString().split("T")[0];
@@ -172,14 +178,21 @@ function buildReport(
   const total = stats.total_requirements || matrix.length;
 
   // Title
-  lines.push("# Compliance Assessment Report");
+  lines.push("# Gap Analysis Report");
   lines.push("");
   lines.push(`**Organization:** ${orgName}  `);
   lines.push(`**Date:** ${date}  `);
-  lines.push(`**Frameworks:** ${fwList}  `);
+  const authoritiesList = detectedAuthorities.length > 0
+    ? detectedAuthorities.map(a => a.authority_title || a.authority_id).join(", ")
+    : (frameworks.join(", ") || "Not specified");
+  lines.push(`**Authorities Assessed:** ${authoritiesList}  `);
   lines.push(`**Assessment ID:** ${assessmentId}`);
   lines.push("");
   lines.push("---");
+  lines.push("");
+  lines.push("> **Scope:** This gap analysis is based on document review only. It does not include interviews, observation of controls in operation, or verification of operational records.");
+  lines.push(">");
+  lines.push("> **Verdicts:** \"Documented\" means relevant text was found in the analyzed documents. It does not confirm that the described measures are implemented or effective.");
   lines.push("");
 
   // Executive Summary
@@ -273,8 +286,25 @@ function buildReport(
   lines.push("---");
   lines.push("");
 
-  // Compliance Matrix
-  lines.push("## 3. Compliance Matrix");
+  // Sort matrix by authority_type priority then verdict severity
+  const authorityPriority: Record<string, number> = {
+    law: 0, regulation: 1, directive: 2, standard: 3, contract: 4, policy: 5, custom: 6,
+  };
+  const verdictSeverity: Record<string, number> = {
+    contradicted: 0, not_found: 1, partially_documented: 2, partial: 2,
+    requires_human_assessment: 3, documented: 4, compliant: 4, not_applicable: 5,
+  };
+  const sortedMatrix = [...matrix].sort((a, b) => {
+    const aPri = authorityPriority[a.authority_type ?? ""] ?? 6;
+    const bPri = authorityPriority[b.authority_type ?? ""] ?? 6;
+    if (aPri !== bPri) return aPri - bPri;
+    const aSev = verdictSeverity[a.verdict] ?? 6;
+    const bSev = verdictSeverity[b.verdict] ?? 6;
+    return aSev - bSev;
+  });
+
+  // Unified Findings Register
+  lines.push("## 3. Unified Findings Register");
   lines.push("");
   lines.push(
     "| # | Req ID | Framework / Authority | Verdict | Confidence | Evidence Summary | Gap |",
@@ -282,12 +312,12 @@ function buildReport(
   lines.push(
     "|--:|--------|----------------------|---------|:----------:|-----------------|-----|",
   );
-  for (let i = 0; i < matrix.length; i++) {
-    const r = matrix[i];
+  for (let i = 0; i < sortedMatrix.length; i++) {
+    const r = sortedMatrix[i];
     const flag = r.requires_human_review ? " ⚠️" : "";
-    const fwLabel = r.authority_title || r.authority_id || r.framework || "—";
+    const fwLabel = r.authority_title || r.authority_id || r.framework || "\u2014";
     lines.push(
-      `| ${i + 1} | ${esc(r.req_id)} | ${esc(fwLabel)} | **${r.verdict}**${flag} | ${r.confidence ?? "—"} | ${esc(r.evidence_summary)} | ${esc(r.gap_description)} |`,
+      `| ${i + 1} | ${esc(getReqId(r))} | ${esc(fwLabel)} | **${r.verdict}**${flag} | ${r.confidence ?? "\u2014"} | ${esc(r.evidence_summary)} | ${esc(r.gap_description)} |`,
     );
   }
   lines.push("");
@@ -295,52 +325,57 @@ function buildReport(
   lines.push("");
 
   // Gap Analysis
-  const notFound = matrix.filter((r) => r.verdict === "not_found");
-  const partial = matrix.filter((r) => r.verdict === "partial" || r.verdict === "partially_documented");
-  const contradicted = matrix.filter((r) => r.verdict === "contradicted");
+  const legalTypes = new Set(["law", "regulation", "directive"]);
+  const criticalGaps = matrix.filter(
+    (r) => (r.verdict === "contradicted" || r.verdict === "not_found") && legalTypes.has(r.authority_type ?? ""),
+  );
+  const improvementAreas = matrix.filter(
+    (r) => r.verdict === "partially_documented" || r.verdict === "partial",
+  );
+  const humanAssessment = matrix.filter(
+    (r) => r.verdict === "requires_human_assessment",
+  );
 
   const fwForRow = (r: MatrixRow): string =>
-    r.authority_title || r.authority_id || r.framework || "—";
+    r.authority_title || r.authority_id || r.framework || "\u2014";
 
   lines.push("## 4. Gap Analysis");
   lines.push("");
 
-  if (notFound.length > 0) {
-    lines.push(`### Not Found (${notFound.length})`);
+  if (criticalGaps.length > 0) {
+    lines.push(`### Critical Gaps (${criticalGaps.length})`);
     lines.push("");
-    lines.push("No documentary evidence was found for these requirements:");
-    lines.push("");
-    for (const r of notFound) {
+    for (const r of criticalGaps) {
       lines.push(
-        `- **${r.req_id}** (${fwForRow(r)}): ${r.requirement_text ?? "—"}`,
+        `- **${getReqId(r)}** (${fwForRow(r)}): ${r.evidence_summary || r.requirement_text || "\u2014"}`,
       );
     }
     lines.push("");
   }
 
-  if (partial.length > 0) {
-    lines.push(`### Partial / Partially Documented (${partial.length})`);
+  if (improvementAreas.length > 0) {
+    lines.push(`### Improvement Areas (${improvementAreas.length})`);
     lines.push("");
-    for (const r of partial) {
-      lines.push(`- **${r.req_id}** (${fwForRow(r)})`);
+    for (const r of improvementAreas) {
+      lines.push(`- **${getReqId(r)}** (${fwForRow(r)})`);
       if (r.gap_description) lines.push(`  - Gap: ${r.gap_description}`);
       if (r.remediation_guidance) lines.push(`  - Remediation: ${r.remediation_guidance}`);
     }
     lines.push("");
   }
 
-  if (contradicted.length > 0) {
-    lines.push(`### Contradictions (${contradicted.length})`);
+  if (humanAssessment.length > 0) {
+    lines.push(`### Requires Human Assessment (${humanAssessment.length})`);
     lines.push("");
-    for (const r of contradicted) {
+    for (const r of humanAssessment) {
       lines.push(
-        `- **${r.req_id}** (${fwForRow(r)}): ${r.evidence_summary ?? "—"}`,
+        `- **${getReqId(r)}** (${fwForRow(r)}): ${r.requirement_text || "\u2014"}`,
       );
     }
     lines.push("");
   }
 
-  if (notFound.length === 0 && partial.length === 0 && contradicted.length === 0) {
+  if (criticalGaps.length === 0 && improvementAreas.length === 0 && humanAssessment.length === 0) {
     lines.push("No gaps identified — all assessed requirements are fully documented or not applicable.");
     lines.push("");
   }
@@ -348,11 +383,57 @@ function buildReport(
   lines.push("---");
   lines.push("");
 
+  // Remediation Plan
+  const tier1 = matrix.filter(
+    (r) => legalTypes.has(r.authority_type ?? "") && (r.verdict === "contradicted" || r.verdict === "not_found"),
+  );
+  const tier2 = matrix.filter(
+    (r) => r.authority_type === "standard" && (r.verdict === "not_found" || r.verdict === "partially_documented" || r.verdict === "partial"),
+  );
+  const tier3 = matrix.filter(
+    (r) => (r.authority_type === "contract" || r.authority_type === "policy" || r.authority_type === "custom") && (r.verdict === "not_found" || r.verdict === "partially_documented" || r.verdict === "partial"),
+  );
+
+  if (tier1.length > 0 || tier2.length > 0 || tier3.length > 0) {
+    lines.push("## 5. Remediation Plan");
+    lines.push("");
+
+    if (tier1.length > 0) {
+      lines.push("### Tier 1: Legal and Regulatory Non-Compliance (Immediate)");
+      lines.push("");
+      for (const r of tier1) {
+        lines.push(`- **${getReqId(r)}** (${fwForRow(r)}): ${r.remediation_guidance || r.gap_description || "Remediation guidance not provided"}`);
+      }
+      lines.push("");
+    }
+
+    if (tier2.length > 0) {
+      lines.push("### Tier 2: Standard and Framework Gaps (Next Audit Cycle)");
+      lines.push("");
+      for (const r of tier2) {
+        lines.push(`- **${getReqId(r)}** (${fwForRow(r)}): ${r.remediation_guidance || r.gap_description || "Remediation guidance not provided"}`);
+      }
+      lines.push("");
+    }
+
+    if (tier3.length > 0) {
+      lines.push("### Tier 3: Policy Improvements (Continuous)");
+      lines.push("");
+      for (const r of tier3) {
+        lines.push(`- **${getReqId(r)}** (${fwForRow(r)}): ${r.remediation_guidance || r.gap_description || "Remediation guidance not provided"}`);
+      }
+      lines.push("");
+    }
+
+    lines.push("---");
+    lines.push("");
+  }
+
   // Evidence Register
   const evidenceRows = matrix.filter(
     (r) => r.evidence_refs && r.evidence_refs.length > 0,
   );
-  lines.push("## 5. Evidence Register");
+  lines.push("## 6. Evidence Register");
   lines.push("");
   if (evidenceRows.length > 0) {
     lines.push("| Req ID | Document | Section | Pages | Quote (excerpt) |");
@@ -370,7 +451,7 @@ function buildReport(
             (r.verbatim_quote.length > 120 ? "…" : "")
           : "—";
         lines.push(
-          `| ${esc(r.req_id)} | ${esc(ref.filename || ref.doc_id)} | ${esc(ref.section_ref)} | ${pages} | ${quote} |`,
+          `| ${esc(getReqId(r))} | ${esc(ref.filename || ref.doc_id)} | ${esc(ref.section_ref)} | ${pages} | ${quote} |`,
         );
       }
     }
@@ -386,7 +467,7 @@ function buildReport(
     scope.client_attestations &&
     scope.client_attestations.length > 0
   ) {
-    lines.push("## 6. Client Attestations");
+    lines.push("## 9. Client Attestations");
     lines.push("");
     for (const att of scope.client_attestations) {
       lines.push(`**Q:** ${att.question}  `);
@@ -400,7 +481,7 @@ function buildReport(
 
   // Assumptions & Limitations
   if (assumptions.length > 0) {
-    lines.push("## Assumptions & Limitations");
+    lines.push("## 7. Assumptions & Limitations");
     lines.push("");
     for (const a of assumptions) {
       lines.push(`- ${a.assumption}`);
@@ -413,7 +494,7 @@ function buildReport(
 
   // Experts Consulted
   if (expertsUsed.length > 0) {
-    lines.push("## Experts Consulted");
+    lines.push("## 8. Experts Consulted");
     lines.push("");
     lines.push("| Expert | Status | Entries |");
     lines.push("|--------|--------|--------:|");
@@ -427,7 +508,7 @@ function buildReport(
 
   // Footer
   lines.push(
-    "*Report generated by Ansvar Compliance Assessment Engine v1.0*",
+    "*Report generated by Ansvar Gap Analysis Engine v2.0*",
   );
 
   return lines.join("\n");
@@ -729,6 +810,7 @@ export async function wkflExportReport(
     documents,
     assumptions,
     expertsUsed,
+    detectedAuthorities,
   );
 
   return {
