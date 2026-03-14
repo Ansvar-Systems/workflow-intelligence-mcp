@@ -79,7 +79,7 @@ export function checkEveryCompliantHasEvidence(
 
   for (const row of s.compliance_matrix) {
     if (
-      row.verdict === "compliant" &&
+      (row.verdict === "compliant" || row.verdict === "documented") &&
       (!row.evidence_refs || row.evidence_refs.length === 0)
     ) {
       failures.push({
@@ -102,7 +102,10 @@ export function checkEveryPartialHasGap(
   const failures: RuleFailure[] = [];
 
   for (const row of s.compliance_matrix) {
-    if (row.verdict === "partial" && !row.gap_description) {
+    if (
+      (row.verdict === "partial" || row.verdict === "partially_documented") &&
+      !row.gap_description
+    ) {
       failures.push({
         rule: "every_partial_has_gap",
         severity: "required",
@@ -192,3 +195,30 @@ export function checkFrameworkVersionRecorded(
 
   return failures;
 }
+
+export function checkSourceRefForGroundedEntries(
+  state: Record<string, unknown>,
+): RuleFailure[] {
+  const s = asCompliance(state);
+  if (!s.compliance_matrix) return [];
+
+  const failures: RuleFailure[] = [];
+  for (const row of s.compliance_matrix) {
+    const sourceKind = (row as any).source_kind;
+    const sourceRef = (row as any).source_ref;
+    if (
+      (sourceKind === "mcp_grounded" || sourceKind === "document_extracted") &&
+      !sourceRef
+    ) {
+      failures.push({
+        rule: "source_ref_for_grounded_entries",
+        severity: "required",
+        details: `Entry '${row.req_id}' claims ${sourceKind} but has no source_ref`,
+      });
+    }
+  }
+  return failures;
+}
+
+export const checkEveryDocumentedHasEvidence = checkEveryCompliantHasEvidence;
+export const checkEveryPartiallyDocumentedHasGap = checkEveryPartialHasGap;
