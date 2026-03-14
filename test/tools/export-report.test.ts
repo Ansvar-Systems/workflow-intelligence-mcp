@@ -113,9 +113,13 @@ describe("wkfl_export_report", () => {
     const report = result.content[0].text;
 
     // Title and metadata
-    expect(report).toContain("# Compliance Assessment Report");
+    expect(report).toContain("# Gap Analysis Report");
     expect(report).toContain("Acme Corp");
     expect(report).toContain("ISO 27001:2022");
+
+    // Disclaimer
+    expect(report).toContain("**Scope:** This gap analysis is based on document review only.");
+    expect(report).toContain("**Verdicts:**");
 
     // Executive Summary
     expect(report).toContain("## 1. Executive Summary");
@@ -126,8 +130,8 @@ describe("wkfl_export_report", () => {
     expect(report).toContain("isms-policy.pdf");
     expect(report).toContain("No interviews conducted");
 
-    // Compliance Matrix
-    expect(report).toContain("## 3. Compliance Matrix");
+    // Unified Findings Register
+    expect(report).toContain("## 3. Unified Findings Register");
     expect(report).toContain("A.5.1");
     expect(report).toContain("**compliant**");
     expect(report).toContain("**partial**");
@@ -135,18 +139,20 @@ describe("wkfl_export_report", () => {
 
     // Gap Analysis
     expect(report).toContain("## 4. Gap Analysis");
-    expect(report).toContain("Not Found (1)");
-    expect(report).toContain("Partial / Partially Documented (1)");
+    expect(report).toContain("Improvement Areas (1)");
     expect(report).toContain("No defined review schedule");
 
     // Evidence Register
-    expect(report).toContain("## 5. Evidence Register");
+    expect(report).toContain("## 6. Evidence Register");
     expect(report).toContain("Section 3.1");
-    expect(report).toContain("5–7");
+    expect(report).toContain("5\u20137");
 
     // Client Attestations
-    expect(report).toContain("## 6. Client Attestations");
+    expect(report).toContain("## 9. Client Attestations");
     expect(report).toContain("Do you develop software in-house?");
+
+    // Footer
+    expect(report).toContain("Ansvar Gap Analysis Engine v2.0");
   });
 
   it("handles pre-assembled compliance_matrix key", async () => {
@@ -178,7 +184,8 @@ describe("wkfl_export_report", () => {
     const report = result.content[0].text;
 
     expect(report).toContain("N-1");
-    expect(report).toContain("Not Found (1)");
+    expect(report).toContain("## 3. Unified Findings Register");
+    expect(report).toContain("**not_found**");
   });
 
   it("assembles a STRIDE report from the documented scope_and_dfd and threats keys", async () => {
