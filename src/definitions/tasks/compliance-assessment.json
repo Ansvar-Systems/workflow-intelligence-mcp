@@ -11,27 +11,56 @@
   "authority_detection": {
     "signals": {
       "NIS2": ["NIS2", "NIS 2", "2022/2555", "netwerk- en informatiebeveiliging", "Cyberbeveiligingswet"],
-      "GDPR": ["GDPR", "AVG", "2016/679", "persoonsgegevens", "data protection", "Datenschutz"],
-      "ISO_27001": ["ISO 27001", "IEC 27001", "ISMS", "information security management"],
+      "GDPR": ["GDPR", "2016/679", "persoonsgegevens", "data protection", "Datenschutz", "gegevensbescherming"],
+      "ISO_27001": ["ISO 27001", "ISO27001", "ISMS", "information security management"],
       "DORA": ["DORA", "2022/2554", "digital operational resilience"],
-      "BIO": ["BIO", "Baseline Informatiebeveiliging Overheid"],
-      "NEN_7510": ["NEN 7510", "NEN7510"]
+      "BIO": ["BIO", "BIO2", "Baseline Informatiebeveiliging", "basisbeveiligingsniveau", "BBN", "overheidsmaatregelen"],
+      "NEN_7510": ["NEN 7510", "NEN7510", "NEN 7512", "NEN 7513"],
+      "CRA": ["CRA", "Cyber Resilience Act", "product security"],
+      "AI_ACT": ["AI Act", "artificial intelligence act"],
+      "HIPAA": ["HIPAA", "health insurance portability", "protected health information"],
+      "PCI_DSS": ["PCI", "PCI DSS", "payment card"],
+      "SOC2": ["SOC 2", "SOC2", "trust services criteria"],
+      "CMMC": ["CMMC", "cybersecurity maturity model"],
+      "ISO_27002": ["ISO 27002", "ISO27002", "security controls"],
+      "CSRD": ["CSRD", "sustainability reporting", "EU taxonomy"],
+      "IEC_62443": ["IEC 62443", "62443", "industrial cybersecurity"],
+      "NERC_CIP": ["NERC CIP", "NERC"],
+      "BSI_GRUNDSCHUTZ": ["BSI", "Grundschutz", "IT-Grundschutz"],
+      "ARCHIEFWET": ["Archiefwet", "archivering", "bewaarplicht"],
+      "WOO": ["Woo", "Wet open overheid", "openbaarheid"],
+      "NIST_CSF": ["NIST CSF", "NIST 800-53", "cybersecurity framework"],
+      "UN_R155": ["UN R155", "ISO 21434", "ISO21434", "vehicle type approval", "WP.29"]
     },
     "jurisdiction_signals": {
-      "NL": ["Nederland", "Dutch", "provincie", "gemeente", "rijksoverheid", "BIO", "Archiefwet", "Woo"],
+      "NL": ["Nederland", "Dutch", "provincie", "gemeente", "rijksoverheid", "BIO", "Archiefwet", "Woo", "overheid"],
       "DE": ["Deutschland", "German", "Bundesamt", "BSI", "KRITIS"],
-      "EU": ["European Union", "EU", "Europese Unie"]
+      "EU": ["European Union", "EU", "Europese Unie"],
+      "US": ["United States", "USA", "FedRAMP"],
+      "GB": ["United Kingdom", "British", "NCSC-UK"]
     }
   },
   "authority_expert_hints": {
     "NIS2": ["nis2-expert"],
     "GDPR": ["gdpr-expert", "privacy-expert"],
-    "DORA": ["dora-expert", "banking-expert"],
+    "DORA": ["dora-expert"],
     "ISO_27001": ["controls-mapper", "audit-expert"],
-    "BIO": ["controls-mapper"],
+    "BIO": ["public-sector-expert", "nis2-expert"],
+    "NEN_7510": ["public-sector-expert"],
+    "BSI_GRUNDSCHUTZ": ["public-sector-expert"],
     "HIPAA": ["healthcare-expert", "us-compliance-expert"],
-    "PCI_DSS": ["banking-expert", "financial-services-expert"],
-    "ISO_21434": ["automotive-expert"]
+    "PCI_DSS": ["banking-expert", "controls-mapper"],
+    "UN_R155": ["automotive-expert"],
+    "IEC_62443": ["ot-security-expert", "critical-infra-expert"],
+    "NERC_CIP": ["energy-expert", "critical-infra-expert"],
+    "CSRD": ["esg-expert", "csrd-expert"],
+    "CMMC": ["defense-aerospace-expert", "us-compliance-expert"],
+    "SOC2": ["audit-expert", "controls-mapper"],
+    "CRA": ["nis2-expert", "supply-chain-expert"],
+    "AI_ACT": ["ai-act-expert"],
+    "ARCHIEFWET": ["nis2-expert"],
+    "WOO": ["nis2-expert"],
+    "NIST_CSF": ["controls-mapper", "us-compliance-expert"]
   },
   "common_gap_entry_schema": {
     "type": "object",
