@@ -198,7 +198,7 @@ export const TOOL_DEFINITIONS = [
   {
     name: "wkfl_export_report",
     description:
-      'Assemble a formatted assessment report from stored state. Supports two formats: compliance (default) and STRIDE threat model. For compliance: loads domain groups, coverage stats, scope/methodology, evidence refs — renders executive summary, compliance matrix, gap analysis, evidence register. For STRIDE: loads components, threats, mitigations, gaps, DFD — renders scope, DFD, threats by STRIDE category, risk matrix, mitigations, gaps register. Format auto-detected from stored state keys, or set report_format explicitly.',
+      'Assemble a formatted assessment report from stored state. Supports three formats: compliance (default), STRIDE threat model, and DPIA. For compliance: loads domain groups, coverage stats, scope/methodology, evidence refs — renders executive summary, compliance matrix, gap analysis, evidence register. For STRIDE: loads components, threats, mitigations, gaps, DFD — renders scope, DFD, threats by STRIDE category, risk matrix, mitigations, gaps register. For DPIA: loads screening, processing description, risks, safeguards, consultation — renders 12-section GDPR Art. 35 report. Format auto-detected from stored state keys or task_id, or set report_format explicitly.',
     inputSchema: {
       type: "object" as const,
       properties: {
@@ -206,11 +206,16 @@ export const TOOL_DEFINITIONS = [
           type: "string",
           description: "Assessment identifier to export.",
         },
+        task_id: {
+          type: "string",
+          description:
+            'Task identifier for explicit format routing. Takes precedence over report_format and state-key detection. Values: "dpia_assessment", "stride_threat_model", "gap_analysis".',
+        },
         report_format: {
           type: "string",
-          enum: ["compliance", "stride"],
+          enum: ["compliance", "stride", "dpia"],
           description:
-            'Report format. "stride" for STRIDE threat model, "compliance" for compliance assessment. Auto-detected from stored state if omitted.',
+            'Report format. "stride" for STRIDE threat model, "dpia" for DPIA, "compliance" for compliance assessment. Auto-detected from stored state or task_id if omitted.',
         },
       },
       required: ["assessment_id"],

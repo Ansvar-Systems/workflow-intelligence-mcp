@@ -21,6 +21,11 @@ import {
   type RedFlagEntry,
   type EvidenceManifestEntry,
 } from "./export-report-stride.js";
+import { buildDpiaReport, type DpiaReportInput } from "./export-report-dpia.js";
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import type { TaskDefinition } from "../types/task.js";
 
 interface StrideDocumentCitation {
   document?: string;
@@ -557,15 +562,104 @@ export async function wkflExportReport(
     return entry?.data ?? null;
   };
 
-  // Detect STRIDE report format: explicit argument or presence of stride-specific state keys
+  // Detect report format: task_id > report_format > state-key heuristic
+  const taskId = args.task_id as string | undefined;
   const reportFormat = args.report_format as string | undefined;
   const storedKeys = new Set(listing.entries.map((e) => e.key));
+
+  const isDpia =
+    taskId === "dpia_assessment" ||
+    reportFormat === "dpia" ||
+    (storedKeys.has("consultation_assessment") && storedKeys.has("processing_description"));
+
   const isStride =
-    reportFormat === "stride" ||
-    storedKeys.has("scope_and_dfd") ||
-    storedKeys.has("stride_threats") ||
-    storedKeys.has("coverage_matrix") ||
-    storedKeys.has("threat_mitigations");
+    !isDpia &&
+    (taskId === "stride_threat_model" ||
+      reportFormat === "stride" ||
+      storedKeys.has("scope_and_dfd") ||
+      storedKeys.has("stride_threats") ||
+      storedKeys.has("coverage_matrix") ||
+      storedKeys.has("threat_mitigations"));
+
+  if (isDpia) {
+    // Validate completeness before export (same pattern as STRIDE path)
+    const dpiaState: Record<string, unknown> = {};
+    for (const entry of listing.entries) {
+      dpiaState[entry.key] = load(entry.key);
+    }
+
+    // Load DPIA task definition for validation (direct file read — ensureLoaded/taskCache are private)
+    const __dirname_local = dirname(fileURLToPath(import.meta.url));
+    const dpiaDefPath = join(__dirname_local, "..", "definitions", "tasks", "dpia-assessment.json");
+    let qualityWarnings: string[] = [];
+
+    try {
+      const dpiaDef = JSON.parse(readFileSync(dpiaDefPath, "utf-8")) as TaskDefinition;
+      const validation = evaluateCompleteness(
+        dpiaState,
+        dpiaDef.completion_criteria,
+        dpiaDef.quality_rubric,
+      );
+      if (validation.status === "incomplete") {
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify({
+                error: "incomplete_assessment",
+                message: `DPIA assessment is not complete. Missing: ${validation.missing.map((f) => f.details).join("; ")}`,
+                missing: validation.missing,
+              }),
+            },
+          ],
+          isError: true,
+        };
+      }
+      qualityWarnings = validation.warnings.map((w) => w.details);
+    } catch {
+      // If definition file can't be loaded, skip validation and proceed
+    }
+
+    const orgProfile = (load("org_profile") ?? {}) as DpiaReportInput["orgProfile"];
+    const screening = (load("screening") ?? {}) as DpiaReportInput["screening"];
+    const dpoConsultation = (load("dpo_consultation") ?? {}) as DpiaReportInput["dpoConsultation"];
+    const processingDescription = (load("processing_description") ?? {}) as DpiaReportInput["processingDescription"];
+    const necessityAssessment = (load("necessity_assessment") ?? {}) as DpiaReportInput["necessityAssessment"];
+    const risks = (load("risks") ?? []) as DpiaReportInput["risks"];
+    const riskAnalysis = (load("risk_analysis") ?? []) as DpiaReportInput["riskAnalysis"];
+    const riskMatrixSummary = (load("risk_matrix_summary") ?? {}) as DpiaReportInput["riskMatrixSummary"];
+    const dataSubjectViews = (load("data_subject_views") ?? {}) as DpiaReportInput["dataSubjectViews"];
+    const safeguards = (load("safeguards") ?? []) as DpiaReportInput["safeguards"];
+    const consultationAssessment = (load("consultation_assessment") ?? {}) as DpiaReportInput["consultationAssessment"];
+    const jurisdictionFindings = (load("jurisdiction_findings") ?? []) as DpiaReportInput["jurisdictionFindings"];
+    const scopeAndMethodology = (load("scope_and_methodology") ?? {}) as DpiaReportInput["scopeAndMethodology"];
+    const assumptions = (load("assumptions") ?? []) as DpiaReportInput["assumptions"];
+    const clientQuestions = (load("client_questions") ?? []) as DpiaReportInput["clientQuestions"];
+
+    const report = buildDpiaReport({
+      assessmentId,
+      orgProfile,
+      screening,
+      dpoConsultation,
+      processingDescription,
+      necessityAssessment,
+      risks,
+      riskAnalysis,
+      riskMatrixSummary,
+      dataSubjectViews,
+      safeguards,
+      consultationAssessment,
+      jurisdictionFindings,
+      scopeAndMethodology,
+      assumptions,
+      clientQuestions,
+      qualityWarnings,
+    });
+
+    return {
+      content: [{ type: "text", text: report }],
+    };
+  }
 
   if (isStride) {
     const evidenceManifest = (load("evidence_manifest") ?? {}) as EvidenceManifestEntry;

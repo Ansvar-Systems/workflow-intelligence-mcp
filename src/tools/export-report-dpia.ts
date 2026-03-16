@@ -457,7 +457,7 @@ export function buildDpiaReport(input: DpiaReportInput): string {
   }
   if ((sm.limitations ?? []).length > 0) {
     sections.push(`\n### Limitations\n`);
-    for (const l of sm.limitations) {
+    for (const l of sm.limitations ?? []) {
       sections.push(`- ${l}`);
     }
   }
