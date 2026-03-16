@@ -1,0 +1,770 @@
+{
+  "id": "dpia_assessment",
+  "name": "Data Protection Impact Assessment",
+  "category": "dpia",
+  "version": "1.0",
+  "standalone": true,
+  "used_in_workflows": [],
+  "dependencies": [],
+  "description": "Structured DPIA following GDPR Article 35. Systematic description of processing, necessity and proportionality assessment, risk identification and assessment, safeguards, DPA consultation determination, and report generation. Supports document-driven progression and jurisdiction-specific expert delegation.",
+  "estimated_duration": "45-180 min",
+  "mcp_tools": [
+    {
+      "mcp": "document-index-mcp",
+      "tools": ["docidx_index_document", "docidx_search", "docidx_get_section", "docidx_get_document", "docidx_list_documents", "docidx_get_surrounding"],
+      "when": "phase_0_screening, phase_1_processing, phase_2_necessity, phase_3_risks, phase_5_safeguards",
+      "guidance": "Index uploaded documents in Phase 0/1. Search for processing descriptions, risk assessments, safeguard inventories, and prior DPIA content in subsequent phases. Only content retrieved via these tools counts as document evidence."
+    },
+    {
+      "mcp": "eu-regulations-mcp",
+      "tools": ["get_article", "search_eu_regulations", "get_definitions", "check_applicability"],
+      "when": "all_phases",
+      "guidance": "Primary grounding source for all GDPR requirements. Use get_article for specific articles (e.g., 'GDPR Article 35', 'GDPR Article 6(1)(f)'). Use search_eu_regulations for recitals and thematic searches (e.g., 'risks rights and freedoms recital 75'). Use get_definitions for EDPB-defined terms (e.g., 'large scale', 'systematic monitoring'). Every legal claim must cite an MCP-retrieved article."
+    },
+    {
+      "mcp": "workflow-intelligence-mcp",
+      "tools": ["wkfl_store_state", "wkfl_load_state", "wkfl_list_states", "wkfl_export_report", "wkfl_check_stage_completeness", "wkfl_get_task_definition"],
+      "when": "all_phases",
+      "guidance": "Call wkfl_list_states on every message for session resume. Store phase outputs after each phase completes. Use wkfl_check_stage_completeness before advancing. Use wkfl_get_task_definition with phase parameter to load phase-specific guidance."
+    },
+    {
+      "mcp": "law-mcp-proxy",
+      "tools": ["law_search_legislation", "law_get_provision", "law_list_legislation"],
+      "when": "phase_0_screening, phase_3_risks, phase_5_safeguards, phase_6_consultation",
+      "guidance": "For jurisdiction-specific GDPR implementation laws. Delegate to jurisdiction expert when org jurisdiction is detected. Use to check national DPA mandatory DPIA lists (Phase 0), national additional requirements (Phases 3, 5), and Member State consultation triggers (Phase 6)."
+    },
+    {
+      "mcp": "privacy-assessment-mcp",
+      "tools": ["search_privacy_frameworks", "get_privacy_control"],
+      "when": "phase_3_risks, phase_5_safeguards",
+      "guidance": "Supplementary privacy framework guidance for risk identification and safeguard selection. Use alongside EU Regulations MCP, not as a replacement."
+    }
+  ],
+  "prompting_guidance": "WORKFLOW INSTRUCTIONS FOR DPIA ORCHESTRATOR:\n\n1. RESUME CHECK: Call wkfl_list_states on every message. If prior state exists, load last completed phase and resume from the next phase. Never restart from scratch.\n\n2. SMART PROGRESSION: For each phase, first search uploaded documents for relevant content. If found, extract into state, populate phase_coverage with source: document_extracted, present to user for confirmation. Only ask questions for genuinely missing information. If user says 'just proceed', record unanswered items as assumptions with confidence_impact.\n\n3. PHASE 0 SCREENING: If user explicitly requests a DPIA, record outcome: required and advance. Otherwise, assess Art. 35 criteria, national lists, and exemptions.\n\n4. LEGAL BASIS VERIFICATION: Always verify stated legal basis via get_article. If Art. 9/10 data present, verify conditions separately.\n\n5. HRI ASSESSMENT: All 9 EDPB WP248 indicators must be assessed before advancing Phase 1.\n\n6. RISK-TO-HARM FRAMING: Every risk must describe concrete harm to the data subject, not organisational risk. Bad: 'data breach'. Good: 'unauthorised disclosure of health data causes discrimination in insurance decisions.'\n\n7. JURISDICTION DELEGATION: If org_profile.jurisdiction is set and a matching law MCP expert is available (check list_delegatable_agents), delegate for Phases 3, 5, 6. Expert failure does not block -- EU-level analysis stands.\n\n8. DATA SUBJECT VIEWS: In Phase 3, ask whether data subject views were sought (Art. 35(9)). Record method and summary, or justification for not seeking them.\n\n9. DPO CONSULTATION: In Phase 1, ask whether the organisation has a DPO and whether their advice was sought (Art. 35(2)). Record in dpo_consultation and update if advice changes during assessment.\n\n10. NO CONSULTATION SHORTCUTS: Phase 6 must assess Art. 36(1) on its merits. 'All risks Low/Medium' is evidence, not a decision rule. Always check Member State triggers.\n\n11. LANGUAGE: Respond in user's language. Legal citations in source language.\n\n12. STATE PERSISTENCE: Store phase outputs via wkfl_store_state after each phase completes.",
+  "stage_state_schema": {
+    "type": "object",
+    "properties": {
+      "org_profile": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "sector": { "type": "string" },
+          "jurisdiction": { "type": "string" },
+          "dpo_contact": { "type": "string" }
+        }
+      },
+      "documents": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "doc_id": { "type": "string" },
+            "filename": { "type": "string" },
+            "sections_count": { "type": "integer" },
+            "quality_signal": { "type": "string", "enum": ["high", "medium", "low"] }
+          },
+          "required": ["doc_id", "filename"]
+        }
+      },
+      "phase_coverage": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "phase_id": { "type": "string" },
+            "coverage_status": { "type": "string", "enum": ["complete", "partial", "not_covered"] },
+            "extracted_fields": { "type": "array", "items": { "type": "string" } },
+            "missing_fields": { "type": "array", "items": { "type": "string" } },
+            "source": { "type": "string", "enum": ["document_extracted", "user_provided", "assumed"] },
+            "confirmation_status": { "type": "string", "enum": ["pending", "confirmed", "rejected", "waived", "not_applicable"] },
+            "confirmed_at": { "type": "string" },
+            "confirmed_by": { "type": "string", "enum": ["user", "system"] }
+          },
+          "required": ["phase_id", "coverage_status"]
+        }
+      },
+      "client_questions": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "string" },
+            "phase_id": { "type": "string" },
+            "question": { "type": "string" },
+            "blocking": { "type": "boolean" },
+            "status": { "type": "string", "enum": ["pending", "answered", "assumed", "waived"] },
+            "response": { "type": "string" },
+            "response_summary": { "type": "string" },
+            "answer_source": { "type": "string", "enum": ["user_attested", "document_evidence", "assumed", "analyst_judgment"] }
+          },
+          "required": ["id", "question", "status"]
+        }
+      },
+      "assumptions": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "string" },
+            "assumption": { "type": "string" },
+            "phase_id": { "type": "string" },
+            "confidence_impact": { "type": "string" },
+            "related_question_id": { "type": "string" }
+          },
+          "required": ["id", "assumption"]
+        }
+      },
+      "screening": {
+        "type": "object",
+        "properties": {
+          "outcome": { "type": "string", "enum": ["required", "not_required", "recommended"] },
+          "criteria_triggered": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "criterion": { "type": "string" },
+                "article": { "type": "string" },
+                "description": { "type": "string" }
+              }
+            }
+          },
+          "national_list_refs": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "jurisdiction": { "type": "string" },
+                "list_name": { "type": "string" },
+                "entry_ref": { "type": "string" }
+              }
+            }
+          },
+          "exemption_basis": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "article": { "type": "string" },
+                "description": { "type": "string" }
+              }
+            }
+          },
+          "source_refs": { "type": "array", "items": { "type": "string" } },
+          "rationale": { "type": "string" }
+        }
+      },
+      "dpo_consultation": {
+        "type": "object",
+        "properties": {
+          "designated": { "type": "boolean" },
+          "dpo_contact": { "type": "string" },
+          "advice_sought": { "type": "boolean" },
+          "advice_date": { "type": "string" },
+          "advice_summary": { "type": "string" },
+          "recommendation": { "type": "string" },
+          "followed": { "type": "boolean" },
+          "deviation_rationale": { "type": "string" }
+        }
+      },
+      "processing_description": {
+        "type": "object",
+        "properties": {
+          "data_types": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "category": { "type": "string" },
+                "sensitivity_flag": { "type": "string", "enum": ["standard", "special_category_art9", "criminal_art10"] },
+                "source": { "type": "string", "enum": ["direct_collection", "third_party", "inferred"] },
+                "art9_type": { "type": "string", "enum": ["health", "biometric", "racial", "political", "religious", "trade_union", "sexual_orientation", "genetic"] },
+                "retention_period": { "type": "string" },
+                "volume_estimate": { "type": "string" }
+              }
+            }
+          },
+          "data_subjects": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "type": { "type": "string" },
+                "vulnerable": { "type": "boolean" },
+                "volume_estimate": { "type": "string" }
+              }
+            }
+          },
+          "purposes": { "type": "array", "items": { "type": "string" } },
+          "legal_basis": {
+            "type": "object",
+            "properties": {
+              "article_6_basis": {
+                "type": "object",
+                "properties": {
+                  "basis": { "type": "string", "enum": ["consent", "contract", "legal_obligation", "vital_interests", "public_task", "legitimate_interests"] },
+                  "article": { "type": "string" },
+                  "verified": { "type": "boolean" },
+                  "verification_note": { "type": "string" }
+                }
+              },
+              "article_9_condition": {
+                "type": "object",
+                "properties": {
+                  "condition": { "type": "string" },
+                  "article": { "type": "string" },
+                  "applies": { "type": "boolean" }
+                }
+              },
+              "article_10_basis": {
+                "type": "object",
+                "properties": {
+                  "basis": { "type": "string" },
+                  "article": { "type": "string" },
+                  "applies": { "type": "boolean" }
+                }
+              }
+            }
+          },
+          "processors": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": { "type": "string" },
+                "country": { "type": "string" },
+                "role": { "type": "string", "enum": ["processor", "joint_controller", "independent"] }
+              }
+            }
+          },
+          "international_transfers": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "destination": { "type": "string" },
+                "mechanism": { "type": "string", "enum": ["adequacy", "sccs", "bcrs", "dpf", "none", "unknown"] }
+              }
+            }
+          },
+          "high_risk_indicators": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": { "type": "integer" },
+                "name": { "type": "string" },
+                "present": { "type": "boolean" },
+                "rationale": { "type": "string" }
+              }
+            }
+          },
+          "hri_count": { "type": "integer" },
+          "recommended_scope": { "type": "string", "enum": ["standard", "comprehensive"] }
+        }
+      },
+      "necessity_assessment": {
+        "type": "object",
+        "properties": {
+          "assessment_narrative": { "type": "string" },
+          "proportionality_assessment": { "type": "string" },
+          "alternatives_considered": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "alternative": { "type": "string" },
+                "why_rejected": { "type": "string" }
+              }
+            }
+          },
+          "lia_assessment": {
+            "type": "object",
+            "properties": {
+              "purpose_test": { "type": "string" },
+              "necessity_test": { "type": "string" },
+              "balancing_test": { "type": "string" },
+              "outcome": { "type": "string", "enum": ["controller_prevails", "data_subject_prevails", "balanced_with_safeguards"] }
+            }
+          },
+          "data_minimisation_assessment": { "type": "string" }
+        }
+      },
+      "risks": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "string" },
+            "description": { "type": "string" },
+            "category": { "type": "string", "enum": ["physical_harm", "material_damage", "non_material_damage", "loss_of_control", "limitation_of_rights", "special_vulnerabilities"] },
+            "affected_rights": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "right": { "type": "string" },
+                  "article": { "type": "string" }
+                }
+              }
+            },
+            "harm_description": { "type": "string" },
+            "data_types_affected": { "type": "array", "items": { "type": "string" } }
+          },
+          "required": ["id", "description", "category", "affected_rights", "harm_description"]
+        }
+      },
+      "rights_summary": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "right": { "type": "string" },
+            "article": { "type": "string" },
+            "impacted": { "type": "boolean" },
+            "risks": { "type": "array", "items": { "type": "string" } }
+          }
+        }
+      },
+      "data_subject_views": {
+        "type": "object",
+        "properties": {
+          "sought": { "type": "boolean" },
+          "method": { "type": "string", "enum": ["survey", "consultation", "representative_body", "focus_group"] },
+          "summary": { "type": "string" },
+          "reason_not_sought": { "type": "string" }
+        }
+      },
+      "risk_analysis": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "string" },
+            "description": { "type": "string" },
+            "category": { "type": "string" },
+            "affected_rights": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "right": { "type": "string" },
+                  "article": { "type": "string" }
+                }
+              }
+            },
+            "harm_description": { "type": "string" },
+            "likelihood": { "type": "string", "enum": ["Remote", "Unlikely", "Possible", "Likely", "Almost Certain"] },
+            "likelihood_score": { "type": "integer" },
+            "likelihood_justification": { "type": "string" },
+            "severity": { "type": "string", "enum": ["Negligible", "Limited", "Significant", "Severe", "Catastrophic"] },
+            "severity_score": { "type": "integer" },
+            "severity_justification": { "type": "string" },
+            "score": { "type": "integer" }
+          },
+          "required": ["id", "likelihood_score", "severity_score", "score"]
+        }
+      },
+      "risk_matrix_summary": {
+        "type": "object",
+        "properties": {
+          "critical": { "type": "integer" },
+          "high": { "type": "integer" },
+          "medium": { "type": "integer" },
+          "low": { "type": "integer" }
+        }
+      },
+      "safeguards": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "risk_id": { "type": "string" },
+            "measure": { "type": "string" },
+            "type": { "type": "string", "enum": ["technical", "organisational", "contractual"] },
+            "gdpr_article": { "type": "string" },
+            "effort": { "type": "string" },
+            "likelihood_before": { "type": "integer" },
+            "severity_before": { "type": "integer" },
+            "score_before": { "type": "integer" },
+            "likelihood_after": { "type": "integer" },
+            "severity_after": { "type": "integer" },
+            "score_after": { "type": "integer" },
+            "justification": { "type": "string" }
+          },
+          "required": ["risk_id", "measure", "type"]
+        }
+      },
+      "consultation_assessment": {
+        "type": "object",
+        "properties": {
+          "consultation_required": { "type": "boolean" },
+          "consultation_basis": { "type": "string" },
+          "residual_high_risks": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "risk_id": { "type": "string" },
+                "score_after": { "type": "integer" },
+                "why_still_high": { "type": "string" }
+              },
+              "required": ["risk_id"]
+            }
+          },
+          "member_state_triggers_checked": { "type": "boolean" },
+          "member_state_triggers": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "jurisdiction": { "type": "string" },
+                "trigger": { "type": "string" },
+                "source_ref": { "type": "string" }
+              }
+            }
+          },
+          "processor_compliance": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "processor": { "type": "string" },
+                "country": { "type": "string" },
+                "art28_required": { "type": "boolean" },
+                "dpa_in_place": { "type": ["boolean", "string"] },
+                "gap": { "type": "string" }
+              }
+            }
+          },
+          "transfer_compliance": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "destination": { "type": "string" },
+                "mechanism": { "type": "string" },
+                "adequate": { "type": "boolean" },
+                "note": { "type": "string" }
+              }
+            }
+          }
+        }
+      },
+      "jurisdiction_findings": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "jurisdiction_id": { "type": "string" },
+            "expert_agent": { "type": "string" },
+            "phase_id": { "type": "string" },
+            "additional_requirements": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "requirement": { "type": "string" },
+                  "legal_reference": { "type": "string" },
+                  "impact": { "type": "string" }
+                }
+              }
+            },
+            "source_kind": { "type": "string", "enum": ["mcp_grounded", "expert_judgment"] }
+          },
+          "required": ["jurisdiction_id", "phase_id"]
+        }
+      },
+      "scope_and_methodology": {
+        "type": "object",
+        "properties": {
+          "assessment_date": { "type": "string" },
+          "frameworks_assessed": { "type": "array", "items": { "type": "string" } },
+          "documents_analyzed": { "type": "array", "items": { "type": "string" } },
+          "methodology": { "type": "string" },
+          "limitations": { "type": "array", "items": { "type": "string" } },
+          "client_attestations": { "type": "array", "items": { "type": "string" } }
+        }
+      },
+      "report_markdown": { "type": "string" },
+      "report_ready": { "type": "boolean" }
+    },
+    "additionalProperties": false
+  },
+  "completion_criteria": {
+    "required_fields": [
+      { "field": "screening", "rule": "exists", "message": "Screening outcome must be recorded" },
+      { "field": "processing_description", "rule": "exists", "message": "Processing description must be completed" },
+      { "field": "necessity_assessment", "rule": "exists", "message": "Necessity and proportionality assessment must be completed" },
+      { "field": "risks", "rule": "min_count", "value": 1, "message": "At least one risk must be identified" },
+      { "field": "risk_analysis", "rule": "min_count", "value": 1, "message": "At least one risk must be scored" },
+      { "field": "safeguards", "rule": "min_count", "value": 1, "message": "At least one safeguard must be defined" },
+      { "field": "consultation_assessment", "rule": "exists", "message": "DPA consultation assessment must be completed" },
+      { "field": "scope_and_methodology", "rule": "exists", "message": "Scope and methodology must be recorded" },
+      { "field": "report_ready", "rule": "equals", "value": true, "message": "Report must be marked as ready" }
+    ],
+    "rules": [
+      { "id": "dpia_unique_risk_ids", "description": "No duplicate risk IDs", "severity": "required", "message_template": "Duplicate risk ID '{id}' found in risks[]" },
+      { "id": "dpia_risk_analysis_references_known_risks", "description": "Risk analysis entries reference known risks", "severity": "required", "message_template": "risk_analysis entry '{id}' does not match any risk in risks[]" },
+      { "id": "dpia_safeguards_reference_known_risks", "description": "Safeguards reference known risks", "severity": "required", "message_template": "Safeguard references unknown risk_id '{risk_id}'" },
+      { "id": "dpia_consultation_references_residual_risks", "description": "Consultation residual risks reference known risks", "severity": "required", "message_template": "Residual risk '{risk_id}' does not match any risk in risks[]" },
+      { "id": "dpia_every_risk_has_category_and_rights", "description": "Every risk has category and affected rights", "severity": "required", "message_template": "Risk '{id}' missing category or affected_rights" },
+      { "id": "dpia_screening_outcome_valid", "description": "Screening outcome and rationale are valid", "severity": "required", "message_template": "Screening outcome must be required/not_required/recommended with non-empty rationale" },
+      { "id": "dpia_processing_description_complete", "description": "Processing description has all required nested fields", "severity": "required", "message_template": "Processing description missing {field_name}" },
+      { "id": "dpia_necessity_complete", "description": "Necessity assessment has narrative and proportionality", "severity": "required", "message_template": "Necessity assessment missing {field_name}" },
+      { "id": "dpia_consultation_complete", "description": "Consultation assessment has required fields and sufficient basis", "severity": "required", "message_template": "Consultation assessment incomplete: {field_name}" }
+    ],
+    "soft_warnings": [
+      { "field": "risks", "rule": "min_count", "value": 3, "message": "Most processing activities have 3+ risks — verify risk identification is complete" },
+      { "field": "dpo_consultation", "rule": "exists", "message": "Art. 35(2) requires seeking DPO advice where designated" },
+      { "field": "data_subject_views", "rule": "exists", "message": "Art. 35(9) requires seeking data subject views where appropriate" }
+    ]
+  },
+  "quality_rubric": {
+    "risks": {
+      "per_item": {
+        "harm_description": {
+          "min_words": 10,
+          "severity": "warning",
+          "message": "Risk '{id}' has a vague harm description — concrete harm to the data subject should be described in at least 2 sentences"
+        }
+      }
+    },
+    "safeguards": {
+      "per_item": {
+        "justification": {
+          "min_words": 5,
+          "severity": "warning",
+          "message": "Safeguard for risk '{risk_id}' lacks justification for the residual score change"
+        }
+      }
+    }
+  },
+  "phases": [
+    {
+      "id": "phase_0_screening",
+      "name": "Screening",
+      "description": "Determine whether a DPIA is required per Art. 35(1), (3), (4), (5), (10) and EDPB WP248 criteria, plus national DPA mandatory lists.",
+      "completion_criteria": {
+        "required_fields": [
+          { "field": "screening", "rule": "exists", "message": "Screening outcome must be recorded" }
+        ],
+        "rules": [
+          {
+            "id": "dpia_screening_outcome_valid",
+            "description": "Screening outcome and rationale are valid",
+            "severity": "required",
+            "message_template": "Screening outcome must be required/not_required/recommended with non-empty rationale"
+          }
+        ],
+        "soft_warnings": []
+      },
+      "quality_rubric": {},
+      "skip_conditions": ["User explicitly states 'I need a DPIA' or 'do the DPIA' — record outcome: required with rationale: User-initiated and advance"]
+    },
+    {
+      "id": "phase_1_processing",
+      "name": "Processing Description",
+      "description": "Systematic description of processing operations per Art. 35(7)(a). Extract data types, subjects, purposes, legal basis, processors, transfers, and HRI assessment. Record DPO consultation status per Art. 35(2).",
+      "completion_criteria": {
+        "required_fields": [
+          { "field": "processing_description", "rule": "exists", "message": "Processing description must be completed" }
+        ],
+        "rules": [
+          {
+            "id": "dpia_processing_description_complete",
+            "description": "Processing description has data_types (min 1), data_subjects (min 1), purposes (min 1), legal_basis.article_6_basis",
+            "severity": "required",
+            "message_template": "Processing description missing {field_name}"
+          }
+        ],
+        "soft_warnings": [
+          { "field": "processing_description.high_risk_indicators", "rule": "min_count", "value": 9, "message": "All 9 EDPB WP248 high-risk indicators should be assessed" },
+          { "field": "processing_description.processors", "rule": "exists", "message": "Processors should be documented if third-party processing is mentioned" },
+          { "field": "dpo_consultation", "rule": "exists", "message": "Art. 35(2) requires seeking DPO advice where designated" }
+        ]
+      },
+      "quality_rubric": {}
+    },
+    {
+      "id": "phase_2_necessity",
+      "name": "Necessity & Proportionality",
+      "description": "Assess necessity and proportionality per Art. 35(7)(b) and Art. 5 principles. If legal basis is legitimate interests, complete the mandatory 3-part LIA test.",
+      "completion_criteria": {
+        "required_fields": [
+          { "field": "necessity_assessment", "rule": "exists", "message": "Necessity assessment must be completed" }
+        ],
+        "rules": [
+          {
+            "id": "dpia_necessity_complete",
+            "description": "Necessity assessment has assessment_narrative and proportionality_assessment",
+            "severity": "required",
+            "message_template": "Necessity assessment missing {field_name}"
+          }
+        ],
+        "soft_warnings": [
+          { "field": "necessity_assessment.lia_assessment", "rule": "exists", "message": "Legitimate interests basis requires a Legitimate Interests Assessment (LIA)" },
+          { "field": "necessity_assessment.alternatives_considered", "rule": "min_count", "value": 1, "message": "At least one alternative should be considered" }
+        ]
+      },
+      "quality_rubric": {}
+    },
+    {
+      "id": "phase_3_risks",
+      "name": "Risk Identification",
+      "description": "Identify risks to data subjects' rights and freedoms per Art. 35(7)(c) and EDPB WP248 harm categories. Map each risk to specific GDPR/CFR rights. Seek data subject views per Art. 35(9). Delegate to jurisdiction expert if applicable.",
+      "completion_criteria": {
+        "required_fields": [
+          { "field": "risks", "rule": "min_count", "value": 1, "message": "At least one risk must be identified" }
+        ],
+        "rules": [
+          {
+            "id": "dpia_every_risk_has_category_and_rights",
+            "description": "Every risk entry must have category and affected_rights (min 1)",
+            "severity": "required",
+            "message_template": "Risk '{id}' missing category or affected_rights"
+          },
+          {
+            "id": "dpia_unique_risk_ids",
+            "description": "No duplicate id values in risks[]",
+            "severity": "required",
+            "message_template": "Duplicate risk ID '{id}' found in risks[]"
+          }
+        ],
+        "soft_warnings": [
+          { "field": "data_subject_views", "rule": "exists", "message": "Art. 35(9) requires seeking data subject views where appropriate" },
+          { "field": "risks", "rule": "min_count", "value": 3, "message": "Most processing activities have 3+ risks — verify risk identification is complete" }
+        ]
+      },
+      "quality_rubric": {
+        "risks": {
+          "per_item": {
+            "harm_description": {
+              "min_words": 10,
+              "severity": "warning",
+              "message": "Risk '{id}' has a vague harm description — concrete harm to the data subject should be described in at least 2 sentences"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "phase_4_risk_assessment",
+      "name": "Risk Assessment",
+      "description": "Score each identified risk for likelihood and severity of harm to data subjects. Calculate score (likelihood x severity). Classify: Critical (>=20), High (12-19), Medium (6-11), Low (1-5). Present risk matrix for confirmation.",
+      "completion_criteria": {
+        "required_fields": [
+          { "field": "risk_analysis", "rule": "min_count", "value": 1, "message": "At least one risk must be scored" }
+        ],
+        "rules": [
+          {
+            "id": "dpia_risk_analysis_references_known_risks",
+            "description": "Every risk_analysis[].id must exist in risks[]",
+            "severity": "required",
+            "message_template": "risk_analysis entry '{id}' does not match any risk in risks[]"
+          }
+        ],
+        "soft_warnings": [
+          { "field": "risk_matrix_summary", "rule": "exists", "message": "Risk matrix summary should be calculated" }
+        ]
+      },
+      "quality_rubric": {}
+    },
+    {
+      "id": "phase_5_safeguards",
+      "name": "Safeguards",
+      "description": "Define technical, organisational, and contractual measures per Art. 35(7)(d), Art. 25, and Art. 32. Calculate before/after risk scores with justification. Check national requirements via jurisdiction expert if applicable.",
+      "completion_criteria": {
+        "required_fields": [
+          { "field": "safeguards", "rule": "min_count", "value": 1, "message": "At least one safeguard must be defined" }
+        ],
+        "rules": [
+          {
+            "id": "dpia_safeguards_reference_known_risks",
+            "description": "Every safeguards[].risk_id must exist in risks[]",
+            "severity": "required",
+            "message_template": "Safeguard references unknown risk_id '{risk_id}'"
+          }
+        ],
+        "soft_warnings": [
+          { "field": "safeguards", "rule": "dpia_residual_score_coherence", "message": "score_after should be <= score_before for each safeguard" },
+          { "field": "safeguards", "rule": "dpia_risk_coverage_complete", "message": "Every risk should have a matching risk_analysis entry and at least one safeguard" }
+        ]
+      },
+      "quality_rubric": {
+        "safeguards": {
+          "per_item": {
+            "justification": {
+              "min_words": 5,
+              "severity": "warning",
+              "message": "Safeguard for risk '{risk_id}' lacks justification for the residual score change"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "phase_6_consultation",
+      "name": "DPA Consultation",
+      "description": "Determine whether prior consultation with the DPA is required under Art. 36. Assess Art. 36(1) threshold on its merits. Check processor compliance, international transfer mechanisms, and Member State consultation triggers. No shortcut rules.",
+      "completion_criteria": {
+        "required_fields": [
+          { "field": "consultation_assessment", "rule": "exists", "message": "DPA consultation assessment must be completed" }
+        ],
+        "rules": [
+          {
+            "id": "dpia_consultation_complete",
+            "description": "consultation_assessment has consultation_required, consultation_basis (min 10 words), member_state_triggers_checked = true",
+            "severity": "required",
+            "message_template": "Consultation assessment incomplete: {field_name}"
+          },
+          {
+            "id": "dpia_consultation_references_residual_risks",
+            "description": "Every residual_high_risks[].risk_id exists in risks[].id",
+            "severity": "required",
+            "message_template": "Residual risk '{risk_id}' does not match any risk in risks[]"
+          }
+        ],
+        "soft_warnings": [
+          { "field": "consultation_assessment.processor_compliance", "rule": "exists", "message": "Processor compliance should be assessed if processors identified in Phase 1" },
+          { "field": "consultation_assessment.transfer_compliance", "rule": "exists", "message": "Transfer compliance should be assessed if international transfers identified in Phase 1" }
+        ]
+      },
+      "quality_rubric": {}
+    },
+    {
+      "id": "phase_7_report",
+      "name": "Report Assembly",
+      "description": "Record scope and methodology, call wkfl_export_report with task_id: dpia_assessment, store report_markdown, and set report_ready: true.",
+      "completion_criteria": {
+        "required_fields": [
+          { "field": "scope_and_methodology", "rule": "exists", "message": "Scope and methodology must be recorded" },
+          { "field": "report_markdown", "rule": "exists", "message": "Report markdown must be generated" },
+          { "field": "report_ready", "rule": "equals", "value": true, "message": "Report must be marked as ready" }
+        ],
+        "rules": [],
+        "soft_warnings": []
+      },
+      "quality_rubric": {},
+      "deliverable": {
+        "format": "markdown",
+        "tool": "wkfl_export_report",
+        "sections": [
+          "Executive Summary — overall risk posture, key findings, DPO recommendation",
+          "Art. 35(7) Compliance Mapping — 4-row table mapping Art. 35(7)(a)-(d) to assessment sections",
+          "Processing Description — data types, subjects, purposes, legal basis (Art. 6 + Art. 9/10 if applicable), processors, transfers, HRI assessment table",
+          "DPO Consultation Record — Art. 35(2) audit trail (advice sought, summary, followed/deviated)",
+          "Necessity & Proportionality — with LIA three-part test if applicable",
+          "Data Subject Views — Art. 35(9) (sought/not sought with justification)",
+          "Risk Register — sorted by score, with rights mapping and harm descriptions",
+          "Safeguards & Risk Reduction — before/after table per risk",
+          "DPA Consultation Assessment — Art. 36 determination with residual risk analysis",
+          "Jurisdiction-Specific Requirements — from expert delegation (if consulted)",
+          "Gaps, Assumptions & Limitations — every assumption, unanswered question, confidence impact",
+          "Recommendations — prioritized actions by risk score"
+        ],
+        "instructions": "Before calling wkfl_export_report, store these keys: org_profile, documents, screening, processing_description, dpo_consultation, necessity_assessment, risks, rights_summary, data_subject_views, risk_analysis, risk_matrix_summary, safeguards, consultation_assessment, jurisdiction_findings, scope_and_methodology, phase_coverage, client_questions, assumptions. The tool assembles everything into a single Markdown report. Present the report to the user as the DPIA deliverable."
+      }
+    }
+  ]
+}
