@@ -203,10 +203,13 @@ describe("DPIA structural rules", () => {
   // dpia_risk_analysis_references_known_risks
   // -----------------------------------------------------------------------
   describe("dpia_risk_analysis_references_known_risks", () => {
-    it("passes with valid references", () => {
+    it("passes with valid references and complete fields", () => {
       const state = {
         risks: [{ id: "R1" }, { id: "R2" }],
-        risk_analysis: [{ id: "R1" }, { id: "R2" }],
+        risk_analysis: [
+          { id: "R1", likelihood_score: 3, severity_score: 4, score: 12 },
+          { id: "R2", likelihood_score: 2, severity_score: 2, score: 4 },
+        ],
       };
       expect(checkDpiaRiskAnalysisReferencesKnownRisks(state)).toHaveLength(0);
     });
@@ -214,11 +217,24 @@ describe("DPIA structural rules", () => {
     it("fails with orphaned risk_analysis entry", () => {
       const state = {
         risks: [{ id: "R1" }],
-        risk_analysis: [{ id: "R1" }, { id: "R99" }],
+        risk_analysis: [
+          { id: "R1", likelihood_score: 3, severity_score: 4, score: 12 },
+          { id: "R99", likelihood_score: 2, severity_score: 2, score: 4 },
+        ],
       };
       const f = checkDpiaRiskAnalysisReferencesKnownRisks(state);
-      expect(f).toHaveLength(1);
-      expect(f[0].details).toContain("R99");
+      expect(f.some((x) => x.details.includes("R99") && x.details.includes("does not match"))).toBe(true);
+    });
+
+    it("fails when risk_analysis entry is missing required scores", () => {
+      const state = {
+        risks: [{ id: "R1" }],
+        risk_analysis: [{ id: "R1" }],
+      };
+      const f = checkDpiaRiskAnalysisReferencesKnownRisks(state);
+      expect(f.some((x) => x.details.includes("likelihood_score"))).toBe(true);
+      expect(f.some((x) => x.details.includes("severity_score"))).toBe(true);
+      expect(f.some((x) => x.details.includes("missing score"))).toBe(true);
     });
   });
 
@@ -226,10 +242,10 @@ describe("DPIA structural rules", () => {
   // dpia_safeguards_reference_known_risks
   // -----------------------------------------------------------------------
   describe("dpia_safeguards_reference_known_risks", () => {
-    it("passes with valid references", () => {
+    it("passes with valid references and complete fields", () => {
       const state = {
         risks: [{ id: "R1" }],
-        safeguards: [{ risk_id: "R1", measure: "Encryption" }],
+        safeguards: [{ risk_id: "R1", measure: "Encryption at rest", type: "technical" }],
       };
       expect(checkDpiaSafeguardsReferenceKnownRisks(state)).toHaveLength(0);
     });
@@ -237,11 +253,20 @@ describe("DPIA structural rules", () => {
     it("fails with orphaned safeguard", () => {
       const state = {
         risks: [{ id: "R1" }],
-        safeguards: [{ risk_id: "R99", measure: "Unknown" }],
+        safeguards: [{ risk_id: "R99", measure: "Unknown", type: "technical" }],
       };
       const f = checkDpiaSafeguardsReferenceKnownRisks(state);
-      expect(f).toHaveLength(1);
-      expect(f[0].details).toContain("R99");
+      expect(f.some((x) => x.details.includes("R99") && x.details.includes("unknown risk_id"))).toBe(true);
+    });
+
+    it("fails when safeguard is missing measure or type", () => {
+      const state = {
+        risks: [{ id: "R1" }],
+        safeguards: [{ risk_id: "R1" }],
+      };
+      const f = checkDpiaSafeguardsReferenceKnownRisks(state);
+      expect(f.some((x) => x.details.includes("missing measure"))).toBe(true);
+      expect(f.some((x) => x.details.includes("missing type"))).toBe(true);
     });
   });
 

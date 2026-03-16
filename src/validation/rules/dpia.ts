@@ -286,6 +286,30 @@ export function checkDpiaRiskAnalysisReferencesKnownRisks(
         ),
       );
     }
+    if (typeof entry.likelihood_score !== "number") {
+      failures.push(
+        fail(
+          "dpia_risk_analysis_references_known_risks",
+          `risk_analysis entry '${entry.id}' is missing likelihood_score`,
+        ),
+      );
+    }
+    if (typeof entry.severity_score !== "number") {
+      failures.push(
+        fail(
+          "dpia_risk_analysis_references_known_risks",
+          `risk_analysis entry '${entry.id}' is missing severity_score`,
+        ),
+      );
+    }
+    if (typeof entry.score !== "number") {
+      failures.push(
+        fail(
+          "dpia_risk_analysis_references_known_risks",
+          `risk_analysis entry '${entry.id}' is missing score`,
+        ),
+      );
+    }
   }
   return failures;
 }
@@ -304,6 +328,22 @@ export function checkDpiaSafeguardsReferenceKnownRisks(
         fail(
           "dpia_safeguards_reference_known_risks",
           `Safeguard references unknown risk_id '${sg.risk_id}'`,
+        ),
+      );
+    }
+    if (!sg.measure) {
+      failures.push(
+        fail(
+          "dpia_safeguards_reference_known_risks",
+          `Safeguard for risk '${sg.risk_id}' is missing measure`,
+        ),
+      );
+    }
+    if (!sg.type) {
+      failures.push(
+        fail(
+          "dpia_safeguards_reference_known_risks",
+          `Safeguard for risk '${sg.risk_id}' is missing type`,
         ),
       );
     }

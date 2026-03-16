@@ -185,7 +185,6 @@ describe("wkflExportReport DPIA routing", () => {
       member_state_triggers_checked: true,
     });
     store("scope_and_methodology", { assessment_date: "2026-03-16" });
-    store("report_ready", true);
 
     const result = await wkflExportReport({ assessment_id: AID, task_id: "dpia_assessment" });
 
@@ -200,11 +199,10 @@ describe("wkflExportReport DPIA routing", () => {
     store("processing_description", { data_types: [{ category: "x" }], data_subjects: [{ type: "y" }], purposes: ["z"], legal_basis: { article_6_basis: { basis: "consent" } } });
     store("necessity_assessment", { assessment_narrative: "necessary for the stated purpose which is clearly defined", proportionality_assessment: "proportionate to the stated purpose" });
     store("risks", [{ id: "R1", category: "loss_of_control", affected_rights: [{ right: "Art. 21" }] }]);
-    store("risk_analysis", [{ id: "R1", score: 4 }]);
-    store("safeguards", [{ risk_id: "R1", measure: "x", score_before: 4, score_after: 2 }]);
+    store("risk_analysis", [{ id: "R1", likelihood_score: 2, severity_score: 2, score: 4 }]);
+    store("safeguards", [{ risk_id: "R1", measure: "access control", type: "technical", score_before: 4, score_after: 2 }]);
     store("consultation_assessment", { consultation_required: false, consultation_basis: "All risks low after safeguards. Art 36 not triggered. Member state checks done.", member_state_triggers_checked: true });
     store("scope_and_methodology", {});
-    store("report_ready", true);
 
     const result = await wkflExportReport({ assessment_id: AID, report_format: "dpia" });
     expect(result.isError).toBeFalsy();

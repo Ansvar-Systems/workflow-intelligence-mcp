@@ -595,9 +595,18 @@ export async function wkflExportReport(
 
     try {
       const dpiaDef = JSON.parse(readFileSync(dpiaDefPath, "utf-8")) as TaskDefinition;
+      // Filter out report_ready and report_markdown from required_fields —
+      // those are set AFTER the export call (the agent calls wkfl_export_report
+      // to generate the report, then stores the result and sets report_ready).
+      const preExportCriteria = {
+        ...dpiaDef.completion_criteria,
+        required_fields: dpiaDef.completion_criteria.required_fields.filter(
+          (f) => f.field !== "report_ready" && f.field !== "report_markdown",
+        ),
+      };
       const validation = evaluateCompleteness(
         dpiaState,
-        dpiaDef.completion_criteria,
+        preExportCriteria,
         dpiaDef.quality_rubric,
       );
       if (validation.status === "incomplete") {

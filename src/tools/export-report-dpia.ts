@@ -324,15 +324,20 @@ export function buildDpiaReport(input: DpiaReportInput): string {
 
   // 4. DPO Consultation Record
   sections.push(`\n## 4. DPO Consultation Record (Art. 35(2))\n`);
-  sections.push(`**DPO designated:** ${dpoConsultation.designated ? "Yes" : "No"}`);
-  if (dpoConsultation.designated) {
-    sections.push(`**Advice sought:** ${dpoConsultation.advice_sought ? "Yes" : "No"}`);
-    if (dpoConsultation.advice_summary) {
-      sections.push(`**Advice summary:** ${dpoConsultation.advice_summary}`);
-    }
-    sections.push(`**Recommendation followed:** ${dpoConsultation.followed ? "Yes" : "No"}`);
-    if (!dpoConsultation.followed && dpoConsultation.deviation_rationale) {
-      sections.push(`**Deviation rationale:** ${dpoConsultation.deviation_rationale}`);
+  const hasDpoData = dpoConsultation.designated !== undefined;
+  if (!hasDpoData) {
+    sections.push(`*DPO consultation status was not recorded during this assessment.*`);
+  } else {
+    sections.push(`**DPO designated:** ${dpoConsultation.designated ? "Yes" : "No"}`);
+    if (dpoConsultation.designated) {
+      sections.push(`**Advice sought:** ${dpoConsultation.advice_sought ? "Yes" : "No"}`);
+      if (dpoConsultation.advice_summary) {
+        sections.push(`**Advice summary:** ${dpoConsultation.advice_summary}`);
+      }
+      sections.push(`**Recommendation followed:** ${dpoConsultation.followed ? "Yes" : "No"}`);
+      if (!dpoConsultation.followed && dpoConsultation.deviation_rationale) {
+        sections.push(`**Deviation rationale:** ${dpoConsultation.deviation_rationale}`);
+      }
     }
   }
 
@@ -358,7 +363,10 @@ export function buildDpiaReport(input: DpiaReportInput): string {
 
   // 6. Data Subject Views
   sections.push(`\n## 6. Data Subject Views (Art. 35(9))\n`);
-  if (dsv.sought) {
+  const hasDsvData = dsv.sought !== undefined;
+  if (!hasDsvData) {
+    sections.push(`*Data subject views were not recorded during this assessment.*`);
+  } else if (dsv.sought) {
     sections.push(`**Method:** ${dsv.method ?? "\u2014"}`);
     if (dsv.summary) sections.push(`**Summary:** ${dsv.summary}`);
   } else {
