@@ -579,8 +579,6 @@
           }
         ],
         "soft_warnings": [
-          { "field": "processing_description.high_risk_indicators", "rule": "min_count", "value": 9, "message": "All 9 EDPB WP248 high-risk indicators should be assessed" },
-          { "field": "processing_description.processors", "rule": "exists", "message": "Processors should be documented if third-party processing is mentioned" },
           { "field": "dpo_consultation", "rule": "exists", "message": "Art. 35(2) requires seeking DPO advice where designated" }
         ]
       },
@@ -603,8 +601,7 @@
           }
         ],
         "soft_warnings": [
-          { "field": "necessity_assessment.lia_assessment", "rule": "exists", "message": "Legitimate interests basis requires a Legitimate Interests Assessment (LIA)" },
-          { "field": "necessity_assessment.alternatives_considered", "rule": "min_count", "value": 1, "message": "At least one alternative should be considered" }
+          { "field": "assumptions", "rule": "exists", "message": "If alternatives were not considered, record as assumption with confidence impact" }
         ]
       },
       "quality_rubric": {}
@@ -684,12 +681,21 @@
             "description": "Every safeguards[].risk_id must exist in risks[]",
             "severity": "required",
             "message_template": "Safeguard references unknown risk_id '{risk_id}'"
+          },
+          {
+            "id": "dpia_residual_score_coherence",
+            "description": "score_after should be <= score_before for each safeguard",
+            "severity": "warning",
+            "message_template": "Safeguard for risk '{risk_id}' has score_after > score_before"
+          },
+          {
+            "id": "dpia_risk_coverage_complete",
+            "description": "Every risk should have a matching risk_analysis entry and at least one safeguard",
+            "severity": "warning",
+            "message_template": "Risk '{id}' missing analysis or safeguard"
           }
         ],
-        "soft_warnings": [
-          { "field": "safeguards", "rule": "dpia_residual_score_coherence", "message": "score_after should be <= score_before for each safeguard" },
-          { "field": "safeguards", "rule": "dpia_risk_coverage_complete", "message": "Every risk should have a matching risk_analysis entry and at least one safeguard" }
-        ]
+        "soft_warnings": []
       },
       "quality_rubric": {
         "safeguards": {
@@ -726,8 +732,7 @@
           }
         ],
         "soft_warnings": [
-          { "field": "consultation_assessment.processor_compliance", "rule": "exists", "message": "Processor compliance should be assessed if processors identified in Phase 1" },
-          { "field": "consultation_assessment.transfer_compliance", "rule": "exists", "message": "Transfer compliance should be assessed if international transfers identified in Phase 1" }
+          { "field": "jurisdiction_findings", "rule": "exists", "message": "Jurisdiction-specific consultation triggers should be checked if jurisdiction is known" }
         ]
       },
       "quality_rubric": {}

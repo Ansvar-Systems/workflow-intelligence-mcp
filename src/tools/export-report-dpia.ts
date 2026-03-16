@@ -449,8 +449,17 @@ export function buildDpiaReport(input: DpiaReportInput): string {
 
   // 11. Gaps, Assumptions & Limitations
   sections.push(`\n## 11. Gaps, Assumptions & Limitations\n`);
+  const unanswered = (clientQuestions ?? []).filter(
+    (q) => q.status === "pending" || q.status === "assumed",
+  );
+  if (unanswered.length > 0) {
+    sections.push(`### Unanswered Questions\n`);
+    for (const q of unanswered) {
+      sections.push(`- **${q.question ?? "\u2014"}** (Phase: ${q.phase_id ?? "\u2014"}, Status: ${q.status ?? "\u2014"}${q.response ? `, Response: ${q.response}` : ""})`);
+    }
+  }
   if ((assumptions ?? []).length > 0) {
-    sections.push(`### Assumptions\n`);
+    sections.push(`\n### Assumptions\n`);
     for (const a of assumptions) {
       sections.push(`- **${a.assumption ?? "\u2014"}** (Phase: ${a.phase_id ?? "\u2014"}, Confidence impact: ${a.confidence_impact ?? "\u2014"})`);
     }

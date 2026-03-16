@@ -570,7 +570,7 @@ export async function wkflExportReport(
   const isDpia =
     taskId === "dpia_assessment" ||
     reportFormat === "dpia" ||
-    (storedKeys.has("consultation_assessment") && storedKeys.has("processing_description"));
+    (!taskId && !reportFormat && storedKeys.has("consultation_assessment") && storedKeys.has("processing_description"));
 
   const isStride =
     !isDpia &&
