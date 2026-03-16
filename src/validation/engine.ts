@@ -64,6 +64,19 @@ import {
   checkBlockingGapsHaveResolutionPath,
   checkClientQuestionTraceability,
 } from "./rules/gap-analysis.js";
+import {
+  checkDpiaScreeningOutcomeValid,
+  checkDpiaProcessingDescriptionComplete,
+  checkDpiaNecessityComplete,
+  checkDpiaEveryRiskHasCategoryAndRights,
+  checkDpiaUniqueRiskIds,
+  checkDpiaRiskAnalysisReferencesKnownRisks,
+  checkDpiaSafeguardsReferenceKnownRisks,
+  checkDpiaConsultationComplete,
+  checkDpiaConsultationReferencesResidualRisks,
+  checkDpiaResidualScoreCoherence,
+  checkDpiaRiskCoverageComplete,
+} from "./rules/dpia.js";
 
 // ---------------------------------------------------------------------------
 // Rule registry
@@ -166,6 +179,19 @@ registerStructuralRule("scope_readiness_recorded", checkScopeReadinessRecorded);
 registerStructuralRule("blocking_client_questions_resolved", checkBlockingClientQuestionsResolved);
 registerStructuralRule("blocking_gaps_have_resolution_path", checkBlockingGapsHaveResolutionPath);
 registerStructuralRule("client_question_traceability", checkClientQuestionTraceability);
+
+// DPIA assessment rules
+registerStructuralRule("dpia_screening_outcome_valid", checkDpiaScreeningOutcomeValid);
+registerStructuralRule("dpia_processing_description_complete", checkDpiaProcessingDescriptionComplete);
+registerStructuralRule("dpia_necessity_complete", checkDpiaNecessityComplete);
+registerStructuralRule("dpia_every_risk_has_category_and_rights", checkDpiaEveryRiskHasCategoryAndRights);
+registerStructuralRule("dpia_unique_risk_ids", checkDpiaUniqueRiskIds);
+registerStructuralRule("dpia_risk_analysis_references_known_risks", checkDpiaRiskAnalysisReferencesKnownRisks);
+registerStructuralRule("dpia_safeguards_reference_known_risks", checkDpiaSafeguardsReferenceKnownRisks);
+registerStructuralRule("dpia_consultation_complete", checkDpiaConsultationComplete);
+registerStructuralRule("dpia_consultation_references_residual_risks", checkDpiaConsultationReferencesResidualRisks);
+registerStructuralRule("dpia_residual_score_coherence", checkDpiaResidualScoreCoherence);
+registerStructuralRule("dpia_risk_coverage_complete", checkDpiaRiskCoverageComplete);
 
 // ---------------------------------------------------------------------------
 // Engine
