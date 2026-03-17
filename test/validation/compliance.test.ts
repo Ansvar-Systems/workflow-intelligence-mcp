@@ -7,7 +7,7 @@ import {
   checkIntakeResponsesComplete,
   checkFrameworkVersionRecorded,
 } from "../../src/validation/rules/compliance.js";
-import { checkManifestCoverage, checkManifestCoverageRule } from "../../src/validation/rules/manifest-coverage.js";
+import { checkManifestCoverage, checkManifestCoverageRule, checkDepthIssuesRule } from "../../src/validation/rules/manifest-coverage.js";
 import { loadManifest } from "../../src/definitions/manifests/loader.js";
 import { getRegisteredRules } from "../../src/validation/engine.js";
 
@@ -281,9 +281,92 @@ describe("manifest_coverage_check integration", () => {
     expect(failures[0].details).toContain("Art. 28(6)");
   });
 
-  it("rule wrapper returns empty when no manifest_coverage_input (enumeration-diff mode)", () => {
+  it("rule wrapper returns required failure when manifest_coverage_input is missing", () => {
     const failures = checkManifestCoverageRule({ compliance_matrix: [] });
-    expect(failures).toHaveLength(0);
+    expect(failures).toHaveLength(1);
+    expect(failures[0].severity).toBe("required");
+    expect(failures[0].details).toContain("manifest_coverage_input is missing");
+  });
+
+  it("depth issues rule returns warnings when flagged_shallow is populated", () => {
+    const state = {
+      validation_state: {
+        flagged_shallow: [
+          { ref: "Art. 5(2)", severity: "insufficient", detail: "Missing non-delegable accountability" },
+          { ref: "Art. 19(2)", severity: "not_addressed", detail: "Missing three-phase reporting" },
+        ],
+      },
+    };
+    const failures = checkDepthIssuesRule(state);
+    expect(failures).toHaveLength(2);
+    expect(failures[0].severity).toBe("warning");
+    expect(failures[0].details).toContain("Art. 5(2)");
+    expect(failures[1].details).toContain("Art. 19(2)");
+  });
+
+  it("depth issues rule returns empty when no flagged_shallow", () => {
+    expect(checkDepthIssuesRule({})).toHaveLength(0);
+    expect(checkDepthIssuesRule({ validation_state: {} })).toHaveLength(0);
+    expect(checkDepthIssuesRule({ validation_state: { flagged_shallow: [] } })).toHaveLength(0);
+  });
+
+  it("tool-level: returns complete_with_quality_warnings when coverage passes but depth issues exist", async () => {
+    const { checkStageCompleteness } = await import("../../src/tools/check-stage-completeness.js");
+    const manifest = loadManifest("DORA")!;
+
+    // Full coverage — all refs assessed
+    const matrix = manifest.article_groups
+      .flatMap((g) => g.articles)
+      .map((a) => ({
+        authority_id: "DORA",
+        authority_type: "regulation",
+        authority_title: "DORA",
+        requirement_id: a.ref,
+        requirement_text: a.topic,
+        source_kind: "mcp_grounded",
+        verdict: "documented",
+        confidence: "high",
+      }));
+
+    const result = await checkStageCompleteness({
+      task_id: "gap_analysis",
+      phase_id: "phase_4b_validate",
+      definition_version: "2.0",
+      stage_state: {
+        manifest_coverage_input: { manifest, authority_id: "DORA" },
+        compliance_matrix: matrix,
+        validation_state: {
+          flagged_shallow: [
+            { ref: "Art. 5(2)", severity: "insufficient", detail: "Missing non-delegable accountability" },
+          ],
+        },
+        documents: [{ doc_id: "test", filename: "test.pdf" }],
+        detected_authorities: [{ authority_id: "DORA", authority_type: "regulation", authority_title: "DORA" }],
+      },
+    });
+
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed.status).toBe("complete_with_quality_warnings");
+    expect(parsed.warnings.some((w: any) => w.details.includes("Art. 5(2)"))).toBe(true);
+  });
+
+  it("tool-level: returns incomplete when manifest_coverage_input is missing", async () => {
+    const { checkStageCompleteness } = await import("../../src/tools/check-stage-completeness.js");
+
+    const result = await checkStageCompleteness({
+      task_id: "gap_analysis",
+      phase_id: "phase_4b_validate",
+      definition_version: "2.0",
+      stage_state: {
+        compliance_matrix: [],
+        documents: [{ doc_id: "test", filename: "test.pdf" }],
+        detected_authorities: [{ authority_id: "DORA", authority_type: "regulation", authority_title: "DORA" }],
+      },
+    });
+
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed.status).toBe("incomplete");
+    expect(parsed.missing.some((f: any) => f.details.includes("manifest_coverage_input is missing"))).toBe(true);
   });
 
   it("full tool-level test: checkStageCompleteness returns incomplete for missing refs", async () => {

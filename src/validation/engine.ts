@@ -44,6 +44,7 @@ import {
 } from "./rules/compliance.js";
 import {
   checkManifestCoverageRule,
+  checkDepthIssuesRule,
 } from "./rules/manifest-coverage.js";
 import {
   checkAttackPathsReferenceKnownThreats,
@@ -163,6 +164,7 @@ registerStructuralRule("every_partially_documented_has_gap", checkEveryPartialHa
 
 // Completeness checker — manifest coverage (Layer 1)
 registerStructuralRule("manifest_coverage_check", checkManifestCoverageRule);
+registerStructuralRule("depth_issues_flagged", checkDepthIssuesRule);
 
 // STRIDE threat model rules
 registerStructuralRule("stride_coverage_complete", checkStrideCoverageComplete);

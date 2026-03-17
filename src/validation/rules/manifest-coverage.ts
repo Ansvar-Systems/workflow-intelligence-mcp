@@ -103,7 +103,17 @@ export function checkManifestCoverageRule(
     | undefined;
 
   if (!input || !input.manifest) {
-    return [];
+    // If this rule fires, the phase is phase_4b_validate — manifest input is required.
+    // Returning [] here would silently mark the phase complete without running the diff.
+    return [
+      {
+        rule: "manifest_coverage_check",
+        severity: "required" as const,
+        details:
+          "manifest_coverage_input is missing from stage_state. Call get_manifest to load the manifest, then pass it in stage_state.manifest_coverage_input.",
+        field: "manifest_coverage_input",
+      },
+    ];
   }
 
   const matrix = (state.compliance_matrix ?? []) as MatrixEntry[];
@@ -116,5 +126,36 @@ export function checkManifestCoverageRule(
     severity: "required" as const,
     details: `Manifest ref '${ref}' in '${input.authority_id}' has no assessed entry in the compliance matrix`,
     field: "compliance_matrix",
+  }));
+}
+
+interface DepthIssue {
+  ref: string;
+  severity: string;
+  detail: string;
+}
+
+interface ValidationState {
+  flagged_shallow?: DepthIssue[];
+}
+
+/**
+ * Structural rule that emits warnings for Layer 2 depth issues.
+ *
+ * The orchestrator stores flagged_shallow in validation_state after
+ * the LLM depth check. This rule surfaces those as warning-severity
+ * failures so the engine returns complete_with_quality_warnings.
+ */
+export function checkDepthIssuesRule(
+  state: Record<string, unknown>,
+): RuleFailure[] {
+  const vs = state.validation_state as ValidationState | undefined;
+  if (!vs?.flagged_shallow || vs.flagged_shallow.length === 0) return [];
+
+  return vs.flagged_shallow.map((issue) => ({
+    rule: "depth_issues_flagged",
+    severity: "warning" as const,
+    details: `Depth issue on '${issue.ref}': ${issue.detail}`,
+    field: "validation_state.flagged_shallow",
   }));
 }
