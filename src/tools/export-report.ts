@@ -22,6 +22,7 @@ import {
   type EvidenceManifestEntry,
 } from "./export-report-stride.js";
 import { buildDpiaReport, type DpiaReportInput } from "./export-report-dpia.js";
+import { buildTprmTriageReport, buildTprmAssessmentReport, type TprmTriageReportInput, type TprmAssessmentReportInput } from "./export-report-tprm.js";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -581,6 +582,18 @@ export async function wkflExportReport(
       storedKeys.has("coverage_matrix") ||
       storedKeys.has("threat_mitigations"));
 
+  const isTprmTriage =
+    !isDpia && !isStride &&
+    (taskId === "vendor_risk_triage" ||
+      reportFormat === "tprm_triage" ||
+      (!taskId && !reportFormat && storedKeys.has("risk_classification") && storedKeys.has("recommendation") && !storedKeys.has("findings_register")));
+
+  const isTprmAssessment =
+    !isDpia && !isStride && !isTprmTriage &&
+    (taskId === "vendor_risk_assessment" ||
+      reportFormat === "tprm_assessment" ||
+      (!taskId && !reportFormat && storedKeys.has("findings_register") && storedKeys.has("domain_scores") && storedKeys.has("vendor_profile")));
+
   if (isDpia) {
     // Validate completeness before export (same pattern as STRIDE path)
     const dpiaState: Record<string, unknown> = {};
@@ -847,6 +860,100 @@ export async function wkflExportReport(
         },
       ],
     };
+  }
+
+  if (isTprmTriage) {
+    const vendorProfile = (load("vendor_profile") ?? {}) as TprmTriageReportInput["vendorProfile"];
+    const riskProfile = (load("risk_profile") ?? {}) as TprmTriageReportInput["riskProfile"];
+    const riskClassification = (load("risk_classification") ?? {}) as TprmTriageReportInput["riskClassification"];
+    const recommendation = (load("recommendation") ?? {}) as TprmTriageReportInput["recommendation"];
+    const tprmDocuments = (load("documents") ?? []) as TprmTriageReportInput["documents"];
+
+    const markdown = buildTprmTriageReport({
+      assessmentId,
+      vendorProfile,
+      riskProfile,
+      riskClassification,
+      recommendation,
+      documents: tprmDocuments,
+    });
+    return { content: [{ type: "text", text: markdown }] };
+  }
+
+  if (isTprmAssessment) {
+    // Validate completeness before export
+    const tprmState: Record<string, unknown> = {};
+    for (const entry of listing.entries) {
+      tprmState[entry.key] = load(entry.key);
+    }
+
+    // Load TPRM assessment task definition for validation
+    const __dirname_tprm = dirname(fileURLToPath(import.meta.url));
+    const tprmDefPath = join(__dirname_tprm, "..", "definitions", "tasks", "vendor-risk-assessment.json");
+
+    try {
+      const tprmDef = JSON.parse(readFileSync(tprmDefPath, "utf-8")) as TaskDefinition;
+      // Strip report_ready and report_markdown from required_fields —
+      // those are set AFTER the export call (same carveout as DPIA).
+      const preExportCriteria = {
+        ...tprmDef.completion_criteria,
+        required_fields: tprmDef.completion_criteria.required_fields.filter(
+          (f) => f.field !== "report_ready" && f.field !== "report_markdown",
+        ),
+      };
+      const validation = evaluateCompleteness(
+        tprmState,
+        preExportCriteria,
+        tprmDef.quality_rubric,
+      );
+      if (validation.status === "incomplete") {
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify({
+                error: "incomplete_assessment",
+                message: `Vendor risk assessment is not complete. Missing: ${validation.missing.map((f) => f.details).join("; ")}`,
+                missing: validation.missing,
+              }),
+            },
+          ],
+          isError: true,
+        };
+      }
+    } catch {
+      // If definition file can't be loaded, skip validation and proceed
+    }
+
+    const vendorProfile = (load("vendor_profile") ?? {}) as TprmAssessmentReportInput["vendorProfile"];
+    const orgProfile_tprm = (load("org_profile") ?? {}) as TprmAssessmentReportInput["orgProfile"];
+    const tprmDocuments = (load("documents") ?? []) as TprmAssessmentReportInput["documents"];
+    const detectedAuthorities_tprm = (load("detected_authorities") ?? []) as TprmAssessmentReportInput["detectedAuthorities"];
+    const questionnaire = (load("questionnaire") ?? {}) as TprmAssessmentReportInput["questionnaire"];
+    const findingsRegister = (load("findings_register") ?? []) as TprmAssessmentReportInput["findingsRegister"];
+    const domainScores = (load("domain_scores") ?? {}) as TprmAssessmentReportInput["domainScores"];
+    const overallScore = (load("overall_score") ?? {}) as TprmAssessmentReportInput["overallScore"];
+    const externalValidations = (load("external_validations") ?? []) as TprmAssessmentReportInput["externalValidations"];
+    const expertsUsed_tprm = (load("experts_used") ?? []) as TprmAssessmentReportInput["expertsUsed"];
+    const supersededEntries = (load("superseded_entries") ?? []) as TprmAssessmentReportInput["supersededEntries"];
+    const scopeAndMethodology_tprm = (load("scope_and_methodology") ?? {}) as TprmAssessmentReportInput["scopeAndMethodology"];
+
+    const markdown = buildTprmAssessmentReport({
+      assessmentId,
+      vendorProfile,
+      orgProfile: orgProfile_tprm,
+      documents: tprmDocuments,
+      detectedAuthorities: detectedAuthorities_tprm,
+      questionnaire,
+      findingsRegister,
+      domainScores,
+      overallScore,
+      externalValidations,
+      expertsUsed: expertsUsed_tprm,
+      supersededEntries,
+      scopeAndMethodology: scopeAndMethodology_tprm,
+    });
+    return { content: [{ type: "text", text: markdown }] };
   }
 
   // --- Compliance report path ---
