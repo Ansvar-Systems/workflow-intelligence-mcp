@@ -4,6 +4,9 @@ import {
   checkSeverityInflation,
   checkCriticalLowLikelihood,
   checkThreatTemplateCompleteness,
+  checkEntryPointsDocumented,
+  checkQaBlockingResolved,
+  checkEnrichmentRatioSufficient,
 } from "../../src/validation/rules/stride.js";
 
 describe("checkSeverityMatchesRiskScore", () => {
@@ -157,5 +160,76 @@ describe("checkThreatTemplateCompleteness", () => {
       }],
     };
     expect(checkThreatTemplateCompleteness(state)).toHaveLength(0);
+  });
+});
+
+describe("checkEntryPointsDocumented", () => {
+  it("passes when entry points exist", () => {
+    const state = { entry_points: [{ id: "EP-001", name: "Public API" }] };
+    expect(checkEntryPointsDocumented(state)).toHaveLength(0);
+  });
+
+  it("passes when no entry points and gaps register notes it", () => {
+    const state = { entry_points: [], gaps: [{ id: "G-001", description: "No entry point enumeration possible", phase: "1" }] };
+    expect(checkEntryPointsDocumented(state)).toHaveLength(0);
+  });
+
+  it("fails when no entry points and gaps register does not note it", () => {
+    const state = { entry_points: [], gaps: [] };
+    const failures = checkEntryPointsDocumented(state);
+    expect(failures).toHaveLength(1);
+    expect(failures[0].rule).toBe("entry_points_documented");
+  });
+
+  it("fails when entry_points missing entirely and no gaps", () => {
+    const state = {};
+    const failures = checkEntryPointsDocumented(state);
+    expect(failures).toHaveLength(1);
+  });
+});
+
+describe("checkQaBlockingResolved", () => {
+  it("passes when all blocking findings are resolved", () => {
+    const state = {
+      qa_findings: [
+        { id: "QA-001", category: "template_gap", severity: "blocking", resolved: true, description: "fixed" },
+        { id: "QA-002", category: "enrichment_gap", severity: "warning", resolved: false, description: "ok" },
+      ],
+    };
+    expect(checkQaBlockingResolved(state)).toHaveLength(0);
+  });
+
+  it("fails when unresolved blocking finding exists", () => {
+    const state = {
+      qa_findings: [
+        { id: "QA-001", category: "severity_mismatch", severity: "blocking", resolved: false, description: "T-001 mismatch" },
+      ],
+    };
+    const failures = checkQaBlockingResolved(state);
+    expect(failures).toHaveLength(1);
+    expect(failures[0].details).toContain("QA-001");
+  });
+
+  it("passes when no qa_findings", () => {
+    expect(checkQaBlockingResolved({})).toHaveLength(0);
+  });
+});
+
+describe("checkEnrichmentRatioSufficient", () => {
+  it("passes when enrichment_ratio >= 0.8", () => {
+    const state = { enrichment_coverage: { total_threats: 10, enrichment_ratio: 0.9 } };
+    expect(checkEnrichmentRatioSufficient(state)).toHaveLength(0);
+  });
+
+  it("warns when enrichment_ratio < 0.8", () => {
+    const state = { enrichment_coverage: { total_threats: 10, enrichment_ratio: 0.5 } };
+    const failures = checkEnrichmentRatioSufficient(state);
+    expect(failures).toHaveLength(1);
+    expect(failures[0].severity).toBe("warning");
+    expect(failures[0].details).toContain("50%");
+  });
+
+  it("passes when no enrichment_coverage", () => {
+    expect(checkEnrichmentRatioSufficient({})).toHaveLength(0);
   });
 });
