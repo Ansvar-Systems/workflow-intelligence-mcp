@@ -3,6 +3,7 @@ import {
   checkSeverityMatchesRiskScore,
   checkSeverityInflation,
   checkCriticalLowLikelihood,
+  checkThreatTemplateCompleteness,
 } from "../../src/validation/rules/stride.js";
 
 describe("checkSeverityMatchesRiskScore", () => {
@@ -97,5 +98,64 @@ describe("checkCriticalLowLikelihood", () => {
   it("ignores non-critical threats", () => {
     const state = { threats: [{ id: "T-001", severity: "high", likelihood_index: 1 }] };
     expect(checkCriticalLowLikelihood(state)).toHaveLength(0);
+  });
+});
+
+describe("checkThreatTemplateCompleteness", () => {
+  const COMPLETE_THREAT = {
+    id: "T-001",
+    stride_category: "Spoofing",
+    component_id: "C-001",
+    title: "Credential compromise via brute force",
+    description: "An attacker performs brute-force authentication against the login API to gain unauthorized access to user accounts",
+    mcp_source: "stride-pattern-S-001",
+    cvss_vector: "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:N/VA:N/SC:N/SI:N/SA:N",
+    cvss_score: 8.7,
+    severity: "high",
+    impact_index: 4,
+    likelihood_index: 3,
+    business_impact: "Account takeover leading to data breach",
+    likelihood: "Likely",
+  };
+
+  it("passes for a complete threat", () => {
+    expect(checkThreatTemplateCompleteness({ threats: [COMPLETE_THREAT] })).toHaveLength(0);
+  });
+
+  it("fails listing missing fields", () => {
+    const state = {
+      threats: [{ id: "T-001", stride_category: "Spoofing", title: "Short", severity: "high" }],
+    };
+    const failures = checkThreatTemplateCompleteness(state);
+    expect(failures).toHaveLength(1);
+    expect(failures[0].rule).toBe("threat_template_completeness");
+    expect(failures[0].details).toContain("component_id");
+    expect(failures[0].details).toContain("impact_index");
+  });
+
+  it("fails when description has fewer than 10 words", () => {
+    const state = {
+      threats: [{ ...COMPLETE_THREAT, description: "Short desc" }],
+    };
+    const failures = checkThreatTemplateCompleteness(state);
+    expect(failures).toHaveLength(1);
+    expect(failures[0].details).toContain("description");
+  });
+
+  it("skips scoring fields for informational threats", () => {
+    const state = {
+      threats: [{
+        id: "T-001",
+        stride_category: "Information Disclosure",
+        component_id: "C-001",
+        title: "Deprecated TLS library in use",
+        description: "The system uses a deprecated TLS 1.0 library but the endpoint is internal-only and not exploitable",
+        mcp_source: "analyst-observation",
+        severity: "informational",
+        business_impact: "None — internal only",
+        likelihood: "N/A",
+      }],
+    };
+    expect(checkThreatTemplateCompleteness(state)).toHaveLength(0);
   });
 });

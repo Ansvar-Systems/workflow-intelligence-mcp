@@ -728,6 +728,66 @@ export function checkCriticalLowLikelihood(state: Record<string, unknown>): Rule
   return failures;
 }
 
+const MANDATORY_THREAT_FIELDS = [
+  "id", "stride_category", "component_id", "title", "mcp_source",
+  "severity", "business_impact", "likelihood",
+] as const;
+
+const SCORING_FIELDS = [
+  "cvss_vector", "cvss_score", "impact_index", "likelihood_index",
+] as const;
+
+/**
+ * Every retained threat must have all mandatory fields populated.
+ * Informational threats are exempt from scoring fields.
+ */
+export function checkThreatTemplateCompleteness(
+  state: Record<string, unknown>,
+): RuleFailure[] {
+  const s = asStride(state);
+  const threats = threatList(s);
+  const failures: RuleFailure[] = [];
+
+  for (const threat of threats) {
+    const missing: string[] = [];
+    const isInformational = normalizeSeverity(threat.severity) === "informational";
+
+    for (const field of MANDATORY_THREAT_FIELDS) {
+      const value = threat[field];
+      if (value === undefined || value === null || (typeof value === "string" && value.trim() === "")) {
+        missing.push(field);
+      }
+    }
+
+    // Description: must exist AND have >= 10 words
+    const desc = typeof threat["description"] === "string" ? threat["description"].trim() : "";
+    if (!desc) {
+      missing.push("description");
+    } else if (desc.split(/\s+/).length < 10) {
+      missing.push("description (>=10 words)");
+    }
+
+    if (!isInformational) {
+      for (const field of SCORING_FIELDS) {
+        const value = threat[field];
+        if (value === undefined || value === null || (typeof value === "string" && value.trim() === "")) {
+          missing.push(field);
+        }
+      }
+    }
+
+    if (missing.length > 0) {
+      failures.push({
+        rule: "threat_template_completeness",
+        severity: "required",
+        details: `Threat '${threat.id}' is missing mandatory fields: ${missing.join(", ")}`,
+      });
+    }
+  }
+
+  return failures;
+}
+
 /**
  * Domain challenge coherence: when domains are detected, experts should
  * have been consulted. All findings must have source attribution.
