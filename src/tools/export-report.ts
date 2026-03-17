@@ -20,6 +20,7 @@ import {
   type VerificationTestEntry,
   type RedFlagEntry,
   type EvidenceManifestEntry,
+  type StrideReportBuildInput,
 } from "./export-report-stride.js";
 import { buildDpiaReport, type DpiaReportInput } from "./export-report-dpia.js";
 import { buildTprmTriageReport, buildTprmAssessmentReport, type TprmTriageReportInput, type TprmAssessmentReportInput } from "./export-report-tprm.js";
@@ -799,11 +800,13 @@ export async function wkflExportReport(
     const qaFindings = Array.isArray(storedQaFindings) ? storedQaFindings : undefined;
     const enrichmentCoverage =
       storedEnrichmentCoverage && typeof storedEnrichmentCoverage === "object"
-        ? storedEnrichmentCoverage
+        ? storedEnrichmentCoverage as NonNullable<StrideReportBuildInput["enrichmentCoverage"]>
         : undefined;
-    const entryPoints = isObjectArray(storedEntryPoints) ? storedEntryPoints : [];
+    const entryPoints = isObjectArray(storedEntryPoints)
+      ? storedEntryPoints as NonNullable<StrideReportBuildInput["entryPoints"]>
+      : [];
     const riskScoringMethodology = storedRiskScoringMethodology && typeof storedRiskScoringMethodology === "object"
-      ? storedRiskScoringMethodology
+      ? storedRiskScoringMethodology as StrideReportBuildInput["riskScoringMethodology"]
       : null;
     const validation = validateStrideReportState({
       system_name: systemName,
