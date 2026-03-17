@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { checkSeverityMatchesRiskScore } from "../../src/validation/rules/stride.js";
+import {
+  checkSeverityMatchesRiskScore,
+  checkSeverityInflation,
+  checkCriticalLowLikelihood,
+} from "../../src/validation/rules/stride.js";
 
 describe("checkSeverityMatchesRiskScore", () => {
   it("passes when severity matches L*I band", () => {
@@ -37,5 +41,61 @@ describe("checkSeverityMatchesRiskScore", () => {
     const failures = checkSeverityMatchesRiskScore(state);
     expect(failures).toHaveLength(1);
     expect(failures[0].details).toContain("missing impact_index or likelihood_index");
+  });
+});
+
+describe("checkSeverityInflation", () => {
+  it("passes when <20% critical", () => {
+    const threats = [
+      { id: "T-001", severity: "critical" },
+      { id: "T-002", severity: "high" },
+      { id: "T-003", severity: "high" },
+      { id: "T-004", severity: "medium" },
+      { id: "T-005", severity: "low" },
+      { id: "T-006", severity: "medium" },
+    ];
+    expect(checkSeverityInflation({ threats })).toHaveLength(0);
+  });
+
+  it("warns when >20% critical with >= 5 threats", () => {
+    const threats = [
+      { id: "T-001", severity: "critical" },
+      { id: "T-002", severity: "critical" },
+      { id: "T-003", severity: "high" },
+      { id: "T-004", severity: "medium" },
+      { id: "T-005", severity: "low" },
+    ];
+    const failures = checkSeverityInflation({ threats });
+    expect(failures).toHaveLength(1);
+    expect(failures[0].severity).toBe("warning");
+    expect(failures[0].details).toContain("40%");
+  });
+
+  it("skips when fewer than 5 threats", () => {
+    const threats = [
+      { id: "T-001", severity: "critical" },
+      { id: "T-002", severity: "high" },
+      { id: "T-003", severity: "medium" },
+    ];
+    expect(checkSeverityInflation({ threats })).toHaveLength(0);
+  });
+});
+
+describe("checkCriticalLowLikelihood", () => {
+  it("warns when critical threat has likelihood_index <= 2", () => {
+    const state = { threats: [{ id: "T-001", severity: "critical", likelihood_index: 1 }] };
+    const failures = checkCriticalLowLikelihood(state);
+    expect(failures).toHaveLength(1);
+    expect(failures[0].severity).toBe("warning");
+  });
+
+  it("passes when critical threat has likelihood_index >= 3", () => {
+    const state = { threats: [{ id: "T-001", severity: "critical", likelihood_index: 4 }] };
+    expect(checkCriticalLowLikelihood(state)).toHaveLength(0);
+  });
+
+  it("ignores non-critical threats", () => {
+    const state = { threats: [{ id: "T-001", severity: "high", likelihood_index: 1 }] };
+    expect(checkCriticalLowLikelihood(state)).toHaveLength(0);
   });
 });
