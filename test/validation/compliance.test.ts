@@ -7,6 +7,9 @@ import {
   checkIntakeResponsesComplete,
   checkFrameworkVersionRecorded,
 } from "../../src/validation/rules/compliance.js";
+import { checkManifestCoverage, checkManifestCoverageRule } from "../../src/validation/rules/manifest-coverage.js";
+import { loadManifest } from "../../src/definitions/manifests/loader.js";
+import { getRegisteredRules } from "../../src/validation/engine.js";
 
 describe("compliance structural rules", () => {
   describe("every_requirement_has_verdict", () => {
@@ -246,5 +249,126 @@ describe("compliance structural rules", () => {
       expect(failures).toHaveLength(1);
       expect(failures[0].details).toContain("iso27001");
     });
+  });
+});
+
+describe("manifest_coverage_check integration", () => {
+  it("rule is registered in the validation engine", () => {
+    const rules = getRegisteredRules();
+    expect(rules.has("manifest_coverage_check")).toBe(true);
+  });
+
+  it("rule wrapper extracts manifest_coverage_input and compliance_matrix from state", () => {
+    const manifest = loadManifest("DORA")!;
+    const matrix = manifest.article_groups
+      .flatMap((g) => g.articles)
+      .filter((a) => a.ref !== "Art. 28(6)")
+      .map((a) => ({
+        requirement_id: a.ref,
+        authority_id: "DORA",
+        verdict: "documented",
+      }));
+
+    const state: Record<string, unknown> = {
+      manifest_coverage_input: { manifest, authority_id: "DORA" },
+      compliance_matrix: matrix,
+    };
+
+    const failures = checkManifestCoverageRule(state);
+    expect(failures).toHaveLength(1);
+    expect(failures[0].rule).toBe("manifest_coverage_check");
+    expect(failures[0].severity).toBe("required");
+    expect(failures[0].details).toContain("Art. 28(6)");
+  });
+
+  it("rule wrapper returns empty when no manifest_coverage_input (enumeration-diff mode)", () => {
+    const failures = checkManifestCoverageRule({ compliance_matrix: [] });
+    expect(failures).toHaveLength(0);
+  });
+
+  it("full tool-level test: checkStageCompleteness returns incomplete for missing refs", async () => {
+    const { checkStageCompleteness } = await import("../../src/tools/check-stage-completeness.js");
+    const manifest = loadManifest("DORA")!;
+
+    const matrix = manifest.article_groups
+      .flatMap((g) => g.articles)
+      .filter((a) => a.ref !== "Art. 28(6)")
+      .map((a) => ({
+        authority_id: "DORA",
+        authority_type: "regulation",
+        authority_title: "DORA",
+        requirement_id: a.ref,
+        requirement_text: a.topic,
+        source_kind: "mcp_grounded",
+        verdict: "documented",
+        confidence: "high",
+      }));
+
+    const result = await checkStageCompleteness({
+      task_id: "gap_analysis",
+      phase_id: "phase_4b_validate",
+      definition_version: "2.0",
+      stage_state: {
+        manifest_coverage_input: { manifest, authority_id: "DORA" },
+        compliance_matrix: matrix,
+        documents: [{ doc_id: "test", filename: "test.pdf" }],
+        detected_authorities: [{ authority_id: "DORA", authority_type: "regulation", authority_title: "DORA" }],
+      },
+    });
+
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed.status).toBe("incomplete");
+    expect(parsed.missing.some((f: any) => f.details.includes("Art. 28(6)"))).toBe(true);
+  });
+
+  it("detects Art. 28(6) as missing — the systematic blind spot", () => {
+    const manifest = loadManifest("DORA")!;
+    expect(manifest).not.toBeNull();
+
+    const matrix = manifest.article_groups
+      .flatMap((g) => g.articles)
+      .filter((a) => a.ref !== "Art. 28(6)")
+      .map((a) => ({
+        requirement_id: a.ref,
+        authority_id: "DORA",
+        verdict: "documented",
+      }));
+
+    const result = checkManifestCoverage(manifest, matrix, "DORA");
+    expect(result.pass).toBe(false);
+    expect(result.missing_refs).toEqual(["Art. 28(6)"]);
+    expect(result.coverage_ratio).toBeCloseTo(63 / 64, 2);
+  });
+
+  it("detects Art. 31-33 as missing — the variance issue", () => {
+    const manifest = loadManifest("DORA")!;
+    const overseerRefs = new Set(["Art. 31", "Art. 32", "Art. 33"]);
+
+    const matrix = manifest.article_groups
+      .flatMap((g) => g.articles)
+      .filter((a) => !overseerRefs.has(a.ref))
+      .map((a) => ({
+        requirement_id: a.ref,
+        authority_id: "DORA",
+        verdict: "documented",
+      }));
+
+    const result = checkManifestCoverage(manifest, matrix, "DORA");
+    expect(result.pass).toBe(false);
+    expect(result.missing_refs).toEqual(["Art. 31", "Art. 32", "Art. 33"]);
+  });
+
+  it("auto_remediate_cap limits to first 10 in manifest order", () => {
+    const manifest = loadManifest("DORA")!;
+    const result = checkManifestCoverage(manifest, [], "DORA");
+    expect(result.missing_refs.length).toBe(64);
+
+    const AUTO_REMEDIATE_CAP = 10;
+    const autoRemediate = result.missing_refs.slice(0, AUTO_REMEDIATE_CAP);
+    const overflow = result.missing_refs.slice(AUTO_REMEDIATE_CAP);
+
+    expect(autoRemediate).toHaveLength(10);
+    expect(overflow).toHaveLength(54);
+    expect(autoRemediate[0]).toBe("Art. 5(1)");
   });
 });
