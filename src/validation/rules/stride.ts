@@ -71,6 +71,10 @@ interface StrideState {
   domain_experts_used?: DomainExpertUsed[];
   domain_findings?: DomainFinding[];
   domain_attestations?: string[];
+  entry_points?: Array<{ id: string; name: string; [key: string]: unknown }>;
+  qa_findings?: Array<{ id: string; category: string; severity: string; resolved: boolean; description: string; [key: string]: unknown }>;
+  enrichment_coverage?: { total_threats: number; enrichment_ratio: number; [key: string]: unknown };
+  report_markdown?: string;
 }
 
 interface EvidenceManifest {
@@ -848,4 +852,67 @@ export function checkDomainChallengeCoherence(
   }
 
   return failures;
+}
+
+/**
+ * Entry point enumeration: either the state carries at least one entry point,
+ * or the gaps register explicitly notes the omission. At validation time the
+ * report has not been generated yet, so this does not inspect report_markdown.
+ */
+export function checkEntryPointsDocumented(state: Record<string, unknown>): RuleFailure[] {
+  const s = asStride(state);
+  const entryPoints = s.entry_points ?? [];
+  const gaps = (state.gaps as Array<{ description?: string }>) ?? [];
+
+  if (entryPoints.length > 0) return [];
+
+  const gapMentionsEntryPoints = gaps.some(
+    (g) => (g.description ?? "").toLowerCase().includes("entry point"),
+  );
+  if (gapMentionsEntryPoints) return [];
+
+  return [{
+    rule: "entry_points_documented",
+    severity: "required",
+    details: "No entry points enumerated and no gap documented for the omission",
+  }];
+}
+
+/**
+ * All QA findings with severity "blocking" must be resolved before the phase
+ * can be considered complete.
+ */
+export function checkQaBlockingResolved(state: Record<string, unknown>): RuleFailure[] {
+  const s = asStride(state);
+  const findings = s.qa_findings ?? [];
+  const failures: RuleFailure[] = [];
+  for (const finding of findings) {
+    if (finding.severity === "blocking" && !finding.resolved) {
+      failures.push({
+        rule: "qa_blocking_resolved",
+        severity: "required",
+        details: `Blocking QA finding '${finding.id}' (${finding.category}) is unresolved: ${finding.description}`,
+      });
+    }
+  }
+  return failures;
+}
+
+/**
+ * At least 80 % of threats should have taxonomy enrichment. Below that
+ * threshold a warning is raised — it does not block completion but signals
+ * that enrichment coverage should be reviewed.
+ */
+export function checkEnrichmentRatioSufficient(state: Record<string, unknown>): RuleFailure[] {
+  const s = asStride(state);
+  const coverage = s.enrichment_coverage;
+  if (!coverage) return [];
+  if (coverage.enrichment_ratio >= 0.8) return [];
+  const percentage = Math.round(coverage.enrichment_ratio * 100);
+  return [{
+    rule: "enrichment_ratio_sufficient",
+    severity: "warning",
+    details: `Only ${percentage}% of threats have taxonomy enrichment — review whether remaining threats were skipped`,
+    field: "enrichment_coverage",
+  }];
 }

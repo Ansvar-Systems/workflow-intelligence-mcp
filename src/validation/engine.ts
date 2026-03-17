@@ -65,6 +65,9 @@ import {
   checkSeverityInflation,
   checkCriticalLowLikelihood,
   checkThreatTemplateCompleteness,
+  checkEntryPointsDocumented,
+  checkQaBlockingResolved,
+  checkEnrichmentRatioSufficient,
 } from "./rules/stride.js";
 import {
   checkScopeReadinessRecorded,
@@ -201,6 +204,9 @@ registerStructuralRule("severity_matches_risk_score", checkSeverityMatchesRiskSc
 registerStructuralRule("severity_inflation_check", checkSeverityInflation);
 registerStructuralRule("critical_low_likelihood_flag", checkCriticalLowLikelihood);
 registerStructuralRule("threat_template_completeness", checkThreatTemplateCompleteness);
+registerStructuralRule("entry_points_documented", checkEntryPointsDocumented);
+registerStructuralRule("qa_blocking_resolved", checkQaBlockingResolved);
+registerStructuralRule("enrichment_ratio_sufficient", checkEnrichmentRatioSufficient);
 
 // Generic scope-gap / client-question rules
 registerStructuralRule("scope_readiness_recorded", checkScopeReadinessRecorded);
