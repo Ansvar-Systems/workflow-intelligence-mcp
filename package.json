@@ -6,6 +6,7 @@
   "main": "dist/server.js",
   "scripts": {
     "build": "tsc",
+    "postbuild": "mkdir -p dist/definitions/manifests && cp src/definitions/manifests/*.json dist/definitions/manifests/",
     "dev": "tsc --watch",
     "start": "node dist/server.js",
     "test": "vitest run",
