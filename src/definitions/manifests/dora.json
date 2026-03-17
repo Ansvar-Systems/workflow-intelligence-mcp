@@ -1,0 +1,107 @@
+{
+  "framework_id": "DORA",
+  "scope": "Regulation (EU) 2022/2554",
+  "version": "2025-01-17",
+  "article_groups": [
+    {
+      "id": "governance",
+      "name": "ICT Risk Management Governance (Art. 5-6)",
+      "articles": [
+        { "ref": "Art. 5(1)", "topic": "ICT risk management framework — board responsibility" },
+        { "ref": "Art. 5(2)", "topic": "Non-delegable management body accountability" },
+        { "ref": "Art. 5(3)", "topic": "Designated senior management oversight" },
+        { "ref": "Art. 5(4)", "topic": "Continuous learning and training obligation" },
+        { "ref": "Art. 6(1)", "topic": "ICT risk management framework — comprehensive" },
+        { "ref": "Art. 6(2)", "topic": "Documented ICT risk management framework" },
+        { "ref": "Art. 6(3)", "topic": "Annual ICT risk management framework review" },
+        { "ref": "Art. 6(4)", "topic": "Internal audit of ICT risk management" },
+        { "ref": "Art. 6(5)", "topic": "ICT risk management framework — proportionality" },
+        { "ref": "Art. 6(8)", "topic": "Dedicated ICT risk management function" }
+      ]
+    },
+    {
+      "id": "ict_risk_management",
+      "name": "ICT Risk Management (Art. 7-14)",
+      "articles": [
+        { "ref": "Art. 7", "topic": "ICT systems, protocols and tools" },
+        { "ref": "Art. 8(1)", "topic": "Identification of ICT-supported business functions" },
+        { "ref": "Art. 8(2)", "topic": "ICT asset inventory and dependencies" },
+        { "ref": "Art. 9(1)", "topic": "Protection and prevention measures" },
+        { "ref": "Art. 9(2)", "topic": "ICT security policies" },
+        { "ref": "Art. 9(3)", "topic": "Network security management" },
+        { "ref": "Art. 9(4)", "topic": "Encryption and cryptographic controls" },
+        { "ref": "Art. 10(1)", "topic": "Detection of anomalous activities" },
+        { "ref": "Art. 10(2)", "topic": "Detection mechanisms — multiple layers" },
+        { "ref": "Art. 11(1)", "topic": "Response and recovery — ICT business continuity policy" },
+        { "ref": "Art. 11(2)", "topic": "ICT disaster recovery plan" },
+        { "ref": "Art. 11(3)", "topic": "Backup policies and procedures" },
+        { "ref": "Art. 12(1)", "topic": "Learning and evolving from ICT incidents" },
+        { "ref": "Art. 12(2)", "topic": "Post-incident reviews" },
+        { "ref": "Art. 13(1)", "topic": "Communication policies" },
+        { "ref": "Art. 14", "topic": "Simplified ICT risk management (proportionality)" }
+      ]
+    },
+    {
+      "id": "incident_management",
+      "name": "ICT Incident Management & Reporting (Art. 17-19)",
+      "articles": [
+        { "ref": "Art. 17(1)", "topic": "ICT-related incident management process" },
+        { "ref": "Art. 17(2)", "topic": "Incident classification criteria" },
+        { "ref": "Art. 17(3)", "topic": "Early warning indicators" },
+        { "ref": "Art. 19(1)", "topic": "Classification of major ICT-related incidents" },
+        { "ref": "Art. 19(2)", "topic": "Initial notification — without undue delay" },
+        { "ref": "Art. 19(3)", "topic": "Intermediate report — within 1 week" },
+        { "ref": "Art. 19(4)", "topic": "Final report — within 1 month" }
+      ]
+    },
+    {
+      "id": "digital_operational_resilience_testing",
+      "name": "Digital Operational Resilience Testing (Art. 24-27)",
+      "articles": [
+        { "ref": "Art. 24(1)", "topic": "General requirements for testing" },
+        { "ref": "Art. 24(2)", "topic": "Proportionate testing approach" },
+        { "ref": "Art. 25(1)", "topic": "Testing of ICT tools and systems" },
+        { "ref": "Art. 26(1)", "topic": "Threat-led penetration testing — requirement" },
+        { "ref": "Art. 26(2)", "topic": "TLPT scope and methodology" },
+        { "ref": "Art. 26(3)", "topic": "TLPT — critical ICT TPP involvement" }
+      ]
+    },
+    {
+      "id": "tpp_risk_management",
+      "name": "ICT Third-Party Risk (Art. 28-30)",
+      "articles": [
+        { "ref": "Art. 28(1)", "topic": "General principles on ICT TPP arrangements" },
+        { "ref": "Art. 28(2)", "topic": "Contractual arrangements — required terms" },
+        { "ref": "Art. 28(3)", "topic": "Concentration risk assessment" },
+        { "ref": "Art. 28(4)", "topic": "Due diligence on TPPs" },
+        { "ref": "Art. 28(5)", "topic": "Sub-outsourcing chain monitoring" },
+        { "ref": "Art. 28(6)", "topic": "Notification to competent authority before critical outsourcing" },
+        { "ref": "Art. 28(7)", "topic": "Register of information on TPP arrangements" },
+        { "ref": "Art. 28(8)", "topic": "Reporting to competent authorities" },
+        { "ref": "Art. 30(2)(a)", "topic": "Service description — critical functions" },
+        { "ref": "Art. 30(2)(b)", "topic": "Data location and processing" },
+        { "ref": "Art. 30(2)(c)", "topic": "Service level descriptions and targets" },
+        { "ref": "Art. 30(2)(d)", "topic": "Data return and deletion on termination" },
+        { "ref": "Art. 30(2)(e)", "topic": "Accessibility, availability and integrity guarantees" },
+        { "ref": "Art. 30(2)(f)", "topic": "Incident notification obligations (all arrangements)" },
+        { "ref": "Art. 30(2)(g)", "topic": "TPP cooperation with competent authorities" },
+        { "ref": "Art. 30(2)(h)", "topic": "Termination rights" },
+        { "ref": "Art. 30(2)(i)", "topic": "Audit and inspection rights" },
+        { "ref": "Art. 30(3)(a)", "topic": "Critical functions — performance targets" },
+        { "ref": "Art. 30(3)(b)", "topic": "Critical functions — data location restrictions" },
+        { "ref": "Art. 30(3)(c)", "topic": "Critical functions — business continuity" },
+        { "ref": "Art. 30(3)(d)", "topic": "Critical functions — transition and termination assistance" },
+        { "ref": "Art. 30(3)(e)", "topic": "Critical functions — exit strategy" }
+      ]
+    },
+    {
+      "id": "lead_overseer",
+      "name": "Oversight of Critical ICT TPPs (Art. 31-33)",
+      "articles": [
+        { "ref": "Art. 31", "topic": "Designation of critical ICT TPPs" },
+        { "ref": "Art. 32", "topic": "Lead overseer tasks" },
+        { "ref": "Art. 33", "topic": "Lead overseer powers" }
+      ]
+    }
+  ]
+}
