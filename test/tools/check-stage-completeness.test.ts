@@ -628,4 +628,152 @@ describe("check_stage_completeness", () => {
     expect(data.status).toBe("incomplete");
     expect(data.missing.some((m: { rule: string }) => m.rule === "verification_tests_reference_known_threats")).toBe(true);
   });
+
+  it("marks Phase 5b incomplete when qa_findings and enrichment_coverage are absent", async () => {
+    const result = await checkStageCompleteness({
+      task_id: "stride_threat_model",
+      phase_id: "phase_5b_quality_assurance",
+      definition_version: "1.0",
+      stage_state: {
+        threats: [
+          {
+            id: "T1",
+            stride_category: "Spoofing",
+            component_id: "api",
+            title: "Forged token accepted",
+            description: "An attacker can submit a forged bearer token to impersonate a trusted caller.",
+            mcp_source: "search_stride_patterns",
+          },
+        ],
+      },
+    });
+    const data = JSON.parse(result.content[0].text);
+    expect(data.status).toBe("incomplete");
+    expect(data.missing.some((m: { field?: string }) => m.field === "qa_findings")).toBe(true);
+    expect(data.missing.some((m: { field?: string }) => m.field === "enrichment_coverage")).toBe(true);
+  });
+
+  it("marks Phase 5b incomplete when a blocking qa_finding is unresolved", async () => {
+    const result = await checkStageCompleteness({
+      task_id: "stride_threat_model",
+      phase_id: "phase_5b_quality_assurance",
+      definition_version: "1.0",
+      stage_state: {
+        threats: [
+          {
+            id: "T1",
+            stride_category: "Spoofing",
+            component_id: "api",
+            title: "Forged token accepted",
+            description: "An attacker can submit a forged bearer token to impersonate a trusted caller.",
+            mcp_source: "search_stride_patterns",
+          },
+        ],
+        qa_findings: [
+          {
+            id: "QA-1",
+            category: "template_gap",
+            severity: "blocking",
+            description: "Threat T1 is missing severity and business_impact fields.",
+            resolved: false,
+          },
+        ],
+        enrichment_coverage: {
+          total_threats: 1,
+          fully_enriched: 1,
+          partially_enriched: 0,
+          unenriched: 0,
+          enrichment_ratio: 1.0,
+        },
+      },
+    });
+    const data = JSON.parse(result.content[0].text);
+    expect(data.status).toBe("incomplete");
+    expect(data.missing.some((m: { rule: string }) => m.rule === "qa_blocking_resolved")).toBe(true);
+  });
+
+  it("blocks root completion when qa_findings is absent from full state", async () => {
+    // Root check (no phase_id) with all prior fields present but qa_findings missing.
+    // qa_findings is not required by the JSON Schema — it is only required by completion_criteria.
+    // data_flows use the schema-required "from"/"to" property names (not source_id/destination_id).
+    const result = await checkStageCompleteness({
+      task_id: "stride_threat_model",
+      definition_version: "1.0",
+      stage_state: {
+        system_name: "Payments API",
+        evidence_manifest: {
+          authorized_documents: [{ doc_id: "doc-1", title: "Arch doc" }],
+          system_identity: { name: "Payments API" },
+          document_coverage: [{ dimension: "architecture", status: "covered" }],
+          mismatch_flags: [],
+        },
+        components: [
+          { id: "api", name: "API", type: "process" },
+          { id: "db", name: "DB", type: "data_store" },
+        ],
+        data_flows: [
+          { id: "df-1", from: "api", to: "db" },
+        ],
+        scope_readiness: {
+          overall_status: "ready",
+          proceeding_mode: "proceed",
+          summary: "Scope is fully defined.",
+        },
+        threats: [
+          {
+            id: "T1",
+            stride_category: "Spoofing",
+            component_id: "api",
+            title: "Forged token accepted",
+            description: "An attacker can submit a forged bearer token to impersonate a trusted caller.",
+            mcp_source: "search_stride_patterns",
+          },
+        ],
+        coverage_matrix: {
+          api: {
+            Spoofing: true, Tampering: true, Repudiation: true,
+            "Information Disclosure": true, "Denial of Service": true, "Elevation of Privilege": true,
+          },
+          db: {
+            Spoofing: true, Tampering: true, Repudiation: true,
+            "Information Disclosure": true, "Denial of Service": true, "Elevation of Privilege": true,
+          },
+        },
+        attack_paths: [
+          {
+            id: "AP-1",
+            title: "Token replay to data exfiltration",
+            summary: "Attacker replays a stolen token to query the DB.",
+            related_threat_ids: ["T1"],
+          },
+        ],
+        verification_tests: [
+          {
+            id: "VT-1",
+            title: "Replay stale token",
+            objective: "Confirm replayed tokens are rejected.",
+            procedure: ["Capture token; replay after expiry."],
+            expected_result: "401 response with audit log entry.",
+            related_threat_ids: ["T1"],
+          },
+        ],
+        threat_mitigations: [
+          {
+            threat_id: "T1",
+            controls: [{
+              control_id: "ISO27001-A.9.4.1",
+              framework: "ISO27001:2022",
+              control_name: "Secure log-on procedures",
+              mcp_source: "search_controls",
+            }],
+          },
+        ],
+        report_markdown: "# Threat Model\n\nFull report text.",
+        // qa_findings intentionally absent to verify the completion_criteria gate fires
+      },
+    });
+    const data = JSON.parse(result.content[0].text);
+    expect(data.status).toBe("incomplete");
+    expect(data.missing.some((m: { field?: string }) => m.field === "qa_findings")).toBe(true);
+  });
 });
