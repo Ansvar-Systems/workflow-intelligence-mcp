@@ -5,6 +5,13 @@ import { getTaskDefinition } from "./get-task-definition.js";
 import { checkStageCompleteness } from "./check-stage-completeness.js";
 import { suggestTrustBoundaries } from "./suggest-trust-boundaries.js";
 import { about, listSources } from "./meta.js";
+import {
+  wkflStoreState,
+  wkflLoadState,
+  wkflListStates,
+  wkflDeleteAssessment,
+} from "./state.js";
+import { wkflExportReport } from "./export-report.js";
 
 export interface ToolResult {
   content: Array<{ type: "text"; text: string }>;
@@ -20,6 +27,11 @@ export const TOOL_HANDLERS: Record<string, ToolHandler> = {
   get_task_definition: getTaskDefinition,
   check_stage_completeness: checkStageCompleteness,
   suggest_trust_boundaries: suggestTrustBoundaries,
+  wkfl_store_state: wkflStoreState,
+  wkfl_load_state: wkflLoadState,
+  wkfl_list_states: wkflListStates,
+  wkfl_delete_assessment: wkflDeleteAssessment,
+  wkfl_export_report: wkflExportReport,
   about,
   list_sources: listSources,
 };
@@ -43,13 +55,17 @@ export const TOOL_DEFINITIONS = [
   {
     name: "get_task_definition",
     description:
-      "Get the full definition of a task including its stage-state schema, completion criteria, quality rubrics, dependencies, cross-MCP tool manifest, and prompting guidance.",
+      "Get a task definition. When phase is provided, returns only that phase's criteria plus shared schema and relevant tools (much smaller response). When phase is omitted, returns the full definition. Use phase-scoped calls during execution to stay within context budget.",
     inputSchema: {
       type: "object" as const,
       properties: {
         task_id: {
           type: "string",
-          description: "The task identifier (e.g., dfd_construction).",
+          description: "The task identifier (e.g., dfd_construction, stride_threat_model).",
+        },
+        phase: {
+          type: "string",
+          description: "Optional phase ID (e.g., phase_0_evidence_manifest, phase_2b_domain_challenge). When provided, returns only the specified phase plus shared schema and phase-relevant MCP tools. Omit to get the full definition.",
         },
       },
       required: ["task_id"],
@@ -58,7 +74,7 @@ export const TOOL_DEFINITIONS = [
   {
     name: "check_stage_completeness",
     description:
-      'Validate collected stage data against the task\'s completion criteria and quality rubrics. Returns "incomplete" (blocking issues), "complete_with_quality_warnings" (structure OK but depth issues), or "complete" (all gates pass).',
+      'Validate stage data against task completion criteria and quality rubrics. Returns "incomplete", "complete_with_quality_warnings", or "complete". If stage_state is omitted, loads from stored state using assessment_id.',
     inputSchema: {
       type: "object" as const,
       properties: {
@@ -70,16 +86,24 @@ export const TOOL_DEFINITIONS = [
           type: "string",
           description: "The stage identifier (same as task_id for standalone tasks).",
         },
+        phase_id: {
+          type: "string",
+          description: "Optional phase identifier for multi-phase tasks. When provided, validates against the phase-specific completion criteria.",
+        },
         definition_version: {
           type: "string",
-          description: "Version from get_task_definition, for version negotiation.",
+          description: "Version from get_task_definition. Defaults to '1.0' if omitted.",
+        },
+        assessment_id: {
+          type: "string",
+          description: "Assessment identifier for loading stored state. Used when stage_state is omitted.",
         },
         stage_state: {
           type: "object",
-          description: "The collected stage data, conforming to the task's stage_state_schema.",
+          description: "The collected stage data. If omitted, the tool loads previously stored state using assessment_id.",
         },
       },
-      required: ["task_id", "stage_id", "definition_version", "stage_state"],
+      required: ["task_id"],
     },
   },
   {
@@ -111,6 +135,105 @@ export const TOOL_DEFINITIONS = [
         },
       },
       required: ["processes", "data_stores", "external_entities", "data_flows"],
+    },
+  },
+  {
+    name: "wkfl_store_state",
+    description:
+      "Persist assessment state (phase outputs, completed domain groups, matrix slices) to disk. Enables context window management for large assessments and session resume after timeout.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        assessment_id: {
+          type: "string",
+          description:
+            "Unique assessment identifier. Use a stable ID so state can be resumed across sessions.",
+        },
+        key: {
+          type: "string",
+          description:
+            'State key (e.g., "phase_1_scoping", "group_access_control", "phase_2_requirements"). Alphanumeric, hyphens, underscores, dots.',
+        },
+        data: {
+          description: "The data to persist (any JSON-serializable value).",
+        },
+      },
+      required: ["assessment_id", "key", "data"],
+    },
+  },
+  {
+    name: "wkfl_load_state",
+    description:
+      "Load previously stored assessment state by assessment_id and key. Use to retrieve completed domain groups, phase outputs, or resume an interrupted assessment.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        assessment_id: {
+          type: "string",
+          description: "Assessment identifier.",
+        },
+        key: {
+          type: "string",
+          description: "State key to load.",
+        },
+      },
+      required: ["assessment_id", "key"],
+    },
+  },
+  {
+    name: "wkfl_list_states",
+    description:
+      "List all stored state keys for an assessment. Use to check progress, find completed domain groups, or determine resume point after a session interruption.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        assessment_id: {
+          type: "string",
+          description: "Assessment identifier.",
+        },
+      },
+      required: ["assessment_id"],
+    },
+  },
+  {
+    name: "wkfl_export_report",
+    description:
+      'Assemble a formatted assessment report from stored state. Supports three formats: compliance (default), STRIDE threat model, and DPIA. For compliance: loads domain groups, coverage stats, scope/methodology, evidence refs — renders executive summary, compliance matrix, gap analysis, evidence register. For STRIDE: loads components, threats, mitigations, gaps, DFD — renders scope, DFD, threats by STRIDE category, risk matrix, mitigations, gaps register. For DPIA: loads screening, processing description, risks, safeguards, consultation — renders 12-section GDPR Art. 35 report. Format auto-detected from stored state keys or task_id, or set report_format explicitly.',
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        assessment_id: {
+          type: "string",
+          description: "Assessment identifier to export.",
+        },
+        task_id: {
+          type: "string",
+          description:
+            'Task identifier for explicit format routing. Takes precedence over report_format and state-key detection. Values: "dpia_assessment", "stride_threat_model", "gap_analysis".',
+        },
+        report_format: {
+          type: "string",
+          enum: ["compliance", "stride", "dpia"],
+          description:
+            'Report format. "stride" for STRIDE threat model, "dpia" for DPIA, "compliance" for compliance assessment. Auto-detected from stored state or task_id if omitted.',
+        },
+      },
+      required: ["assessment_id"],
+    },
+  },
+  {
+    name: "wkfl_delete_assessment",
+    description:
+      "Delete all stored state for an assessment. Use for cleanup after delivery.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        assessment_id: {
+          type: "string",
+          description: "Assessment identifier to delete.",
+        },
+      },
+      required: ["assessment_id"],
     },
   },
   {

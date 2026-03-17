@@ -1,7 +1,8 @@
 import Ajv from "ajv";
 import type { ToolResult } from "./index.js";
 import { getTaskById } from "./get-task-definition.js";
-import { evaluateCompleteness } from "../validation/engine.js";
+import { evaluateCompleteness, evaluatePhaseCompleteness } from "../validation/engine.js";
+import { loadState, listStates } from "../state/store.js";
 
 const ajv = new Ajv({ allErrors: true });
 
@@ -9,23 +10,64 @@ export async function checkStageCompleteness(
   args: Record<string, unknown>,
 ): Promise<ToolResult> {
   const taskId = args.task_id as string;
-  const definitionVersion = args.definition_version as string;
-  const stageState = args.stage_state as Record<string, unknown>;
+  const definitionVersion = (args.definition_version as string) || "1.0";
+  let stageState = args.stage_state as Record<string, unknown> | undefined;
 
-  if (!taskId || !definitionVersion || !stageState) {
+  if (!taskId) {
     return {
       content: [
         {
           type: "text",
           text: JSON.stringify({
             error: "missing_parameter",
-            message:
-              "task_id, definition_version, and stage_state are all required.",
+            message: "task_id is required.",
           }),
         },
       ],
       isError: true,
     };
+  }
+
+  // If stage_state is not provided, try to reconstruct from stored state.
+  // LLMs often call this without stage_state, expecting server-side state.
+  if (!stageState) {
+    const assessmentId = args.assessment_id as string;
+    if (assessmentId) {
+      const result = listStates(assessmentId);
+      if (result && Array.isArray(result.entries) && result.entries.length > 0) {
+        const assembled: Record<string, unknown> = {};
+        for (const entry of result.entries) {
+          const loaded = loadState(assessmentId, entry.key);
+          if (loaded && loaded.data !== undefined) {
+            assembled[entry.key] = loaded.data;
+          }
+        }
+        stageState = assembled;
+      }
+    }
+
+    // If still no state, return an informative incomplete status rather than error
+    if (!stageState || Object.keys(stageState).length === 0) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({
+              status: "incomplete",
+              missing: [
+                {
+                  rule: "no_state",
+                  severity: "required",
+                  details: "No stage data provided or found in stored state. Store phase outputs via wkfl_store_state before checking completeness.",
+                },
+              ],
+              warnings: [],
+              summary: "No stage data available yet. Complete the phase work first, store results, then check completeness.",
+            }),
+          },
+        ],
+      };
+    }
   }
 
   const def = getTaskById(taskId);
@@ -93,12 +135,21 @@ export async function checkStageCompleteness(
     };
   }
 
-  // Run validation engine
-  const result = evaluateCompleteness(
-    stageState,
-    def.completion_criteria,
-    def.quality_rubric,
-  );
+  // Run validation engine — phase-aware if phase_id provided and task has phases
+  const phaseId = args.phase_id as string | undefined;
+  const result = phaseId && def.phases
+    ? evaluatePhaseCompleteness(
+        stageState,
+        def.phases,
+        phaseId,
+        def.completion_criteria,
+        def.quality_rubric,
+      )
+    : evaluateCompleteness(
+        stageState,
+        def.completion_criteria,
+        def.quality_rubric,
+      );
 
   return {
     content: [

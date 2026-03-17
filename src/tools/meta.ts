@@ -26,6 +26,7 @@ export async function about(): Promise<ToolResult> {
               "Quality gates: structural validation + quality rubrics",
               "Cross-MCP tool manifests (declares which external MCP tools are relevant per stage)",
               "Trust boundary suggestion heuristics for DFD construction",
+              "Assessment state persistence (store/load/resume across sessions)",
             ],
             tier_model: {
               starter: "Basic workflows (MSB InfoSec, IR Readiness, standalone DFD)",

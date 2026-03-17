@@ -11,8 +11,10 @@ import type { RuleFailure } from "../../types/validation.js";
 /**
  * Evaluate field presence rules against a state object.
  *
- * For each rule with `rule: "min_count"`, the field must exist in
- * the state, be an array, and contain at least `rule.value` items.
+ * Supported rule types:
+ * - "min_count": field must be an array with at least `value` items
+ * - "exists": field must be present and non-null
+ * - "equals": field must be present and strictly equal to `value`
  */
 export function evaluateFieldPresence(
   state: Record<string, unknown>,
@@ -23,6 +25,31 @@ export function evaluateFieldPresence(
   for (const rule of rules) {
     const value = state[rule.field];
 
+    if (rule.rule === "exists") {
+      if (value === undefined || value === null) {
+        failures.push({
+          rule: "field_presence",
+          severity: "required",
+          details: rule.message,
+          field: rule.field,
+        });
+      }
+      continue;
+    }
+
+    if (rule.rule === "equals") {
+      if (value !== rule.value) {
+        failures.push({
+          rule: "field_presence",
+          severity: "required",
+          details: rule.message,
+          field: rule.field,
+        });
+      }
+      continue;
+    }
+
+    // min_count
     if (value === undefined || value === null) {
       failures.push({
         rule: "field_presence",
@@ -33,25 +60,23 @@ export function evaluateFieldPresence(
       continue;
     }
 
-    if (rule.rule === "min_count") {
-      if (!Array.isArray(value)) {
-        failures.push({
-          rule: "field_presence",
-          severity: "required",
-          details: rule.message,
-          field: rule.field,
-        });
-        continue;
-      }
+    if (!Array.isArray(value)) {
+      failures.push({
+        rule: "field_presence",
+        severity: "required",
+        details: rule.message,
+        field: rule.field,
+      });
+      continue;
+    }
 
-      if (value.length < rule.value) {
-        failures.push({
-          rule: "field_presence",
-          severity: "required",
-          details: rule.message,
-          field: rule.field,
-        });
-      }
+    if (value.length < rule.value) {
+      failures.push({
+        rule: "field_presence",
+        severity: "required",
+        details: rule.message,
+        field: rule.field,
+      });
     }
   }
 

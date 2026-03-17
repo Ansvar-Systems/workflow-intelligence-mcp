@@ -11,6 +11,7 @@
 import type { DfdStageState } from "../types/dfd.js";
 import type {
   CompletionCriteria,
+  PhaseDefinition,
   QualityRubricEntry,
   StructuralRule,
 } from "../types/task.js";
@@ -32,6 +33,50 @@ import {
   checkNoDirectExternalToDatastore,
   checkNoOrphanDataStores,
 } from "./rules/structural.js";
+import {
+  checkEveryRequirementHasVerdict,
+  checkEveryCompliantHasEvidence,
+  checkEveryPartialHasGap,
+  checkNoHighConfidenceWithoutQuote,
+  checkIntakeResponsesComplete,
+  checkFrameworkVersionRecorded,
+  checkSourceRefForGroundedEntries,
+} from "./rules/compliance.js";
+import {
+  checkAttackPathsReferenceKnownThreats,
+  checkEvidenceManifestReady,
+  checkStrideCoverageComplete,
+  checkEveryThreatHasCvss,
+  checkEveryThreatHasBusinessContext,
+  checkEveryThreatHasSeverity,
+  checkNoDuplicateThreatIds,
+  checkHighCriticalThreatsHaveControls,
+  checkMcpGroundingSufficient,
+  checkDocumentEvidenceHasCitationDetails,
+  checkDomainChallengeCoherence,
+  checkLargeThreatModelsUseBatching,
+  checkSeverityDistributionHasSignal,
+  checkVerificationTestsReferenceKnownThreats,
+} from "./rules/stride.js";
+import {
+  checkScopeReadinessRecorded,
+  checkBlockingClientQuestionsResolved,
+  checkBlockingGapsHaveResolutionPath,
+  checkClientQuestionTraceability,
+} from "./rules/gap-analysis.js";
+import {
+  checkDpiaScreeningOutcomeValid,
+  checkDpiaProcessingDescriptionComplete,
+  checkDpiaNecessityComplete,
+  checkDpiaEveryRiskHasCategoryAndRights,
+  checkDpiaUniqueRiskIds,
+  checkDpiaRiskAnalysisReferencesKnownRisks,
+  checkDpiaSafeguardsReferenceKnownRisks,
+  checkDpiaConsultationComplete,
+  checkDpiaConsultationReferencesResidualRisks,
+  checkDpiaResidualScoreCoherence,
+  checkDpiaRiskCoverageComplete,
+} from "./rules/dpia.js";
 
 // ---------------------------------------------------------------------------
 // Rule registry
@@ -101,6 +146,52 @@ registerStructuralRule("no_direct_external_to_datastore", (state) =>
 registerStructuralRule("every_external_entity_crosses_boundary", (state) =>
   checkEveryExternalEntityCrossesBoundary(asDfd(state)),
 );
+
+// Compliance assessment rules
+registerStructuralRule("every_requirement_has_verdict", checkEveryRequirementHasVerdict);
+registerStructuralRule("every_compliant_has_evidence", checkEveryCompliantHasEvidence);
+registerStructuralRule("every_partial_has_gap", checkEveryPartialHasGap);
+registerStructuralRule("no_high_confidence_without_quote", checkNoHighConfidenceWithoutQuote);
+registerStructuralRule("intake_responses_complete", checkIntakeResponsesComplete);
+registerStructuralRule("framework_version_recorded", checkFrameworkVersionRecorded);
+registerStructuralRule("source_ref_for_grounded_entries", checkSourceRefForGroundedEntries);
+registerStructuralRule("every_documented_has_evidence", checkEveryCompliantHasEvidence);
+registerStructuralRule("every_partially_documented_has_gap", checkEveryPartialHasGap);
+
+// STRIDE threat model rules
+registerStructuralRule("stride_coverage_complete", checkStrideCoverageComplete);
+registerStructuralRule("evidence_manifest_ready", checkEvidenceManifestReady);
+registerStructuralRule("every_threat_has_cvss", checkEveryThreatHasCvss);
+registerStructuralRule("every_threat_has_business_context", checkEveryThreatHasBusinessContext);
+registerStructuralRule("every_threat_has_severity", checkEveryThreatHasSeverity);
+registerStructuralRule("no_duplicate_threat_ids", checkNoDuplicateThreatIds);
+registerStructuralRule("high_critical_threats_have_controls", checkHighCriticalThreatsHaveControls);
+registerStructuralRule("mcp_grounding_sufficient", checkMcpGroundingSufficient);
+registerStructuralRule("document_evidence_has_citation_details", checkDocumentEvidenceHasCitationDetails);
+registerStructuralRule("severity_distribution_has_signal", checkSeverityDistributionHasSignal);
+registerStructuralRule("attack_paths_reference_known_threats", checkAttackPathsReferenceKnownThreats);
+registerStructuralRule("verification_tests_reference_known_threats", checkVerificationTestsReferenceKnownThreats);
+registerStructuralRule("large_threat_models_use_batching", checkLargeThreatModelsUseBatching);
+registerStructuralRule("domain_challenge_coherence", checkDomainChallengeCoherence);
+
+// Generic scope-gap / client-question rules
+registerStructuralRule("scope_readiness_recorded", checkScopeReadinessRecorded);
+registerStructuralRule("blocking_client_questions_resolved", checkBlockingClientQuestionsResolved);
+registerStructuralRule("blocking_gaps_have_resolution_path", checkBlockingGapsHaveResolutionPath);
+registerStructuralRule("client_question_traceability", checkClientQuestionTraceability);
+
+// DPIA assessment rules
+registerStructuralRule("dpia_screening_outcome_valid", checkDpiaScreeningOutcomeValid);
+registerStructuralRule("dpia_processing_description_complete", checkDpiaProcessingDescriptionComplete);
+registerStructuralRule("dpia_necessity_complete", checkDpiaNecessityComplete);
+registerStructuralRule("dpia_every_risk_has_category_and_rights", checkDpiaEveryRiskHasCategoryAndRights);
+registerStructuralRule("dpia_unique_risk_ids", checkDpiaUniqueRiskIds);
+registerStructuralRule("dpia_risk_analysis_references_known_risks", checkDpiaRiskAnalysisReferencesKnownRisks);
+registerStructuralRule("dpia_safeguards_reference_known_risks", checkDpiaSafeguardsReferenceKnownRisks);
+registerStructuralRule("dpia_consultation_complete", checkDpiaConsultationComplete);
+registerStructuralRule("dpia_consultation_references_residual_risks", checkDpiaConsultationReferencesResidualRisks);
+registerStructuralRule("dpia_residual_score_coherence", checkDpiaResidualScoreCoherence);
+registerStructuralRule("dpia_risk_coverage_complete", checkDpiaRiskCoverageComplete);
 
 // ---------------------------------------------------------------------------
 // Engine
@@ -231,4 +322,25 @@ export function evaluateCompleteness(
   const summary = buildSummary(status, missing, warnings);
 
   return { status, missing, warnings, summary };
+}
+
+/**
+ * Evaluate completeness for a specific phase of a multi-phase task.
+ * Falls back to top-level criteria if the phase has no phases array
+ * or the requested phase_id is not found.
+ */
+export function evaluatePhaseCompleteness(
+  state: Record<string, unknown>,
+  phases: PhaseDefinition[] | undefined,
+  phaseId: string,
+  fallbackCriteria: CompletionCriteria,
+  fallbackRubric: Record<string, QualityRubricEntry>,
+): StageCompletionResult {
+  if (phases) {
+    const phase = phases.find((p) => p.id === phaseId);
+    if (phase) {
+      return evaluateCompleteness(state, phase.completion_criteria, phase.quality_rubric);
+    }
+  }
+  return evaluateCompleteness(state, fallbackCriteria, fallbackRubric);
 }

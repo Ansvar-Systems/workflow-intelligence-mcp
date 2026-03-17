@@ -1,0 +1,1354 @@
+{
+  "id": "stride_threat_model",
+  "name": "STRIDE Threat Model",
+  "category": "threat_modeling",
+  "version": "1.0",
+  "standalone": true,
+  "used_in_workflows": [],
+  "description": "Led STRIDE threat model. The orchestrator assesses what the user has provided, runs a dedicated scope-gap analysis after DFD construction, asks only the load-bearing questions that are actually missing, and proceeds with gaps marked explicitly. No fixed questionnaires. Produces a full threat model with DFD, scope readiness, client clarifications, STRIDE-per-component enumeration, business-risk prioritization, CVSS v4 scoring, mitigation mappings, taxonomy enrichment, attack paths, verification tests, and a gaps/assumptions register. All findings trace to MCP tool calls or uploaded document citations.",
+  "estimated_duration": "45-120 min depending on system complexity and document volume",
+  "dependencies": [
+    {
+      "task_id": "dfd_construction",
+      "relationship": "requires_output",
+      "required_fields": ["processes", "data_stores", "external_entities", "data_flows", "trust_boundaries"],
+      "description": "DFD Architect constructs the data flow diagram in Phase 1. The orchestrator delegates DFD construction and receives the structured model back."
+    }
+  ],
+  "mcp_tools": [
+    {
+      "mcp": "document-index-mcp",
+      "tools": ["docidx_index_document", "docidx_search", "docidx_get_section", "docidx_get_surrounding", "docidx_list_documents"],
+      "when": "phase_1_scope_and_dfd, phase_2_stride_enumeration",
+      "guidance": "Index uploaded documents in Phase 1. Search documents for system facts (component names, technologies, data flows, security controls) and cite the source section. Use get_surrounding when a match needs adjacent context. Every system fact extracted from a document must carry a document_citation with doc_id, section_ref, and verbatim_quote."
+    },
+    {
+      "mcp": "stride-mcp",
+      "tools": ["search_stride_patterns", "get_stride_pattern", "list_stride_categories"],
+      "when": "phase_2_stride_enumeration",
+      "guidance": "Each STRIDE specialist calls search_stride_patterns filtered to their category and the target component type. Record the pattern_id as mcp_source on every threat. Threats not grounded by a pattern get mcp_source: 'llm-reasoned' and lower confidence."
+    },
+    {
+      "mcp": "cve-mcp",
+      "tools": ["search_cve", "get_cve_details", "search_by_product", "get_exploits", "get_epss_score", "check_kev_status"],
+      "when": "phase_2_stride_enumeration, phase_3_dedup_and_scoring, phase_3c_risk_calibration",
+      "guidance": "This is backed by the threat-intel server's CVE dataset. Use search_by_product and get_cve_details only when the scope includes exact product/vendor/version evidence. Use get_exploits, get_epss_score, and check_kev_status to ground exploitability and CVSS rationale. If exact versions are unknown, do not invent CVE links — keep the threat pattern-grounded and explain why product-specific CVE grounding is unavailable."
+    },
+    {
+      "mcp": "security-controls-mcp",
+      "tools": ["search_controls", "get_control", "list_frameworks", "get_framework_controls", "map_frameworks"],
+      "when": "phase_3b_threat_enrichment, phase_5_mitigation_mapping, phase_6_report_assembly",
+      "guidance": "One pass over all threats. Use search_controls to find controls matching each threat. Use get_control for full control details and implementation guidance. Use list_frameworks/get_framework_controls when a domain-specific framework needs coverage confirmation. Deduplicate control recommendations across related threats — do not recommend the same control six times."
+    },
+    {
+      "mcp": "threat-intel-mcp",
+      "tools": ["search_attack_techniques", "get_technique_details", "search_capec_patterns", "get_capec_details", "find_weaknesses_for_capec", "search_cwe_weaknesses", "get_cwe_details", "search_d3fend_defenses", "get_defense_details", "get_defenses_for_attack", "search_atlas_techniques", "get_atlas_technique_details", "search_atlas_case_studies", "get_data_freshness"],
+      "when": "phase_2_stride_enumeration, phase_2b_domain_challenge, phase_3b_threat_enrichment, phase_3c_risk_calibration, phase_4a_attack_path_synthesis, phase_4b_verification_test_generation",
+      "guidance": "Use threat-intel enrichment to ground ATT&CK, CAPEC, CWE, D3FEND, and ATLAS mappings. Do not attach taxonomy badges or defensive mappings without explicit tool calls. Use get_technique_details/get_capec_details/get_cwe_details/get_defense_details for final threat-card quality, and use get_defenses_for_attack to derive grounded defensive countermeasures. Use ATLAS tools only when AI/ML components are actually in scope."
+    },
+    {
+      "mcp": "sigma-rules-mcp",
+      "tools": ["search_rules", "get_rule", "list_by_technique", "list_by_logsource"],
+      "when": "phase_4b_verification_test_generation",
+      "guidance": "Use Sigma Rules MCP to ground detection opportunities and verification guidance. Prefer list_by_technique when ATT&CK mappings are already known, and search_rules when the architecture exposes a specific product/service/logsource."
+    },
+    {
+      "mcp": "pentest-knowledge-mcp",
+      "tools": ["search_techniques", "get_technique", "get_methodology_checklist", "get_phase_guidance", "pt_get_attack_surface", "map_to_attack"],
+      "when": "phase_4a_attack_path_synthesis, phase_4b_verification_test_generation",
+      "guidance": "Use Pentest Knowledge MCP to turn retained threats into concrete attack chains and verification test ideas. This is especially useful for large models where attack-path and test generation should be delegated in threat batches rather than overloaded into a single prompt."
+    },
+    {
+      "mcp": "visualization-mcp",
+      "tools": ["generate_heatmap", "generate_risk_matrix"],
+      "when": "phase_6_report_assembly",
+      "guidance": "Generate a STRIDE coverage heatmap (component x category) and risk matrix (severity distribution) for the report. Non-fatal — if visualization fails, the report is still complete."
+    },
+    {
+      "mcp": "workflow-intelligence-mcp",
+      "tools": ["wkfl_store_state", "wkfl_load_state", "wkfl_list_states", "wkfl_export_report", "wkfl_get_task_definition", "wkfl_check_stage_completeness"],
+      "when": "all_phases",
+      "guidance": "Store state after each phase completion. Key format: phase_{phase_id} for phase results, specialist_{category}_{component_id} for per-specialist results. Use check_stage_completeness to validate phase gates. Call wkfl_export_report in Phase 6 to assemble the final deliverable."
+    }
+  ],
+  "prompting_guidance": "You are leading a STRIDE threat model. The user's prompt and uploaded documents set the scope — there is no fixed questionnaire.\n\n**Core rules:**\n1. Assess what you know vs. what you need. Ask specific questions about what is actually missing. Do not present a form.\n2. Run an evidence-manifest check before DFD or STRIDE work. Refuse to proceed on unresolved document/system mismatches.\n3. Run a dedicated scope-gap analysis immediately after Phase 1. Batch questions into a single round where possible. Ask only load-bearing questions that change the threat model.\n4. Never block on missing information indefinitely. If the user does not answer, record the gap, state the assumption, lower confidence, and proceed.\n5. Every threat must trace to an MCP tool call (mcp_source field) or be explicitly marked 'llm-reasoned' with lower confidence.\n6. Every system fact from an uploaded document must cite the source section (document_citations).\n7. Every user-provided clarification must be stored as client_questions/client_attestations with answer provenance. Distinguish document_evidence, user_attested, and assumed facts.\n8. No regulation references. This is pure technical security analysis. Regulation mapping happens downstream in a separate compliance pipeline.\n9. Delegate DFD construction to dfd-architect, STRIDE enumeration to the 6 category specialists, domain challenge to domain experts, enrichment to MCP-grounding specialists, and attack/test synthesis to dedicated follow-on analysts. You orchestrate, you do not analyze.\n10. Detect the domain (automotive, healthcare, ICS/OT, financial, AI/ML) from user input and add domain experts to the fan-out alongside STRIDE specialists.\n11. Store state after each phase via wkfl_store_state. Use wkfl_check_stage_completeness to validate before proceeding.\n12. Mid-phase questions are allowed: if a specialist returns uncertainty, pause to ask the user, then resume.\n13. The report must include a Gaps and Assumptions Register — every unknown, every assumption, impact if wrong.\n14. Taxonomy badges, CVE links, D3FEND mappings, ATLAS mappings, and exploitability claims must be grounded in explicit MCP calls. If the tool evidence is missing, label the content as pattern-mapped or assumed instead of presenting it as authoritative.\n15. When retained threats or architecture size grows large, record a scale_out_plan and shard enrichment/calibration work into grounding_batches rather than overloading one agent prompt.\n\n**Phase flow:**\n- Phase 0: Build an evidence manifest from authorized documents. Confirm system identity, document coverage, and mismatch flags before further work.\n- Phase 1: Build scope and DFD from user input + documents. Delegate to dfd-architect. Proceed when >= 2 components and >= 1 data flow exist.\n- Phase 1b: Run scope-gap analysis. Assess readiness (ready / partial / blocked / minimal), identify blocking gaps, generate up to 5 batched client questions, and capture answers or assumptions with provenance.\n- Phase 2: Fan out per STRIDE category to specialists with full system context. Build coverage matrix. Every component must have all 6 categories assessed.\n- Phase 2b: Run domain challenge for system-specific blind spots and red flags.\n- Phase 3: Deduplicate similar threats. Preserve a retained threat list and dedup_log.\n- Phase 3b: Enrich retained threats with ATT&CK/CAPEC/CWE/D3FEND/ATLAS, source type, citations, and grounded badge metadata.\n- Phase 3c: Calibrate business risk, likelihood, CVSS v4, EPSS/KEV context, and residual risk.\n- Phase 4a: Synthesize attack paths from retained threats, trust boundaries, and data flows.\n- Phase 4b: Generate verification tests and detection opportunities linked to retained threats.\n- Phase 5: Map mitigations using Security Controls MCP. Every high/critical threat must have >= 1 control.\n- Phase 6: Assemble report from stored state via wkfl_export_report, including business risk rollups, traceability, remediation priorities, attack paths, and verification tests.",
+  "domain_vocabulary": {
+    "healthcare": ["PHI", "HIPAA", "HL7", "FHIR", "medical_device", "FDA", "IEC_81001", "clinical", "EHR", "EMR"],
+    "automotive": ["CAN_bus", "UDS", "ISO_21434", "UN_R155", "TISAX", "V2X", "ECU", "OBD"],
+    "ics_ot": ["SCADA", "Modbus", "OPC_UA", "PLC", "DCS", "HMI", "Purdue", "IEC_62443", "industrial"],
+    "financial": ["PCI_DSS", "SWIFT", "PSD2", "payment", "banking", "settlement", "AML", "KYC"],
+    "ai_ml": ["PyTorch", "TensorFlow", "LLM", "model_serving", "ML_pipeline", "ONNX", "inference", "training_data"],
+    "cloud": ["AWS", "Azure", "GCP", "S3", "Lambda", "EKS", "Kubernetes", "serverless", "IAM", "cloud_native"],
+    "maritime": ["IMO", "BIMCO", "vessel", "port", "AIS", "ECDIS", "GMDSS"],
+    "aviation": ["EASA", "ICAO", "DO_326A", "avionics", "ACARS", "ADS_B"],
+    "defense": ["CMMC", "ITAR", "DFARS", "FedRAMP", "classified", "CUI"],
+    "telecom": ["5G", "3GPP", "EECC", "SIM", "roaming", "SS7", "Diameter"],
+    "supply_chain": ["SBOM", "SLSA", "CycloneDX", "SPDX", "dependency", "vendor_risk"],
+    "energy": ["NERC_CIP", "smart_grid", "IEC_62351", "substation", "AMI", "DER"],
+    "privacy": ["GDPR", "CCPA", "LGPD", "data_protection", "DPA", "cross_border_transfer"],
+    "cryptography": ["HSM", "PKI", "PQC", "TLS", "key_management", "FIPS_140", "X509"]
+  },
+  "domain_expert_hints": {
+    "healthcare": ["healthcare-expert", "privacy-expert", "us-compliance-expert"],
+    "automotive": ["automotive-expert", "ot-security-expert"],
+    "ics_ot": ["ot-security-expert", "energy-expert", "critical-infra-expert"],
+    "financial": ["financial-services-expert", "banking-expert", "dora-expert"],
+    "ai_ml": ["ai-security-expert", "ai-act-expert"],
+    "cloud": ["cloud-security-expert", "iam-expert", "devsecops-expert"],
+    "maritime": ["maritime-expert", "ot-security-expert"],
+    "aviation": ["aviation-expert", "defense-aerospace-expert"],
+    "defense": ["defense-aerospace-expert", "crypto-expert"],
+    "telecom": ["telecom-expert", "critical-infra-expert"],
+    "supply_chain": ["supply-chain-expert", "tprm-expert", "devsecops-expert"],
+    "energy": ["energy-expert", "ot-security-expert", "critical-infra-expert"],
+    "privacy": ["privacy-expert", "gdpr-expert"],
+    "cryptography": ["crypto-expert"]
+  },
+  "stage_state_schema": {
+    "type": "object",
+    "properties": {
+      "system_name": { "type": "string" },
+      "system_purpose": { "type": "string" },
+      "components": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "string" },
+            "name": { "type": "string" },
+            "type": { "type": "string", "enum": ["process", "data_store", "external_entity"] },
+            "trust_zone": { "type": "string" },
+            "technology": { "type": "string" },
+            "confidence": { "type": "string", "enum": ["confirmed", "inferred", "ambiguous"] }
+          },
+          "required": ["id", "name", "type"]
+        }
+      },
+      "data_flows": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "string" },
+            "from": { "type": "string" },
+            "to": { "type": "string" },
+            "data": { "type": "string" },
+            "protocol": { "type": "string" },
+            "encrypted": { "type": ["boolean", "string"] },
+            "authenticated": { "type": "string" },
+            "crosses_boundary": { "type": "boolean" }
+          },
+          "required": ["id", "from", "to"]
+        }
+      },
+      "trust_boundaries": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "string" },
+            "name": { "type": "string" },
+            "from_zone": { "type": "string" },
+            "to_zone": { "type": "string" },
+            "flows": { "type": "array", "items": { "type": "string" } }
+          },
+          "required": ["id", "name"]
+        }
+      },
+      "actors": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "string" },
+            "name": { "type": "string" },
+            "type": { "type": "string", "enum": ["user", "admin", "service", "external_system"] },
+            "trust_level": { "type": "string", "enum": ["trusted", "semi_trusted", "untrusted"] }
+          },
+          "required": ["id", "name"]
+        }
+      },
+      "existing_controls": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "string" },
+            "name": { "type": "string" },
+            "type": { "type": "string" },
+            "applies_to": { "type": "array", "items": { "type": "string" } }
+          },
+          "required": ["id", "name"]
+        }
+      },
+      "deployment_environment": {
+        "type": "object",
+        "properties": {
+          "type": { "type": "string", "enum": ["cloud", "on_prem", "hybrid", "unknown"] },
+          "provider": { "type": "string" },
+          "details": { "type": "string" }
+        }
+      },
+      "evidence_manifest": {
+        "type": "object",
+        "properties": {
+          "authorized_documents": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "doc_id": { "type": "string" },
+                "title": { "type": "string" },
+                "role": { "type": "string" },
+                "coverage_tags": {
+                  "type": "array",
+                  "items": { "type": "string" }
+                }
+              },
+              "required": ["doc_id", "title"]
+            }
+          },
+          "system_identity": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "aliases": {
+                "type": "array",
+                "items": { "type": "string" }
+              },
+              "evidence_doc_ids": {
+                "type": "array",
+                "items": { "type": "string" }
+              }
+            },
+            "required": ["name"]
+          },
+          "document_coverage": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "dimension": { "type": "string" },
+                "status": { "type": "string", "enum": ["covered", "partial", "missing"] },
+                "supporting_doc_ids": {
+                  "type": "array",
+                  "items": { "type": "string" }
+                },
+                "notes": { "type": "string" }
+              },
+              "required": ["dimension", "status"]
+            }
+          },
+          "mismatch_flags": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "extraction_confidence": { "type": "string", "enum": ["high", "medium", "low"] }
+        },
+        "required": ["authorized_documents", "system_identity", "document_coverage"]
+      },
+      "scale_out_plan": {
+        "type": "object",
+        "properties": {
+          "complexity_level": { "type": "string", "enum": ["small", "medium", "large", "very_large"] },
+          "estimated_component_count": { "type": "integer" },
+          "estimated_threat_count": { "type": "integer" },
+          "recommended_batch_size": { "type": "integer" },
+          "parallel_workstreams": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "reasoning": { "type": "string" }
+        }
+      },
+      "grounding_batches": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "batch_id": { "type": "string" },
+            "phase_id": { "type": "string" },
+            "agent_id": { "type": "string" },
+            "work_type": { "type": "string", "enum": ["domain_challenge", "enrichment", "risk_calibration", "attack_path", "verification_test", "mitigation_mapping"] },
+            "item_ids": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "status": { "type": "string", "enum": ["pending", "running", "complete", "failed"] },
+            "source_tools": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "notes": { "type": "string" }
+          },
+          "required": ["batch_id", "phase_id", "work_type", "item_ids", "status"]
+        }
+      },
+      "gaps": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "string" },
+            "phase": { "type": "string" },
+            "description": { "type": "string" },
+            "blocking": { "type": "boolean" },
+            "question_id": { "type": "string" },
+            "resolution_status": { "type": "string", "enum": ["open", "answered", "assumed", "waived"] },
+            "assumption": { "type": "string" },
+            "impact_if_wrong": { "type": "string" }
+          },
+          "required": ["id", "phase", "description"]
+        }
+      },
+      "scope_readiness": {
+        "type": "object",
+        "properties": {
+          "overall_status": { "type": "string", "enum": ["ready", "partial", "blocked", "minimal"] },
+          "proceeding_mode": { "type": "string", "enum": ["proceed", "awaiting_client_input", "proceed_with_assumptions"] },
+          "confidence": { "type": "string", "enum": ["high", "medium", "low"] },
+          "summary": { "type": "string" },
+          "blocking_gaps": { "type": "array", "items": { "type": "string" } },
+          "clarifications_needed": { "type": "array", "items": { "type": "string" } },
+          "dimensions_confirmed": { "type": "array", "items": { "type": "string" } },
+          "dimensions_missing": { "type": "array", "items": { "type": "string" } }
+        },
+        "required": ["overall_status", "proceeding_mode", "summary"]
+      },
+      "client_questions": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "string" },
+            "question": { "type": "string" },
+            "context": { "type": "string" },
+            "rationale": { "type": "string" },
+            "blocking": { "type": "boolean" },
+            "priority": { "type": "string", "enum": ["high", "medium", "low"] },
+            "response_type": { "type": "string", "enum": ["text", "single_choice", "multi_choice", "boolean", "table"] },
+            "choices": { "type": "array", "items": { "type": "string" } },
+            "affects_fields": { "type": "array", "items": { "type": "string" } },
+            "status": { "type": "string", "enum": ["pending", "answered", "assumed", "waived"] },
+            "response": { "type": "string" },
+            "response_summary": { "type": "string" },
+            "answer_source": { "type": "string", "enum": ["user_attested", "document_evidence", "assumed", "analyst_judgment"] },
+            "impact_if_unanswered": { "type": "string" },
+            "asked_in_phase": { "type": "string" }
+          },
+          "required": ["id", "question", "blocking", "response_type", "status"]
+        }
+      },
+      "client_attestations": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "question_id": { "type": "string" },
+            "question": { "type": "string" },
+            "response": { "type": "string" },
+            "impact": { "type": "string" },
+            "answer_source": { "type": "string", "enum": ["user_attested", "document_evidence", "assumed", "analyst_judgment"] }
+          },
+          "required": ["question", "response", "answer_source"]
+        }
+      },
+      "document_citations": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "document": { "type": "string" },
+            "doc_id": { "type": "string" },
+            "section": { "type": "string" },
+            "verbatim_quote": { "type": "string" },
+            "evidence_type": { "type": "string", "enum": ["document_evidence", "user_reported", "assumed"] }
+          },
+          "required": ["document", "evidence_type"]
+        }
+      },
+      "threats": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "string" },
+            "stride_category": { "type": "string", "enum": ["Spoofing", "Tampering", "Repudiation", "Information Disclosure", "Denial of Service", "Elevation of Privilege"] },
+            "component_id": { "type": "string" },
+            "title": { "type": "string" },
+            "description": { "type": "string" },
+            "mcp_source": { "type": "string" },
+            "confidence": { "type": "string", "enum": ["high", "medium", "low"] },
+            "cvss_vector": { "type": "string" },
+            "cvss_score": { "type": "number" },
+            "cvss_rationale": { "type": "string" },
+            "severity": { "type": "string", "enum": ["critical", "high", "medium", "low", "informational"] },
+            "business_risk_tier": { "type": "string", "enum": ["critical", "high", "medium", "low", "informational"] },
+            "business_risk_label": { "type": "string" },
+            "business_impact": { "type": "string" },
+            "business_impact_severity": { "type": "string", "enum": ["critical", "high", "medium", "low", "informational"] },
+            "likelihood": { "type": "string" },
+            "likelihood_rationale": { "type": "string" },
+            "priority_score": { "type": "number" },
+            "impact_index": { "type": "integer", "minimum": 1, "maximum": 5 },
+            "likelihood_index": { "type": "integer", "minimum": 1, "maximum": 5 },
+            "epss_score": { "type": "number" },
+            "kev_status": { "type": "boolean" },
+            "affected_components": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "affected_flows": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "affected_trust_boundaries": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "attack_techniques": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "mitre_attack_ids": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "cwe_ids": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "capec_ids": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "atlas_ids": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "d3fend_ids": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "owasp_llm_ids": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "existing_controls": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "recommended_controls": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "residual_risk": { "type": "string", "enum": ["critical", "high", "medium", "low", "informational"] },
+            "residual_risk_rationale": { "type": "string" },
+            "attack_path_refs": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "verification_test_refs": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "provenance": {
+              "type": "object",
+              "properties": {
+                "source_type": { "type": "string", "enum": ["document_grounded", "user_attested", "assumed", "pattern_mapped", "analyst_judgment"] },
+                "confidence": { "type": "string", "enum": ["high", "medium", "low"] },
+                "document_grounded_fields": {
+                  "type": "array",
+                  "items": { "type": "string" }
+                },
+                "user_attested_fields": {
+                  "type": "array",
+                  "items": { "type": "string" }
+                },
+                "assumed_fields": {
+                  "type": "array",
+                  "items": { "type": "string" }
+                },
+                "pattern_mapped_fields": {
+                  "type": "array",
+                  "items": { "type": "string" }
+                }
+              }
+            },
+            "document_citations": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "document": { "type": "string" },
+                  "doc_id": { "type": "string" },
+                  "page": { "type": "integer" },
+                  "section": { "type": "string" },
+                  "verbatim_quote": { "type": "string" },
+                  "evidence_type": { "type": "string" }
+                }
+              }
+            },
+            "pattern_citations": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "source": { "type": "string" },
+                  "pattern_id": { "type": "string" },
+                  "cwe_id": { "type": "string" },
+                  "tool_call": { "type": "string" }
+                }
+              }
+            }
+          },
+          "required": ["id", "stride_category", "component_id", "title", "mcp_source"]
+        }
+      },
+      "coverage_matrix": {
+        "type": "object",
+        "description": "Maps component_id to an object with STRIDE category keys and boolean values indicating whether that category has been assessed for that component.",
+        "additionalProperties": {
+          "type": "object",
+          "properties": {
+            "Spoofing": { "type": "boolean" },
+            "Tampering": { "type": "boolean" },
+            "Repudiation": { "type": "boolean" },
+            "Information Disclosure": { "type": "boolean" },
+            "Denial of Service": { "type": "boolean" },
+            "Elevation of Privilege": { "type": "boolean" }
+          }
+        }
+      },
+      "domain_experts_used": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "agent_id": { "type": "string" },
+            "display_name": { "type": "string" },
+            "domain": { "type": "string" },
+            "status": { "type": "string", "enum": ["delegated", "complete", "failed", "skipped"] },
+            "findings_count": { "type": "integer" },
+            "attestations_count": { "type": "integer" }
+          },
+          "required": ["agent_id", "status"]
+        }
+      },
+      "mid_phase_questions": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "phase": { "type": "string" },
+            "question": { "type": "string" },
+            "response": { "type": "string" },
+            "asked_by": { "type": "string" }
+          },
+          "required": ["phase", "question"]
+        }
+      },
+      "domain_findings": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "string" },
+            "domain": { "type": "string" },
+            "title": { "type": "string" },
+            "description": { "type": "string" },
+            "severity": { "type": "string", "enum": ["critical", "high", "medium", "low", "informational"] },
+            "rationale": { "type": "string" },
+            "domain_standard": { "type": "string" },
+            "related_components": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "related_threat_ids": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "evidence_refs": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "source_agent": { "type": "string" },
+            "suggested_threat": {
+              "type": "object",
+              "properties": {
+                "stride_category": { "type": "string" },
+                "title": { "type": "string" },
+                "description": { "type": "string" }
+              },
+              "required": ["stride_category", "title", "description"]
+            },
+            "merged_as_threat_id": { "type": "string" },
+            "status": { "type": "string", "enum": ["net_new", "merged", "rejected", "needs_review"] }
+          },
+          "required": ["id", "domain", "title", "description", "status"]
+        }
+      },
+      "detected_domains": {
+        "type": "array",
+        "items": { "type": "string" },
+        "description": "Canonical domain tokens extracted from system context (e.g., healthcare, automotive, ics_ot)"
+      },
+      "domain_attestations": {
+        "type": "array",
+        "items": { "type": "string" },
+        "description": "Domain-specific context assertions from expert challenge (e.g., 'System processes PHI')"
+      },
+      "missing_threat_candidates": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "string" },
+            "title": { "type": "string" },
+            "description": { "type": "string" },
+            "related_components": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "source_agent": { "type": "string" },
+            "recommended_stride_category": { "type": "string" },
+            "priority": { "type": "string", "enum": ["high", "medium", "low"] }
+          },
+          "required": ["id", "title", "description"]
+        }
+      },
+      "dedup_log": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "merged_threat_id": { "type": "string" },
+            "original_ids": { "type": "array", "items": { "type": "string" } },
+            "reason": { "type": "string" }
+          },
+          "required": ["merged_threat_id", "original_ids", "reason"]
+        }
+      },
+      "threat_mitigations": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "threat_id": { "type": "string" },
+            "controls": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "control_id": { "type": "string" },
+                  "framework": { "type": "string" },
+                  "control_name": { "type": "string" },
+                  "implementation_guidance": { "type": "string" },
+                  "mcp_source": { "type": "string" }
+                },
+                "required": ["control_id", "framework", "control_name", "mcp_source"]
+              }
+            }
+          },
+          "required": ["threat_id", "controls"]
+        }
+      },
+      "attack_paths": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "string" },
+            "title": { "type": "string" },
+            "summary": { "type": "string" },
+            "description": { "type": "string" },
+            "related_threat_ids": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "steps": {
+              "type": "array",
+              "items": {
+                "anyOf": [
+                  { "type": "string" },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "step": { "type": "string" },
+                      "title": { "type": "string" },
+                      "description": { "type": "string" }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        }
+      },
+      "verification_tests": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "string" },
+            "title": { "type": "string" },
+            "objective": { "type": "string" },
+            "procedure": {
+              "anyOf": [
+                { "type": "string" },
+                {
+                  "type": "array",
+                  "items": { "type": "string" }
+                }
+              ]
+            },
+            "expected_result": { "type": "string" },
+            "related_threat_ids": {
+              "type": "array",
+              "items": { "type": "string" }
+            }
+          }
+        }
+      },
+      "red_flags": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "string" },
+            "title": { "type": "string" },
+            "severity": { "type": "string" },
+            "description": { "type": "string" },
+            "rationale": { "type": "string" },
+            "source": { "type": "string" }
+          }
+        }
+      },
+      "report_markdown": { "type": "string" },
+      "threat_summary": {
+        "type": "array",
+        "description": "Threat[] for frontend ThreatSummary component. Populated in Phase 6.",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "string" },
+            "stride_category": { "type": "string" },
+            "component_id": { "type": "string" },
+            "title": { "type": "string" },
+            "description": { "type": "string" },
+            "severity": { "type": "string" },
+            "business_risk_tier": { "type": "string" },
+            "business_impact": { "type": "string" },
+            "likelihood": { "type": "string" },
+            "cvss_score": { "type": "number" },
+            "cvss_vector": { "type": "string" },
+            "confidence": { "type": "string" },
+            "source_type": { "type": "string" },
+            "mitigation_count": { "type": "integer" }
+          },
+          "required": ["id", "stride_category", "title", "severity"]
+        }
+      }
+    },
+    "additionalProperties": false
+  },
+  "completion_criteria": {
+    "required_fields": [
+      { "field": "system_name", "rule": "exists", "message": "System name is required" },
+      { "field": "evidence_manifest", "rule": "exists", "message": "Evidence manifest must be completed before final export" },
+      { "field": "components", "rule": "min_count", "value": 2, "message": "At least 2 components are required" },
+      { "field": "data_flows", "rule": "min_count", "value": 1, "message": "At least 1 data flow is required" },
+      { "field": "scope_readiness", "rule": "exists", "message": "Scope gap analysis must be completed before export" },
+      { "field": "threats", "rule": "min_count", "value": 1, "message": "At least 1 threat must be identified" },
+      { "field": "coverage_matrix", "rule": "exists", "message": "STRIDE coverage matrix is required" },
+      { "field": "attack_paths", "rule": "min_count", "value": 1, "message": "At least 1 attack path is required before final export" },
+      { "field": "verification_tests", "rule": "min_count", "value": 1, "message": "At least 1 verification test is required before final export" },
+      { "field": "threat_mitigations", "rule": "min_count", "value": 1, "message": "At least 1 mitigation mapping is required" },
+      { "field": "report_markdown", "rule": "exists", "message": "Final report must be assembled" }
+    ],
+    "rules": [
+      {
+        "id": "evidence_manifest_ready",
+        "description": "Evidence manifest must confirm authorized scope and contain no unresolved mismatch flags before final export",
+        "severity": "required",
+        "message_template": "Evidence manifest is incomplete or has unresolved mismatch flags"
+      },
+      {
+        "id": "scope_readiness_recorded",
+        "description": "Scope readiness must declare overall_status, proceeding_mode, and a summary before final export",
+        "severity": "required",
+        "message_template": "Scope readiness is missing required metadata"
+      },
+      {
+        "id": "blocking_client_questions_resolved",
+        "description": "Blocking client questions must be answered or explicitly downgraded to assumptions before final export",
+        "severity": "required",
+        "message_template": "Blocking client questions are still unresolved"
+      },
+      {
+        "id": "blocking_gaps_have_resolution_path",
+        "description": "Every blocking gap must link to a client question or an explicit assumption before final export",
+        "severity": "required",
+        "message_template": "Blocking gap has no resolution path"
+      },
+      {
+        "id": "client_question_traceability",
+        "description": "Answered or assumed client questions should retain answer provenance in the final state",
+        "severity": "warning",
+        "message_template": "Client question traceability is incomplete"
+      },
+      {
+        "id": "stride_coverage_complete",
+        "description": "Every component must have all 6 STRIDE categories assessed in the coverage matrix",
+        "severity": "required",
+        "message_template": "Component '{component_id}' is missing STRIDE assessment for category '{category}'"
+      },
+      {
+        "id": "every_threat_has_cvss",
+        "description": "Every threat must have a CVSS v4 vector and score after Phase 3",
+        "severity": "required",
+        "message_template": "Threat '{id}' has no CVSS score"
+      },
+      {
+        "id": "every_threat_has_severity",
+        "description": "Every threat must declare a severity label after scoring",
+        "severity": "required",
+        "message_template": "Threat '{id}' has no severity"
+      },
+      {
+        "id": "no_duplicate_threat_ids",
+        "description": "All threat IDs must be unique after deduplication",
+        "severity": "required",
+        "message_template": "Duplicate threat ID '{id}' found"
+      },
+      {
+        "id": "severity_distribution_has_signal",
+        "description": "Warn when all scored threats collapse into a single severity band",
+        "severity": "warning",
+        "message_template": "Threat severity distribution lacks useful prioritization signal"
+      },
+      {
+        "id": "every_threat_has_business_context",
+        "description": "Threats must carry business risk, business impact, likelihood rationale, and CVSS rationale after calibration",
+        "severity": "required",
+        "message_template": "Threat '{id}' is missing business risk context"
+      },
+      {
+        "id": "large_threat_models_use_batching",
+        "description": "Large retained threat sets should record scale_out_plan or grounding_batches so enrichment/calibration can be sharded across agents",
+        "severity": "warning",
+        "message_template": "Large threat model has no batching metadata"
+      },
+      {
+        "id": "high_critical_threats_have_controls",
+        "description": "Every threat with severity high or critical must have at least one control mapping",
+        "severity": "required",
+        "message_template": "High/critical threat '{id}' has no mitigation controls"
+      },
+      {
+        "id": "mcp_grounding_sufficient",
+        "description": "Warn when more than 20% of threats are llm-reasoned or missing MCP grounding",
+        "severity": "warning",
+        "message_template": "Too many threats are llm-reasoned or missing MCP grounding"
+      },
+      {
+        "id": "document_evidence_has_citation_details",
+        "description": "Document-backed evidence should include a document reference, section, and verbatim quote",
+        "severity": "warning",
+        "message_template": "Document-backed evidence is missing citation detail"
+      },
+      {
+        "id": "attack_paths_reference_known_threats",
+        "description": "Attack paths must only reference retained threat IDs that still exist",
+        "severity": "required",
+        "message_template": "Attack path references an unknown retained threat"
+      },
+      {
+        "id": "verification_tests_reference_known_threats",
+        "description": "Verification tests must only reference retained threat IDs that still exist",
+        "severity": "required",
+        "message_template": "Verification test references an unknown retained threat"
+      }
+    ],
+    "soft_warnings": [
+      { "field": "evidence_manifest", "rule": "exists", "message": "No evidence manifest recorded — system identity and document scope traceability may be incomplete" },
+      { "field": "trust_boundaries", "rule": "min_count", "value": 1, "message": "No trust boundaries defined — threat analysis may miss boundary-crossing risks" },
+      { "field": "existing_controls", "rule": "min_count", "value": 1, "message": "No existing controls specified — all mitigations will be treated as new" },
+      { "field": "deployment_environment", "rule": "exists", "message": "Deployment environment unknown — infrastructure-layer threats may be missed" },
+      { "field": "actors", "rule": "min_count", "value": 1, "message": "No actors defined — spoofing and privilege escalation analysis may be incomplete" },
+      { "field": "attack_paths", "rule": "min_count", "value": 1, "message": "No attack paths synthesized — exploitation chains and lateral movement may be underdeveloped" },
+      { "field": "verification_tests", "rule": "min_count", "value": 1, "message": "No verification tests generated — the report has no concrete validation plan" }
+    ]
+  },
+  "quality_rubric": {
+    "threats": {
+      "per_item": {
+        "description": {
+          "min_words": 10,
+          "severity": "warning",
+          "message": "Threat '{id}' has a vague description. Specify the attack vector, preconditions, and impact."
+        }
+      }
+    }
+  },
+  "phases": [
+    {
+      "id": "phase_0_evidence_manifest",
+      "name": "Evidence Manifest",
+      "description": "Build a scoped evidence manifest from authorized documents before DFD or STRIDE work. Confirm the intended system identity, enumerate the authorized documents used for this run, assess which architecture dimensions are covered, and stop if unresolved mismatch flags exist.",
+      "completion_criteria": {
+        "required_fields": [
+          { "field": "evidence_manifest", "rule": "exists", "message": "Evidence manifest is required before proceeding" }
+        ],
+        "rules": [
+          {
+            "id": "evidence_manifest_ready",
+            "description": "Evidence manifest must confirm authorized scope and contain no unresolved mismatch flags",
+            "severity": "required",
+            "message_template": "Evidence manifest is incomplete or has unresolved mismatch flags"
+          }
+        ],
+        "soft_warnings": []
+      },
+      "quality_rubric": {}
+    },
+    {
+      "id": "phase_1_scope_and_dfd",
+      "name": "Scope & DFD Construction",
+      "description": "Build system scope from user input and uploaded documents. Identify components, data flows, trust boundaries, actors, and existing controls. Delegate DFD construction to dfd-architect. Assessment dimensions (agent decides what to ask): system_name, system_purpose, components, data_flows, trust_boundaries, actors, existing_controls, deployment_environment. Do not ask clarification questions yet except for absolute blockers to drawing a minimal DFD.",
+      "completion_criteria": {
+        "required_fields": [
+          { "field": "system_name", "rule": "exists", "message": "System name is required" },
+          { "field": "components", "rule": "min_count", "value": 2, "message": "At least 2 components are required to proceed" },
+          { "field": "data_flows", "rule": "min_count", "value": 1, "message": "At least 1 data flow is required to proceed" }
+        ],
+        "rules": [],
+        "soft_warnings": [
+          { "field": "trust_boundaries", "rule": "min_count", "value": 1, "message": "No trust boundaries defined — threat analysis may miss boundary-crossing risks" },
+          { "field": "existing_controls", "rule": "min_count", "value": 1, "message": "No existing controls specified — all mitigations will be treated as new" },
+          { "field": "deployment_environment", "rule": "exists", "message": "Deployment environment unknown — infrastructure-layer threats may be missed" },
+          { "field": "actors", "rule": "min_count", "value": 1, "message": "No actors defined — spoofing and privilege escalation analysis may be incomplete" }
+        ]
+      },
+      "quality_rubric": {}
+    },
+    {
+      "id": "phase_1b_scope_gap_analysis",
+      "name": "Scope Gap Analysis",
+      "description": "Assess whether the current scope is ready for STRIDE analysis. Record scope_readiness, identify blocking vs non-blocking gaps, generate at most 5 load-bearing client_questions in one batch, and capture any user answers as client_attestations. Every blocking gap must route to either a client question or an explicit assumption.",
+      "completion_criteria": {
+        "required_fields": [
+          { "field": "scope_readiness", "rule": "exists", "message": "Scope readiness assessment is required before STRIDE fan-out" }
+        ],
+        "rules": [
+          {
+            "id": "scope_readiness_recorded",
+            "description": "scope_readiness must declare overall_status, proceeding_mode, and a summary",
+            "severity": "required",
+            "message_template": "Scope readiness is missing required metadata"
+          },
+          {
+            "id": "blocking_client_questions_resolved",
+            "description": "Blocking client questions must be answered or explicitly downgraded to assumptions before proceeding",
+            "severity": "required",
+            "message_template": "Blocking client questions are still unresolved"
+          },
+          {
+            "id": "blocking_gaps_have_resolution_path",
+            "description": "Every blocking gap must link to a client question or an explicit assumption",
+            "severity": "required",
+            "message_template": "Blocking gap has no resolution path"
+          },
+          {
+            "id": "client_question_traceability",
+            "description": "Answered or assumed questions should record answer provenance",
+            "severity": "warning",
+            "message_template": "Client question traceability is incomplete"
+          }
+        ],
+        "soft_warnings": []
+      },
+      "quality_rubric": {
+        "client_questions": {
+          "per_item": {
+            "question": {
+              "min_words": 4,
+              "severity": "warning",
+              "message": "Client question '{id}' is too terse. Ask a concrete, answerable question."
+            },
+            "rationale": {
+              "min_words": 4,
+              "severity": "warning",
+              "message": "Client question '{id}' lacks rationale. Explain why the answer changes the threat model."
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "phase_2_stride_enumeration",
+      "name": "STRIDE Enumeration",
+      "description": "Fan out per STRIDE category with full system context. Each specialist receives the complete component inventory, data flows, trust boundaries, relevant document citations, and any scope clarifications captured in Phase 1b. Build a coverage matrix tracking which component x category pairs are assessed. Domain experts join if the domain warrants it. Mid-phase questions allowed when specialists return uncertainty.",
+      "completion_criteria": {
+        "required_fields": [
+          { "field": "threats", "rule": "min_count", "value": 1, "message": "At least 1 threat must be identified" },
+          { "field": "coverage_matrix", "rule": "exists", "message": "STRIDE coverage matrix is required" }
+        ],
+        "rules": [
+          {
+            "id": "stride_coverage_complete",
+            "description": "Every component must have all 6 STRIDE categories assessed",
+            "severity": "required",
+            "message_template": "Component '{component_id}' is missing assessment for '{category}'"
+          },
+          {
+            "id": "mcp_grounding_sufficient",
+            "description": "Warn when more than 20% of threats are llm-reasoned or missing MCP grounding",
+            "severity": "warning",
+            "message_template": "Too many threats are llm-reasoned or missing MCP grounding"
+          },
+          {
+            "id": "document_evidence_has_citation_details",
+            "description": "Document-backed evidence should include a document reference, section, and verbatim quote",
+            "severity": "warning",
+            "message_template": "Document-backed evidence is missing citation detail"
+          },
+          {
+            "id": "large_threat_models_use_batching",
+            "description": "Large retained threat sets should record scale_out_plan or grounding_batches so enrichment/calibration can be sharded across agents",
+            "severity": "warning",
+            "message_template": "Large threat model has no batching metadata"
+          }
+        ],
+        "soft_warnings": []
+      },
+      "quality_rubric": {}
+    },
+    {
+      "id": "phase_2b_domain_challenge",
+      "name": "Domain Expert Challenge",
+      "description": "Discover and delegate to domain experts who can identify security blind spots that generic STRIDE analysis misses. The orchestrator detects domain signals from the system's components, technologies, deployment environment, and user input, then queries available agents via list_delegatable_agents and delegates a domain security challenge to each relevant expert. Results are merged into the threat set or stored as domain-specific red flags.",
+      "skip_conditions": ["No domain signals detected from components, technologies, or user input. Record a gap noting generic STRIDE coverage only."],
+      "guidance": "1. Extract raw domain signals: scan component technology fields, deployment_environment, user descriptions, and document content for keywords. Normalize raw signals to canonical domain tokens using the domain_vocabulary alias table from this task definition. Store canonical tokens in detected_domains. Pass both canonical tokens and unmatched raw signals to step 2.\n2. Call list_delegatable_agents with canonical tokens + unmatched raw signals as keywords. Exclude agents already used in Phase 2 (STRIDE specialists, DFD architect).\n3. Cross-reference results with domain_expert_hints (keyed by canonical tokens) for fast matching. Select 1-5 experts whose descriptions best match the system domain. Prefer specialists over generalists.\n4. Delegate a domain_security_review challenge to each selected expert in parallel. Set domain_signals in context to canonical tokens only (not raw signals). Include system context, threat summary so far, and a specific_challenge prompt tailored to each expert's domain and the actual system technologies.\n5. Merge results: orchestrator adds source_agent and domain (canonical token) to each finding, sets initial status. Findings with suggested_threat that the orchestrator accepts become new threats (mcp_source: domain-challenge:{agent_id}, confidence: medium). Findings without become domain red flags in the report. Malformed responses produce a fallback finding with domain derived from domain_experts_used[].domain.\n6. Record each delegation as a grounding_batch entry with work_type: domain_challenge for consistency with the enrichment/calibration batching pattern.\n7. If no canonical tokens produced after normalization, skip this phase and record a gap: 'No domain specialization detected -- generic STRIDE coverage only.'\n8. Store results via wkfl_store_state with key phase_2b_domain_challenge.",
+      "tools_used": ["list_delegatable_agents", "delegate_to_agent", "wkfl_store_state"],
+      "completion_criteria": {
+        "required_fields": [],
+        "rules": [
+          {
+            "id": "domain_challenge_coherence",
+            "description": "When domain signals are detected, at least one expert must have been consulted. Domain findings must have source attribution.",
+            "severity": "warning",
+            "message_template": "Domain challenge coherence issue: {details}"
+          }
+        ],
+        "soft_warnings": [
+          { "field": "domain_findings", "rule": "min_count", "value": 1, "message": "No domain findings recorded -- confirm the domain challenge explicitly considered blind spots or that no domain signals were detected" },
+          { "field": "missing_threat_candidates", "rule": "min_count", "value": 1, "message": "No missing threat candidates were recorded -- confirm the domain challenge explicitly considered blind spots" }
+        ]
+      },
+      "quality_rubric": {
+        "domain_findings": {
+          "per_item": {
+            "description": {
+              "min_words": 8,
+              "severity": "warning",
+              "message": "Domain finding '{id}' is too terse. Explain the system-specific concern and why it matters."
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "phase_3_dedup_and_scoring",
+      "name": "Deduplication & Retained Threat Set",
+      "description": "Deduplicate semantically similar threats across specialists and domain challengers. Preserve one canonical retained threat list, record deduplication decisions in dedup_log, and carry forward any scale_out_plan metadata needed for later enrichment and calibration.",
+      "completion_criteria": {
+        "required_fields": [
+          { "field": "threats", "rule": "min_count", "value": 1, "message": "Threats must exist for deduplication" }
+        ],
+        "rules": [
+          {
+            "id": "no_duplicate_threat_ids",
+            "description": "All threat IDs must be unique after deduplication",
+            "severity": "required",
+            "message_template": "Duplicate threat ID '{id}' found"
+          },
+          {
+            "id": "large_threat_models_use_batching",
+            "description": "Large retained threat sets should record scale_out_plan or grounding_batches so enrichment/calibration can be sharded across agents",
+            "severity": "warning",
+            "message_template": "Large threat model has no batching metadata"
+          }
+        ],
+        "soft_warnings": []
+      },
+      "quality_rubric": {}
+    },
+    {
+      "id": "phase_3b_threat_enrichment",
+      "name": "Threat Enrichment",
+      "description": "Enrich the retained threat list with explicit MCP-grounded ATT&CK, CAPEC, CWE, D3FEND, ATLAS, source-type, and citation metadata. Use grounding_batches when the threat set is large enough that a single enrichment pass would overload context.",
+      "completion_criteria": {
+        "required_fields": [
+          { "field": "threats", "rule": "min_count", "value": 1, "message": "Threats must exist for enrichment" }
+        ],
+        "rules": [
+          {
+            "id": "mcp_grounding_sufficient",
+            "description": "Warn when more than 20% of threats are llm-reasoned or missing MCP grounding",
+            "severity": "warning",
+            "message_template": "Too many threats are llm-reasoned or missing MCP grounding"
+          },
+          {
+            "id": "document_evidence_has_citation_details",
+            "description": "Document-backed evidence should include a document reference, section, and verbatim quote",
+            "severity": "warning",
+            "message_template": "Document-backed evidence is missing citation detail"
+          },
+          {
+            "id": "large_threat_models_use_batching",
+            "description": "Large retained threat sets should record scale_out_plan or grounding_batches so enrichment/calibration can be sharded across agents",
+            "severity": "warning",
+            "message_template": "Large threat model has no batching metadata"
+          }
+        ],
+        "soft_warnings": []
+      },
+      "quality_rubric": {}
+    },
+    {
+      "id": "phase_3c_risk_calibration",
+      "name": "Risk Calibration",
+      "description": "Calibrate the retained threat list into usable prioritization. Every threat gets business impact, likelihood, business risk tier, CVSS v4 score/vector/rationale, and residual-risk context. Use product-specific CVE, EPSS, and KEV evidence only when the scope actually supports that grounding.",
+      "completion_criteria": {
+        "required_fields": [
+          { "field": "threats", "rule": "min_count", "value": 1, "message": "Threats must exist for calibration" }
+        ],
+        "rules": [
+          {
+            "id": "every_threat_has_cvss",
+            "description": "Every threat must have a CVSS v4 vector and score",
+            "severity": "required",
+            "message_template": "Threat '{id}' has no CVSS score"
+          },
+          {
+            "id": "every_threat_has_severity",
+            "description": "Every threat must declare a severity label after scoring",
+            "severity": "required",
+            "message_template": "Threat '{id}' has no severity"
+          },
+          {
+            "id": "every_threat_has_business_context",
+            "description": "Every threat must carry business risk, business impact, likelihood rationale, and CVSS rationale",
+            "severity": "required",
+            "message_template": "Threat '{id}' is missing business risk context"
+          },
+          {
+            "id": "severity_distribution_has_signal",
+            "description": "Warn when all scored threats collapse into a single severity band",
+            "severity": "warning",
+            "message_template": "Threat severity distribution lacks useful prioritization signal"
+          },
+          {
+            "id": "large_threat_models_use_batching",
+            "description": "Large retained threat sets should record scale_out_plan or grounding_batches so enrichment/calibration can be sharded across agents",
+            "severity": "warning",
+            "message_template": "Large threat model has no batching metadata"
+          }
+        ],
+        "soft_warnings": []
+      },
+      "quality_rubric": {}
+    },
+    {
+      "id": "phase_4a_attack_path_synthesis",
+      "name": "Attack Path Synthesis",
+      "description": "Group retained threats into plausible attack paths using the DFD, trust boundaries, and pentest knowledge. The goal is to explain how isolated weaknesses combine into system-level compromise paths.",
+      "completion_criteria": {
+        "required_fields": [
+          { "field": "attack_paths", "rule": "min_count", "value": 1, "message": "At least 1 attack path must be synthesized" }
+        ],
+        "rules": [
+          {
+            "id": "attack_paths_reference_known_threats",
+            "description": "Attack paths must only reference retained threat IDs that still exist",
+            "severity": "required",
+            "message_template": "Attack path references an unknown retained threat"
+          }
+        ],
+        "soft_warnings": []
+      },
+      "quality_rubric": {
+        "attack_paths": {
+          "per_item": {
+            "summary": {
+              "min_words": 6,
+              "severity": "warning",
+              "message": "Attack path '{id}' summary is too terse. Explain the chain in business-relevant terms."
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "phase_4b_verification_test_generation",
+      "name": "Verification Test Generation",
+      "description": "Generate concrete validation tests and grounded detection opportunities linked to retained threats and attack paths. Use Sigma and pentest knowledge MCPs when available instead of vague generic testing advice.",
+      "completion_criteria": {
+        "required_fields": [
+          { "field": "verification_tests", "rule": "min_count", "value": 1, "message": "At least 1 verification test must be generated" }
+        ],
+        "rules": [
+          {
+            "id": "verification_tests_reference_known_threats",
+            "description": "Verification tests must only reference retained threat IDs that still exist",
+            "severity": "required",
+            "message_template": "Verification test references an unknown retained threat"
+          }
+        ],
+        "soft_warnings": []
+      },
+      "quality_rubric": {
+        "verification_tests": {
+          "per_item": {
+            "objective": {
+              "min_words": 4,
+              "severity": "warning",
+              "message": "Verification test '{id}' objective is too terse."
+            },
+            "expected_result": {
+              "min_words": 4,
+              "severity": "warning",
+              "message": "Verification test '{id}' expected_result is too terse."
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "phase_5_mitigation_mapping",
+      "name": "Mitigation Mapping",
+      "description": "One pass over all retained threats using Security Controls MCP. Map controls to threats with implementation guidance. Deduplicate control recommendations across related threats. Every high/critical threat must have at least one control.",
+      "completion_criteria": {
+        "required_fields": [
+          { "field": "threat_mitigations", "rule": "min_count", "value": 1, "message": "At least 1 mitigation mapping is required" }
+        ],
+        "rules": [
+          {
+            "id": "high_critical_threats_have_controls",
+            "description": "Every threat with severity high or critical must have at least one control mapping",
+            "severity": "required",
+            "message_template": "High/critical threat '{id}' has no mitigation controls"
+          }
+        ],
+        "soft_warnings": []
+      },
+      "quality_rubric": {
+        "threat_mitigations": {
+          "per_item": {
+            "controls": {
+              "min_count": 1,
+              "severity": "warning",
+              "message": "Threat '{threat_id}' has an empty controls array. Every mapped threat should have at least one control with implementation guidance."
+            }
+          }
+        },
+        "mitigation_coverage": {
+          "severity": "required",
+          "message": "Every high/critical threat must have >= 1 control mapping"
+        }
+      }
+    },
+    {
+      "id": "phase_6_report_assembly",
+      "name": "Report Assembly",
+      "description": "Assemble the final report from stored state via wkfl_export_report. Populate threat_summary for the frontend ThreatSummary component, including business-risk badges, traceability, attack paths, verification tests, and remediation priorities.",
+      "completion_criteria": {
+        "required_fields": [
+          { "field": "evidence_manifest", "rule": "exists", "message": "Evidence manifest must be present in the final report state" },
+          { "field": "attack_paths", "rule": "min_count", "value": 1, "message": "Attack paths must be present in the final report state" },
+          { "field": "verification_tests", "rule": "min_count", "value": 1, "message": "Verification tests must be present in the final report state" },
+          { "field": "report_markdown", "rule": "exists", "message": "Final report must be assembled" },
+          { "field": "threat_summary", "rule": "min_count", "value": 1, "message": "Threat summary for frontend must be populated" }
+        ],
+        "rules": [
+          {
+            "id": "evidence_manifest_ready",
+            "description": "Evidence manifest must confirm authorized scope and contain no unresolved mismatch flags",
+            "severity": "required",
+            "message_template": "Evidence manifest is incomplete or has unresolved mismatch flags"
+          },
+          {
+            "id": "stride_coverage_complete",
+            "description": "Every component must have all 6 STRIDE categories assessed in the coverage matrix",
+            "severity": "required",
+            "message_template": "Component '{component_id}' is missing STRIDE assessment for category '{category}'"
+          },
+          {
+            "id": "every_threat_has_cvss",
+            "description": "Every threat must have a CVSS v4 vector and score",
+            "severity": "required",
+            "message_template": "Threat '{id}' has no CVSS score"
+          },
+          {
+            "id": "every_threat_has_severity",
+            "description": "Every threat must declare a severity label after scoring",
+            "severity": "required",
+            "message_template": "Threat '{id}' has no severity"
+          },
+          {
+            "id": "every_threat_has_business_context",
+            "description": "Every threat must carry business risk, business impact, likelihood rationale, and CVSS rationale",
+            "severity": "required",
+            "message_template": "Threat '{id}' is missing business risk context"
+          },
+          {
+            "id": "high_critical_threats_have_controls",
+            "description": "Every threat with severity high or critical must have at least one control mapping",
+            "severity": "required",
+            "message_template": "High/critical threat '{id}' has no mitigation controls"
+          },
+          {
+            "id": "severity_distribution_has_signal",
+            "description": "Warn when all scored threats collapse into a single severity band",
+            "severity": "warning",
+            "message_template": "Threat severity distribution lacks useful prioritization signal"
+          },
+          {
+            "id": "attack_paths_reference_known_threats",
+            "description": "Attack paths must only reference retained threat IDs that still exist",
+            "severity": "required",
+            "message_template": "Attack path references an unknown retained threat"
+          },
+          {
+            "id": "verification_tests_reference_known_threats",
+            "description": "Verification tests must only reference retained threat IDs that still exist",
+            "severity": "required",
+            "message_template": "Verification test references an unknown retained threat"
+          }
+        ],
+        "soft_warnings": []
+      },
+      "quality_rubric": {
+        "coverage_completeness": {
+          "severity": "required",
+          "message": "Every component must have all 6 STRIDE categories assessed"
+        }
+      },
+      "deliverable": {
+        "format": "markdown",
+        "tool": "wkfl_export_report",
+        "sections": [
+          "Scope and Limitations — authorized evidence manifest, system assessed, scope readiness, client clarifications, documents reviewed, gaps and assumptions, what was NOT assessed",
+          "Data Flow Diagram — from DFD Architect output, trust boundaries, component inventory",
+          "Threats by STRIDE Category — grouped findings with evidence citations, MCP sources, confidence levels, and taxonomy badges",
+          "Risk Matrix — business risk tiers, likelihood, CVSS v4 scores, severity distribution, EPSS/KEV enrichment",
+          "Attack Paths and Verification Tests — exploitation chains, validation procedures, and expected results",
+          "Mitigations — controls per threat, implementation guidance, framework references, and remediation priorities",
+          "Gaps and Assumptions Register — every unknown, every assumption, impact if wrong"
+        ],
+        "instructions": "Before calling wkfl_export_report, store these keys via wkfl_store_state: evidence_manifest (Phase 0 bundle), scope_and_dfd (Phase 1 output bundle containing at least system_name, components, dfd_markdown, and any document_citations/documents_reviewed), scope_gap_analysis (Phase 1b bundle containing scope_readiness, client_questions, and any client_attestations), threats (canonical retained threat list after enrichment and calibration), coverage_matrix, attack_paths, verification_tests, threat_mitigations, gaps, and optionally document_citations at the top level. Legacy flattened keys like system_name, components, dfd_markdown, and stride_threats are also accepted for backwards compatibility, but the report should prefer the canonical retained threat list. Then call wkfl_export_report to assemble. Populate threat_summary with the Threat[] array for the frontend ThreatSummary component via message.metadata.threat_summary."
+      }
+    }
+  ]
+}

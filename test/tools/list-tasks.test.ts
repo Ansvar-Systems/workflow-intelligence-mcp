@@ -2,19 +2,19 @@ import { describe, it, expect } from "vitest";
 import { listTasks } from "../../src/tools/list-tasks.js";
 
 describe("list_tasks", () => {
-  it("returns DFD construction task", async () => {
+  it("returns all registered tasks", async () => {
     const result = await listTasks({});
     const data = JSON.parse(result.content[0].text);
-    expect(data.tasks).toHaveLength(1);
-    expect(data.tasks[0].id).toBe("dfd_construction");
-    expect(data.tasks[0].standalone).toBe(true);
-    expect(data.tasks[0].version).toBe("1.0");
+    expect(data.tasks.length).toBeGreaterThanOrEqual(2);
+    const ids = data.tasks.map((t: { id: string }) => t.id);
+    expect(ids).toContain("dfd_construction");
+    expect(ids).toContain("gap_analysis");
   });
 
   it("filters by category", async () => {
     const result = await listTasks({ category: "threat_modeling" });
     const data = JSON.parse(result.content[0].text);
-    expect(data.tasks).toHaveLength(1);
+    expect(data.tasks).toHaveLength(2);
 
     const empty = await listTasks({ category: "nonexistent" });
     const emptyData = JSON.parse(empty.content[0].text);
