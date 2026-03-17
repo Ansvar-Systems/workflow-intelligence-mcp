@@ -334,6 +334,47 @@ describe("wkfl_export_report", () => {
             tool_call: "search_stride_patterns",
           },
         ],
+        risk_score: 20,
+        severity_override_rationale: "Severity set to high because existing managed-identity control reduces effective risk from the Critical L*I band.",
+      },
+    ]);
+    store("qa_findings", [
+      {
+        id: "QA-1",
+        category: "severity_mismatch",
+        severity: "warning",
+        description: "T1 severity override from Critical to high — rationale provided.",
+        resolved: true,
+      },
+    ]);
+    store("enrichment_coverage", {
+      total_threats: 1,
+      fully_enriched: 1,
+      partially_enriched: 0,
+      unenriched: 0,
+      enrichment_ratio: 1.0,
+    });
+    store("gaps", [
+      {
+        id: "gap-1",
+        phase: "phase_1_scope_and_dfd",
+        description: "Token issuer not documented",
+        impact_if_wrong: "Spoofing coverage may be incomplete",
+      },
+      {
+        id: "gap-2",
+        phase: "phase_1b_scope_gap_analysis",
+        description: "Hybrid trust-boundary placement needed clarification",
+        blocking: true,
+        question_id: "Q1",
+        resolution_status: "answered",
+      },
+      {
+        id: "gap-3",
+        phase: "phase_1_scope_and_dfd",
+        description: "Entry points not enumerated — scope documents did not contain endpoint inventory",
+        blocking: false,
+        resolution_status: "waived",
       },
     ]);
     store("attack_paths", [
