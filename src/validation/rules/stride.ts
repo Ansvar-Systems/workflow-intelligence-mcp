@@ -30,6 +30,11 @@ interface Threat {
   likelihood?: string;
   likelihood_rationale?: string;
   document_citations?: DocumentCitation[];
+  impact_index?: number;
+  likelihood_index?: number;
+  risk_score?: number;
+  severity_override_rationale?: string;
+  affected_entry_points?: string[];
   [key: string]: unknown;
 }
 
@@ -622,6 +627,63 @@ export function checkLargeThreatModelsUseBatching(
       field: "threats",
     },
   ];
+}
+
+const RISK_BANDS: Array<{ min: number; max: number; severity: string }> = [
+  { min: 1, max: 4, severity: "low" },
+  { min: 5, max: 9, severity: "medium" },
+  { min: 10, max: 15, severity: "high" },
+  { min: 16, max: 25, severity: "critical" },
+];
+
+function riskScoreToBand(score: number): string {
+  for (const band of RISK_BANDS) {
+    if (score >= band.min && score <= band.max) return band.severity;
+  }
+  return "unknown";
+}
+
+/**
+ * Severity label must match the L×I risk band.
+ * Threats missing impact_index or likelihood_index are flagged as incomplete.
+ * Mismatches are allowed only when severity_override_rationale is provided.
+ */
+export function checkSeverityMatchesRiskScore(
+  state: Record<string, unknown>,
+): RuleFailure[] {
+  const s = asStride(state);
+  const threats = threatList(s);
+  const failures: RuleFailure[] = [];
+
+  for (const threat of threats) {
+    const severity = normalizeSeverity(threat.severity);
+    if (severity === "informational") continue;
+
+    const impactIndex = typeof threat.impact_index === "number" ? threat.impact_index : null;
+    const likelihoodIndex = typeof threat.likelihood_index === "number" ? threat.likelihood_index : null;
+
+    if (impactIndex === null || likelihoodIndex === null) {
+      failures.push({
+        rule: "severity_matches_risk_score",
+        severity: "required",
+        details: `Threat '${threat.id}' is missing impact_index or likelihood_index`,
+      });
+      continue;
+    }
+
+    const riskScore = impactIndex * likelihoodIndex;
+    const expectedBand = riskScoreToBand(riskScore);
+
+    if (severity !== expectedBand && !nonEmptyString(threat.severity_override_rationale)) {
+      failures.push({
+        rule: "severity_matches_risk_score",
+        severity: "required",
+        details: `Threat '${threat.id}' has severity '${severity}' but risk_score ${riskScore} falls in the '${expectedBand}' band with no override rationale`,
+      });
+    }
+  }
+
+  return failures;
 }
 
 /**
