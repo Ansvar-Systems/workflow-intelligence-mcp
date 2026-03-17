@@ -354,6 +354,14 @@ describe("wkfl_export_report", () => {
       unenriched: 0,
       enrichment_ratio: 1.0,
     });
+    store("entry_points", [
+      { id: "EP-001", name: "Public API", component_id: "C-001", protocol: "HTTPS", authentication: "oauth2", exposed_to: "internet" },
+    ]);
+    store("risk_scoring_methodology", {
+      impact_scale: [{ index: 1, label: "Negligible", criteria: "No impact" }],
+      likelihood_scale: [{ index: 1, label: "Rare", criteria: "Nation-state" }],
+      risk_bands: [{ range_min: 1, range_max: 4, severity: "low" }],
+    });
     store("gaps", [
       {
         id: "gap-1",
@@ -452,12 +460,13 @@ describe("wkfl_export_report", () => {
     expect(report).toContain("Components:** 2");
     expect(report).toContain("Threats Identified:** 1");
     expect(report).toContain("## 1. Executive Summary");
-    expect(report).toContain("## 2. Scope, Evidence, and Limitations");
+    expect(report).toContain("## 2. Risk Scoring Methodology");
+    expect(report).toContain("## 3. Scope, Evidence, and Limitations");
     expect(report).toContain("### Authorized Evidence Manifest");
     expect(report).toContain("FinPay360 Payments API");
-    expect(report).toContain("## 3. Architecture Summary");
-    expect(report).toContain("## 4. Detailed Threat Register");
-    expect(report).toContain("## 8. Traceability Appendix");
+    expect(report).toContain("## 4. Architecture Summary");
+    expect(report).toContain("## 5. Detailed Threat Register");
+    expect(report).toContain("## 9. Traceability Appendix");
     expect(report).toContain("Scope is usable after targeted client clarifications.");
     expect(report).toContain("### Client Clarifications and Attestations");
     expect(report).toContain("Where is the trust boundary between the cloud workload and the HSM enclave?");
@@ -473,10 +482,11 @@ describe("wkfl_export_report", () => {
     expect(report).toContain("CAPEC:CAPEC-115");
     expect(report).toContain("ATLAS:AML.TA0001");
     expect(report).toContain("D3FEND:D3-AUTHE");
-    expect(report).toContain("## 5. Remediation Priorities");
-    expect(report).toContain("## 6. Attack Paths");
-    expect(report).toContain("## 7. Verification Test Cases");
-    expect(report).toContain("## 9. Gaps and Assumptions Register");
+    expect(report).toContain("## 6. Remediation Priorities");
+    expect(report).toContain("## 7. Attack Paths");
+    expect(report).toContain("## 8. Verification Test Cases");
+    expect(report).toContain("## 10. Quality Assurance Summary");
+    expect(report).toContain("## 11. Gaps and Assumptions Register");
     expect(report).toContain("Forged token accepted");
     expect(report).toContain("8.7");
     expect(report).toContain("Fraudulent payment initiation and unauthorized account actions become possible.");
@@ -484,6 +494,26 @@ describe("wkfl_export_report", () => {
     expect(report).toContain("Token forgery to payment fraud");
     expect(report).toContain("Reject forged bearer token");
     expect(report).toContain("Spoofing coverage may be incomplete");
+
+    // New sections: Risk Scoring Methodology, Entry Point Inventory, QA Summary
+    expect(report).toContain("Risk Scoring Methodology");
+    expect(report).toContain("Impact Scale");
+    expect(report).toContain("Negligible");
+    expect(report).toContain("Likelihood Scale");
+    expect(report).toContain("Rare");
+    expect(report).toContain("Risk Score Bands");
+    expect(report).toContain("1-4");
+    expect(report).toContain("Override policy:");
+
+    expect(report).toContain("Entry Point Inventory");
+    expect(report).toContain("EP-001");
+    expect(report).toContain("Public API");
+
+    expect(report).toContain("Quality Assurance Summary");
+    expect(report).toContain("QA-1");
+    expect(report).toContain("severity_mismatch");
+    expect(report).toContain("Enrichment coverage:");
+    expect(report).toContain("100%");
   });
 
   it("blocks STRIDE export when the required state is incomplete", async () => {

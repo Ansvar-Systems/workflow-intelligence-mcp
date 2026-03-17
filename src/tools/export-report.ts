@@ -709,6 +709,8 @@ export async function wkflExportReport(
     const storedDomainAttestations = load("domain_attestations");
     const storedQaFindings = load("qa_findings");
     const storedEnrichmentCoverage = load("enrichment_coverage");
+    const storedEntryPoints = load("entry_points");
+    const storedRiskScoringMethodology = load("risk_scoring_methodology");
 
     const systemName: string =
       typeof storedSystemName === "string"
@@ -799,6 +801,10 @@ export async function wkflExportReport(
       storedEnrichmentCoverage && typeof storedEnrichmentCoverage === "object"
         ? storedEnrichmentCoverage
         : undefined;
+    const entryPoints = isObjectArray(storedEntryPoints) ? storedEntryPoints : [];
+    const riskScoringMethodology = storedRiskScoringMethodology && typeof storedRiskScoringMethodology === "object"
+      ? storedRiskScoringMethodology
+      : null;
     const validation = validateStrideReportState({
       system_name: systemName,
       evidence_manifest: evidenceManifest,
@@ -817,6 +823,8 @@ export async function wkflExportReport(
       report_markdown: "__pending_export__",
       ...(qaFindings ? { qa_findings: qaFindings } : {}),
       ...(enrichmentCoverage ? { enrichment_coverage: enrichmentCoverage } : {}),
+      ...(entryPoints.length > 0 ? { entry_points: entryPoints } : {}),
+      ...(riskScoringMethodology ? { risk_scoring_methodology: riskScoringMethodology } : {}),
     });
 
     if (validation && validation.status === "incomplete") {
@@ -859,6 +867,10 @@ export async function wkflExportReport(
       domainExpertsUsed,
       domainFindings,
       domainAttestations,
+      entryPoints,
+      riskScoringMethodology,
+      qaFindings,
+      enrichmentCoverage,
     });
 
     return {
