@@ -1,0 +1,50 @@
+{
+  "framework_id": "NIS2",
+  "scope": "Directive (EU) 2022/2555",
+  "version": "2024-10-18",
+  "article_groups": [
+    {
+      "id": "governance",
+      "name": "Governance & Accountability (Art. 20)",
+      "articles": [
+        { "ref": "Art. 20(1)", "topic": "Management body approval of cybersecurity risk-management measures" },
+        { "ref": "Art. 20(2)", "topic": "Management body cybersecurity training obligation" }
+      ]
+    },
+    {
+      "id": "risk_measures",
+      "name": "Cybersecurity Risk-Management Measures (Art. 21)",
+      "articles": [
+        { "ref": "Art. 21(1)", "topic": "Appropriate and proportionate technical, operational and organisational measures" },
+        { "ref": "Art. 21(2)(a)", "topic": "Policies on risk analysis and information system security" },
+        { "ref": "Art. 21(2)(b)", "topic": "Incident handling" },
+        { "ref": "Art. 21(2)(c)", "topic": "Business continuity and crisis management" },
+        { "ref": "Art. 21(2)(d)", "topic": "Supply chain security" },
+        { "ref": "Art. 21(2)(e)", "topic": "Security in network and information systems acquisition, development and maintenance" },
+        { "ref": "Art. 21(2)(f)", "topic": "Policies and procedures to assess effectiveness" },
+        { "ref": "Art. 21(2)(g)", "topic": "Basic cyber hygiene practices and cybersecurity training" },
+        { "ref": "Art. 21(2)(h)", "topic": "Policies on use of cryptography and encryption" },
+        { "ref": "Art. 21(2)(i)", "topic": "Human resources security, access control policies and asset management" },
+        { "ref": "Art. 21(2)(j)", "topic": "Multi-factor authentication and secured communications" }
+      ]
+    },
+    {
+      "id": "incident_reporting",
+      "name": "Incident Reporting (Art. 23)",
+      "articles": [
+        { "ref": "Art. 23(1)", "topic": "Early warning — within 24 hours" },
+        { "ref": "Art. 23(2)", "topic": "Incident notification — within 72 hours" },
+        { "ref": "Art. 23(3)", "topic": "Final report — within 1 month" },
+        { "ref": "Art. 23(4)", "topic": "Intermediate reports upon request" }
+      ]
+    },
+    {
+      "id": "certification",
+      "name": "Cybersecurity Certification (Art. 24)",
+      "articles": [
+        { "ref": "Art. 24(1)", "topic": "Use of European cybersecurity certification schemes" },
+        { "ref": "Art. 24(2)", "topic": "Implementing acts on certification requirements" }
+      ]
+    }
+  ]
+}
