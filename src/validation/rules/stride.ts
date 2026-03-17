@@ -687,6 +687,48 @@ export function checkSeverityMatchesRiskScore(
 }
 
 /**
+ * Warn when more than 20% of threats are rated Critical.
+ * Minimum 5 threats before the check applies — small models are exempt.
+ */
+export function checkSeverityInflation(state: Record<string, unknown>): RuleFailure[] {
+  const s = asStride(state);
+  const threats = threatList(s);
+  if (threats.length < 5) return [];
+  const criticalCount = threats.filter(t => normalizeSeverity(t.severity) === "critical").length;
+  const percentage = Math.round((criticalCount / threats.length) * 100);
+  if (percentage <= 20) return [];
+  return [{
+    rule: "severity_inflation_check",
+    severity: "warning",
+    details: `${percentage}% of threats are Critical (${criticalCount}/${threats.length}). Review whether all Critical threats meet impact_index>=4 AND likelihood_index>=4.`,
+    field: "threats",
+  }];
+}
+
+/**
+ * Flag Critical threats with likelihood_index <= 2.
+ * Critical threats without likelihood_index are not flagged here —
+ * that missing-index case is caught by checkSeverityMatchesRiskScore.
+ */
+export function checkCriticalLowLikelihood(state: Record<string, unknown>): RuleFailure[] {
+  const s = asStride(state);
+  const threats = threatList(s);
+  const failures: RuleFailure[] = [];
+  for (const threat of threats) {
+    if (normalizeSeverity(threat.severity) !== "critical") continue;
+    const likelihoodIndex = typeof threat.likelihood_index === "number" ? threat.likelihood_index : null;
+    if (likelihoodIndex !== null && likelihoodIndex <= 2) {
+      failures.push({
+        rule: "critical_low_likelihood_flag",
+        severity: "warning",
+        details: `Threat '${threat.id}' is Critical severity with likelihood_index=${likelihoodIndex}. Critical threats should reflect both high impact AND realistic exploitability.`,
+      });
+    }
+  }
+  return failures;
+}
+
+/**
  * Domain challenge coherence: when domains are detected, experts should
  * have been consulted. All findings must have source attribution.
  */
