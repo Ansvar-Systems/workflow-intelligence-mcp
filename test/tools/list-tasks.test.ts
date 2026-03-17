@@ -28,6 +28,15 @@ describe("list_tasks", () => {
     expect(ids).toContain("vendor_risk_triage");
   });
 
+  it("lists both TPRM tasks in tprm category", async () => {
+    const result = await listTasks({ category: "tprm" });
+    const parsed = JSON.parse(result.content[0].text);
+    const ids = parsed.tasks.map((t: { id: string }) => t.id);
+    expect(ids).toContain("vendor_risk_assessment");
+    expect(ids).toContain("vendor_risk_triage");
+    expect(parsed.tasks.length).toBe(2);
+  });
+
   it("includes _meta", async () => {
     const result = await listTasks({});
     const data = JSON.parse(result.content[0].text);
