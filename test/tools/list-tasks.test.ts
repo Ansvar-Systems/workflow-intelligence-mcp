@@ -21,6 +21,13 @@ describe("list_tasks", () => {
     expect(emptyData.tasks).toHaveLength(0);
   });
 
+  it("lists vendor_risk_triage in tprm category", async () => {
+    const result = await listTasks({ category: "tprm" });
+    const parsed = JSON.parse(result.content[0].text);
+    const ids = parsed.tasks.map((t: { id: string }) => t.id);
+    expect(ids).toContain("vendor_risk_triage");
+  });
+
   it("includes _meta", async () => {
     const result = await listTasks({});
     const data = JSON.parse(result.content[0].text);

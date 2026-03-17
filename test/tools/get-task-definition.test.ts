@@ -49,6 +49,20 @@ describe("get_task_definition", () => {
     expect(data.mcp_tools[0].guidance).toBeDefined();
   });
 
+  it("returns vendor_risk_triage definition with correct metadata", async () => {
+    const result = await getTaskDefinition({ task_id: "vendor_risk_triage" });
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed.id).toBe("vendor_risk_triage");
+    expect(parsed.category).toBe("tprm");
+    expect(parsed.version).toBe("1.0");
+    expect(parsed.standalone).toBe(true);
+    expect(parsed.stage_state_schema).toBeDefined();
+    expect(parsed.completion_criteria).toBeDefined();
+    expect(parsed.phases).toBeDefined();
+    expect(parsed.phases.length).toBe(5);
+    expect(parsed.mcp_tools).toBeDefined();
+  });
+
   it("exposes the expanded STRIDE workflow backbone and MCP grounding surface", async () => {
     const result = await getTaskDefinition({ task_id: "stride_threat_model" });
     expect(result.isError).toBeUndefined();
