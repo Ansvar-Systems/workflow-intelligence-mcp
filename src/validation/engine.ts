@@ -61,6 +61,7 @@ import {
   checkLargeThreatModelsUseBatching,
   checkSeverityDistributionHasSignal,
   checkVerificationTestsReferenceKnownThreats,
+  checkSeverityMatchesRiskScore,
 } from "./rules/stride.js";
 import {
   checkScopeReadinessRecorded,
@@ -193,6 +194,7 @@ registerStructuralRule("attack_paths_reference_known_threats", checkAttackPathsR
 registerStructuralRule("verification_tests_reference_known_threats", checkVerificationTestsReferenceKnownThreats);
 registerStructuralRule("large_threat_models_use_batching", checkLargeThreatModelsUseBatching);
 registerStructuralRule("domain_challenge_coherence", checkDomainChallengeCoherence);
+registerStructuralRule("severity_matches_risk_score", checkSeverityMatchesRiskScore);
 
 // Generic scope-gap / client-question rules
 registerStructuralRule("scope_readiness_recorded", checkScopeReadinessRecorded);
