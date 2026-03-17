@@ -43,6 +43,9 @@ import {
   checkSourceRefForGroundedEntries,
 } from "./rules/compliance.js";
 import {
+  checkManifestCoverageRule,
+} from "./rules/manifest-coverage.js";
+import {
   checkAttackPathsReferenceKnownThreats,
   checkEvidenceManifestReady,
   checkStrideCoverageComplete,
@@ -157,6 +160,9 @@ registerStructuralRule("framework_version_recorded", checkFrameworkVersionRecord
 registerStructuralRule("source_ref_for_grounded_entries", checkSourceRefForGroundedEntries);
 registerStructuralRule("every_documented_has_evidence", checkEveryCompliantHasEvidence);
 registerStructuralRule("every_partially_documented_has_gap", checkEveryPartialHasGap);
+
+// Completeness checker — manifest coverage (Layer 1)
+registerStructuralRule("manifest_coverage_check", checkManifestCoverageRule);
 
 // STRIDE threat model rules
 registerStructuralRule("stride_coverage_complete", checkStrideCoverageComplete);
