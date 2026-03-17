@@ -533,6 +533,9 @@ describe("check_stage_completeness", () => {
           likelihood: "likely",
           likelihood_rationale: "The attack path is exposed over the network with no stated anti-replay controls.",
           cvss_rationale: "Network-reachable authentication bypass with direct integrity and confidentiality impact.",
+          impact_index: 3,
+          likelihood_index: 4,
+          risk_score: 12,
         })),
       },
     });

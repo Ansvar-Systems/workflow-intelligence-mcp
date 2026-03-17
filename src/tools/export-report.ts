@@ -707,6 +707,8 @@ export async function wkflExportReport(
     const storedDomainExpertsUsed = load("domain_experts_used");
     const storedDomainFindings = load("domain_findings");
     const storedDomainAttestations = load("domain_attestations");
+    const storedQaFindings = load("qa_findings");
+    const storedEnrichmentCoverage = load("enrichment_coverage");
 
     const systemName: string =
       typeof storedSystemName === "string"
@@ -792,6 +794,11 @@ export async function wkflExportReport(
     const domainAttestations = isStringArray(storedDomainAttestations)
       ? storedDomainAttestations
       : [];
+    const qaFindings = Array.isArray(storedQaFindings) ? storedQaFindings : undefined;
+    const enrichmentCoverage =
+      storedEnrichmentCoverage && typeof storedEnrichmentCoverage === "object"
+        ? storedEnrichmentCoverage
+        : undefined;
     const validation = validateStrideReportState({
       system_name: systemName,
       evidence_manifest: evidenceManifest,
@@ -808,6 +815,8 @@ export async function wkflExportReport(
       threat_mitigations: mitigations,
       gaps,
       report_markdown: "__pending_export__",
+      ...(qaFindings ? { qa_findings: qaFindings } : {}),
+      ...(enrichmentCoverage ? { enrichment_coverage: enrichmentCoverage } : {}),
     });
 
     if (validation && validation.status === "incomplete") {
