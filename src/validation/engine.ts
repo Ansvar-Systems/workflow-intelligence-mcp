@@ -81,6 +81,18 @@ import {
   checkDpiaResidualScoreCoherence,
   checkDpiaRiskCoverageComplete,
 } from "./rules/dpia.js";
+import {
+  checkAdequateHasEvidence,
+  checkPartiallyAdequateHasGap,
+  checkInadequateHasGapAndRemediation,
+  checkNotAddressedHasGapAndRemediation,
+  checkTprmGroundedHasSourceRef,
+  checkTprmTriageVendorProfileComplete,
+  checkTprmTriageClassificationComplete,
+  checkTprmTriageRecommendationComplete,
+  checkTprmConditionalHasConditions,
+  checkTprmNogoHasBlockingFindings,
+} from "./rules/tprm.js";
 
 // ---------------------------------------------------------------------------
 // Rule registry
@@ -200,6 +212,18 @@ registerStructuralRule("dpia_consultation_complete", checkDpiaConsultationComple
 registerStructuralRule("dpia_consultation_references_residual_risks", checkDpiaConsultationReferencesResidualRisks);
 registerStructuralRule("dpia_residual_score_coherence", checkDpiaResidualScoreCoherence);
 registerStructuralRule("dpia_risk_coverage_complete", checkDpiaRiskCoverageComplete);
+
+// TPRM assessment rules
+registerStructuralRule("adequate_has_evidence", checkAdequateHasEvidence);
+registerStructuralRule("partially_adequate_has_gap", checkPartiallyAdequateHasGap);
+registerStructuralRule("inadequate_has_gap_and_remediation", checkInadequateHasGapAndRemediation);
+registerStructuralRule("not_addressed_has_gap_and_remediation", checkNotAddressedHasGapAndRemediation);
+registerStructuralRule("tprm_grounded_has_source_ref", checkTprmGroundedHasSourceRef);
+registerStructuralRule("tprm_triage_vendor_profile_complete", checkTprmTriageVendorProfileComplete);
+registerStructuralRule("tprm_triage_classification_complete", checkTprmTriageClassificationComplete);
+registerStructuralRule("tprm_triage_recommendation_complete", checkTprmTriageRecommendationComplete);
+registerStructuralRule("tprm_conditional_has_conditions", checkTprmConditionalHasConditions);
+registerStructuralRule("tprm_nogo_has_blocking_findings", checkTprmNogoHasBlockingFindings);
 
 // ---------------------------------------------------------------------------
 // Engine
