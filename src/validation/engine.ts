@@ -43,6 +43,10 @@ import {
   checkSourceRefForGroundedEntries,
 } from "./rules/compliance.js";
 import {
+  checkManifestCoverageRule,
+  checkDepthIssuesRule,
+} from "./rules/manifest-coverage.js";
+import {
   checkAttackPathsReferenceKnownThreats,
   checkEvidenceManifestReady,
   checkStrideCoverageComplete,
@@ -57,6 +61,13 @@ import {
   checkLargeThreatModelsUseBatching,
   checkSeverityDistributionHasSignal,
   checkVerificationTestsReferenceKnownThreats,
+  checkSeverityMatchesRiskScore,
+  checkSeverityInflation,
+  checkCriticalLowLikelihood,
+  checkThreatTemplateCompleteness,
+  checkEntryPointsDocumented,
+  checkQaBlockingResolved,
+  checkEnrichmentRatioSufficient,
 } from "./rules/stride.js";
 import {
   checkScopeReadinessRecorded,
@@ -77,6 +88,18 @@ import {
   checkDpiaResidualScoreCoherence,
   checkDpiaRiskCoverageComplete,
 } from "./rules/dpia.js";
+import {
+  checkAdequateHasEvidence,
+  checkPartiallyAdequateHasGap,
+  checkInadequateHasGapAndRemediation,
+  checkNotAddressedHasGapAndRemediation,
+  checkTprmGroundedHasSourceRef,
+  checkTprmTriageVendorProfileComplete,
+  checkTprmTriageClassificationComplete,
+  checkTprmTriageRecommendationComplete,
+  checkTprmConditionalHasConditions,
+  checkTprmNogoHasBlockingFindings,
+} from "./rules/tprm.js";
 
 // ---------------------------------------------------------------------------
 // Rule registry
@@ -158,6 +181,10 @@ registerStructuralRule("source_ref_for_grounded_entries", checkSourceRefForGroun
 registerStructuralRule("every_documented_has_evidence", checkEveryCompliantHasEvidence);
 registerStructuralRule("every_partially_documented_has_gap", checkEveryPartialHasGap);
 
+// Completeness checker — manifest coverage (Layer 1)
+registerStructuralRule("manifest_coverage_check", checkManifestCoverageRule);
+registerStructuralRule("depth_issues_flagged", checkDepthIssuesRule);
+
 // STRIDE threat model rules
 registerStructuralRule("stride_coverage_complete", checkStrideCoverageComplete);
 registerStructuralRule("evidence_manifest_ready", checkEvidenceManifestReady);
@@ -173,6 +200,13 @@ registerStructuralRule("attack_paths_reference_known_threats", checkAttackPathsR
 registerStructuralRule("verification_tests_reference_known_threats", checkVerificationTestsReferenceKnownThreats);
 registerStructuralRule("large_threat_models_use_batching", checkLargeThreatModelsUseBatching);
 registerStructuralRule("domain_challenge_coherence", checkDomainChallengeCoherence);
+registerStructuralRule("severity_matches_risk_score", checkSeverityMatchesRiskScore);
+registerStructuralRule("severity_inflation_check", checkSeverityInflation);
+registerStructuralRule("critical_low_likelihood_flag", checkCriticalLowLikelihood);
+registerStructuralRule("threat_template_completeness", checkThreatTemplateCompleteness);
+registerStructuralRule("entry_points_documented", checkEntryPointsDocumented);
+registerStructuralRule("qa_blocking_resolved", checkQaBlockingResolved);
+registerStructuralRule("enrichment_ratio_sufficient", checkEnrichmentRatioSufficient);
 
 // Generic scope-gap / client-question rules
 registerStructuralRule("scope_readiness_recorded", checkScopeReadinessRecorded);
@@ -192,6 +226,18 @@ registerStructuralRule("dpia_consultation_complete", checkDpiaConsultationComple
 registerStructuralRule("dpia_consultation_references_residual_risks", checkDpiaConsultationReferencesResidualRisks);
 registerStructuralRule("dpia_residual_score_coherence", checkDpiaResidualScoreCoherence);
 registerStructuralRule("dpia_risk_coverage_complete", checkDpiaRiskCoverageComplete);
+
+// TPRM assessment rules
+registerStructuralRule("adequate_has_evidence", checkAdequateHasEvidence);
+registerStructuralRule("partially_adequate_has_gap", checkPartiallyAdequateHasGap);
+registerStructuralRule("inadequate_has_gap_and_remediation", checkInadequateHasGapAndRemediation);
+registerStructuralRule("not_addressed_has_gap_and_remediation", checkNotAddressedHasGapAndRemediation);
+registerStructuralRule("tprm_grounded_has_source_ref", checkTprmGroundedHasSourceRef);
+registerStructuralRule("tprm_triage_vendor_profile_complete", checkTprmTriageVendorProfileComplete);
+registerStructuralRule("tprm_triage_classification_complete", checkTprmTriageClassificationComplete);
+registerStructuralRule("tprm_triage_recommendation_complete", checkTprmTriageRecommendationComplete);
+registerStructuralRule("tprm_conditional_has_conditions", checkTprmConditionalHasConditions);
+registerStructuralRule("tprm_nogo_has_blocking_findings", checkTprmNogoHasBlockingFindings);
 
 // ---------------------------------------------------------------------------
 // Engine

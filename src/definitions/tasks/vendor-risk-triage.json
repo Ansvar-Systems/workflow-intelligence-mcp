@@ -1,0 +1,392 @@
+{
+  "id": "vendor_risk_triage",
+  "name": "Vendor Risk Triage",
+  "category": "tprm",
+  "version": "1.0",
+  "standalone": true,
+  "used_in_workflows": [],
+  "dependencies": [],
+  "description": "Fast vendor screening. Entity verification, document-based profiling, automated risk assessment, and risk tier classification. Produces a go/conditional/no-go recommendation. Industry-agnostic — authority detection determines applicable frameworks. Triage state feeds directly into full vendor risk assessment with zero rework.",
+  "estimated_duration": "5-15 min",
+  "mcp_tools": [
+    {
+      "mcp": "vendor-intelligence-mcp",
+      "tools": ["search_vendors", "assess_vendor_risk"],
+      "when": "phase_1_identification, phase_3_profiling",
+      "guidance": "Use search_vendors in Phase 1 to look up vendor by name and retrieve known intelligence. Use assess_vendor_risk in Phase 3 to pull automated risk signals. Both tools return structured data — extract relevant fields into vendor_profile and risk_profile."
+    },
+    {
+      "mcp": "gleif-mcp",
+      "tools": ["search_entities", "get_entity"],
+      "when": "phase_1_identification",
+      "guidance": "Non-blocking LEI lookup. Use search_entities with the vendor's legal name. If a match is found, use get_entity for full LEI record. Record lei and lei_status in vendor_profile. If no match, set lei_status to 'not_found' and proceed — LEI absence is a risk signal, not a blocker."
+    },
+    {
+      "mcp": "sanctions-mcp",
+      "tools": ["screen_entity", "search_sanctions"],
+      "when": "phase_1_identification",
+      "guidance": "Blocking on positive match. Use screen_entity with vendor name and country. If a match is returned, set sanctions_status to 'match' and record sanctions_details. A confirmed sanctions match forces decision: no_go with the sanctions hit as a blocking finding. If no match, set sanctions_status to 'clear'."
+    },
+    {
+      "mcp": "document-index-mcp",
+      "tools": ["docidx_index_document", "docidx_search", "docidx_get_section", "docidx_get_document", "docidx_list_documents", "docidx_get_surrounding"],
+      "when": "phase_2_intake",
+      "guidance": "Index all uploaded vendor documents (SOC 2 reports, ISO certificates, security questionnaire responses, penetration test reports, privacy policies). Search indexed content for security posture evidence, certifications, breach history, and compliance attestations. Only content retrieved via these tools counts as document evidence."
+    },
+    {
+      "mcp": "cve-mcp",
+      "tools": ["search_cves"],
+      "when": "phase_3_profiling",
+      "guidance": "Only when CPE identifiers are available from vendor_profile or document extraction. Search for known vulnerabilities in vendor products. Record findings in cve_exposure. Skip if no CPE data is available — do not guess product identifiers."
+    },
+    {
+      "mcp": "workflow-intelligence-mcp",
+      "tools": ["wkfl_store_state", "wkfl_load_state", "wkfl_list_states", "wkfl_check_stage_completeness", "wkfl_get_task_definition"],
+      "when": "all_phases",
+      "guidance": "Call wkfl_list_states on every message for session resume. Store phase outputs after each phase completes. Use wkfl_check_stage_completeness before advancing phases. Use wkfl_get_task_definition with phase parameter to load phase-specific guidance."
+    }
+  ],
+  "prompting_guidance": "WORKFLOW INSTRUCTIONS FOR VENDOR RISK TRIAGE ORCHESTRATOR:\n\n1. RESUME CHECK: Call wkfl_list_states on every message. If prior state exists, load last completed phase and resume from the next phase. Never restart from scratch.\n\n2. GLEIF LOOKUP (Phase 1): Use search_entities with the vendor's legal name. If a match is found, call get_entity for the full record. Record lei and lei_status in vendor_profile. If no match, set lei_status to 'not_found' and proceed. LEI absence is a risk signal, not a blocker.\n\n3. SANCTIONS SCREENING (Phase 1): Use screen_entity with vendor name and country. This check is BLOCKING on a positive match. If sanctions_status is 'match', immediately set recommendation.decision to 'no_go' with the sanctions hit as a blocking_finding. Do not proceed to risk scoring. If sanctions_status is 'clear', continue normally.\n\n4. DOCUMENT INDEXING (Phase 2): Index all uploaded vendor documents via docidx_index_document. Search for certifications, breach disclosures, security posture indicators, and compliance attestations. Extract structured data into vendor_profile fields (certifications array, breach_history array). If no documents are provided, record document_type as 'none' and proceed with external sources only.\n\n5. RISK PROFILING (Phase 3): Combine external intelligence (vendor-intelligence-mcp, cve-mcp) with document-extracted evidence to build the risk_profile. Record signal_sources for each data point. Assess security_posture_summary and identify key_concerns. Use search_cves only when CPE identifiers are available.\n\n6. CLASSIFICATION SCORING (Phase 4): Score across 5 dimensions: data_sensitivity, access_scope, security_maturity, regulatory_exposure, and business_criticality. Each dimension scored 1-5. Determine tier: critical (any dimension >= 4 and average >= 3.5), low (all dimensions <= 2 and average <= 2.0), standard (everything else). Record rationale with minimum 20 words explaining the tier assignment.\n\n7. RECOMMENDATION LOGIC (Phase 5): Apply decision rules. no_go: sanctions match OR any dimension score = 5 with no mitigating controls. conditional: tier is critical or standard with key_concerns that have documented remediation paths. go: tier is low or standard with no key_concerns. For conditional decisions, list specific conditions the vendor must meet. For no_go decisions, list all blocking findings. Rationale must be minimum 30 words.\n\n8. LANGUAGE: Respond in the user's language. Legal entity names and citations in their original form.\n\n9. STATE PERSISTENCE: Store phase outputs via wkfl_store_state after each phase completes. The triage state structure is designed to feed directly into vendor_risk_assessment with zero rework.",
+  "stage_state_schema": {
+    "type": "object",
+    "properties": {
+      "org_profile": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "sector": { "type": "string" },
+          "jurisdiction": { "type": "string" },
+          "vendor_portfolio": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        }
+      },
+      "vendor_profile": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "legal_name": { "type": "string" },
+          "lei": { "type": "string" },
+          "lei_status": {
+            "type": "string",
+            "enum": ["active", "inactive", "lapsed", "not_found", "not_checked"]
+          },
+          "sanctions_status": {
+            "type": "string",
+            "enum": ["clear", "match", "inconclusive", "not_checked"]
+          },
+          "sanctions_details": { "type": "string" },
+          "country": { "type": "string" },
+          "sector": { "type": "string" },
+          "service_description": { "type": "string" },
+          "certifications": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "breach_history": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "date": { "type": "string" },
+                "description": { "type": "string" },
+                "severity": { "type": "string" },
+                "source": { "type": "string" }
+              }
+            }
+          },
+          "cve_exposure": {
+            "type": "object",
+            "properties": {
+              "cpe_identifiers": { "type": "array", "items": { "type": "string" } },
+              "critical_cves": { "type": "integer" },
+              "high_cves": { "type": "integer" },
+              "total_cves": { "type": "integer" },
+              "last_checked": { "type": "string" }
+            }
+          },
+          "financial_indicators": {
+            "type": "object",
+            "properties": {
+              "revenue_range": { "type": "string" },
+              "employee_count": { "type": "string" },
+              "year_founded": { "type": "string" },
+              "publicly_traded": { "type": "boolean" }
+            }
+          }
+        }
+      },
+      "documents": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "doc_id": { "type": "string" },
+            "filename": { "type": "string" },
+            "sections_count": { "type": "integer" },
+            "document_type": {
+              "type": "string",
+              "enum": ["soc2_report", "iso_certificate", "pentest_report", "security_questionnaire", "privacy_policy", "contract", "other"]
+            }
+          },
+          "required": ["doc_id", "filename"]
+        }
+      },
+      "risk_profile": {
+        "type": "object",
+        "properties": {
+          "signal_sources": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "source": { "type": "string" },
+                "signal_type": { "type": "string" },
+                "finding": { "type": "string" },
+                "confidence": { "type": "string", "enum": ["high", "medium", "low"] }
+              }
+            }
+          },
+          "security_posture_summary": { "type": "string" },
+          "key_concerns": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "concern": { "type": "string" },
+                "severity": { "type": "string", "enum": ["critical", "high", "medium", "low"] },
+                "source": { "type": "string" },
+                "remediable": { "type": "boolean" }
+              }
+            }
+          }
+        }
+      },
+      "risk_classification": {
+        "type": "object",
+        "properties": {
+          "tier": {
+            "type": "string",
+            "enum": ["critical", "standard", "low"]
+          },
+          "dimension_scores": {
+            "type": "object",
+            "properties": {
+              "data_sensitivity": { "type": "integer" },
+              "access_scope": { "type": "integer" },
+              "security_maturity": { "type": "integer" },
+              "regulatory_exposure": { "type": "integer" },
+              "business_criticality": { "type": "integer" }
+            }
+          },
+          "rationale": { "type": "string" }
+        }
+      },
+      "recommendation": {
+        "type": "object",
+        "properties": {
+          "decision": {
+            "type": "string",
+            "enum": ["go", "conditional", "no_go"]
+          },
+          "rationale": { "type": "string" },
+          "conditions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "condition": { "type": "string" },
+                "deadline": { "type": "string" },
+                "priority": { "type": "string", "enum": ["high", "medium", "low"] }
+              }
+            }
+          },
+          "blocking_findings": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "finding": { "type": "string" },
+                "source": { "type": "string" },
+                "severity": { "type": "string" }
+              }
+            }
+          },
+          "monitoring_cadence": {
+            "type": "string",
+            "enum": ["quarterly", "semi_annual", "annual", "continuous", "not_applicable"]
+          }
+        }
+      }
+    },
+    "additionalProperties": false
+  },
+  "completion_criteria": {
+    "required_fields": [
+      { "field": "vendor_profile", "rule": "exists", "message": "Vendor profile must be recorded" },
+      { "field": "risk_classification", "rule": "exists", "message": "Risk classification must be completed" },
+      { "field": "recommendation", "rule": "exists", "message": "Recommendation must be recorded" }
+    ],
+    "rules": [
+      {
+        "id": "tprm_triage_vendor_profile_complete",
+        "description": "Vendor profile must have name, lei_status, and sanctions_status",
+        "severity": "required",
+        "message_template": "Vendor profile incomplete: {details}"
+      },
+      {
+        "id": "tprm_triage_classification_complete",
+        "description": "Risk classification must have tier and rationale (min 20 words)",
+        "severity": "required",
+        "message_template": "Risk classification incomplete: {details}"
+      },
+      {
+        "id": "tprm_triage_recommendation_complete",
+        "description": "Recommendation must have decision and rationale (min 30 words)",
+        "severity": "required",
+        "message_template": "Recommendation incomplete: {details}"
+      },
+      {
+        "id": "tprm_conditional_has_conditions",
+        "description": "Conditional decision must have at least one condition",
+        "severity": "required",
+        "message_template": "Decision is 'conditional' but conditions array is empty"
+      },
+      {
+        "id": "tprm_nogo_has_blocking_findings",
+        "description": "No-go decision must have at least one blocking finding",
+        "severity": "required",
+        "message_template": "Decision is 'no_go' but blocking_findings array is empty"
+      }
+    ],
+    "soft_warnings": [
+      { "field": "documents", "rule": "min_count", "value": 1, "message": "No vendor documents were provided — assessment relies entirely on external intelligence" },
+      { "field": "risk_profile", "rule": "exists", "message": "Risk profile should be built before classification" }
+    ]
+  },
+  "quality_rubric": {
+    "risk_classification": {
+      "per_item": {
+        "rationale": {
+          "min_words": 20,
+          "severity": "warning",
+          "message": "Risk classification rationale should explain the tier assignment in at least 20 words"
+        }
+      }
+    }
+  },
+  "phases": [
+    {
+      "id": "phase_1_identification",
+      "name": "Entity Identification",
+      "description": "Verify vendor identity via GLEIF LEI lookup and sanctions screening. Record legal name, LEI status, country, and sanctions status. Sanctions match is blocking — triggers immediate no-go recommendation.",
+      "completion_criteria": {
+        "required_fields": [
+          { "field": "vendor_profile", "rule": "exists", "message": "Vendor profile must be started with at least name and identity checks" }
+        ],
+        "rules": [
+          {
+            "id": "tprm_triage_vendor_profile_complete",
+            "description": "Vendor profile must have name, lei_status, and sanctions_status after identification",
+            "severity": "required",
+            "message_template": "Vendor profile incomplete after identification: {details}"
+          }
+        ],
+        "soft_warnings": []
+      },
+      "quality_rubric": {}
+    },
+    {
+      "id": "phase_2_intake",
+      "name": "Document Intake",
+      "description": "Index all uploaded vendor documents (SOC 2 reports, ISO certificates, pentest reports, security questionnaires, privacy policies). Extract certifications, breach history, and security posture indicators into vendor_profile.",
+      "completion_criteria": {
+        "required_fields": [],
+        "rules": [],
+        "soft_warnings": [
+          { "field": "documents", "rule": "min_count", "value": 1, "message": "No vendor documents were indexed — assessment will rely on external intelligence only" }
+        ]
+      },
+      "quality_rubric": {},
+      "skip_conditions": ["No documents uploaded and user confirms external-only assessment"]
+    },
+    {
+      "id": "phase_3_profiling",
+      "name": "Risk Profiling",
+      "description": "Build risk profile from external intelligence sources (vendor-intelligence-mcp, cve-mcp) combined with document-extracted evidence. Assess security posture, identify key concerns, and record signal sources with confidence levels.",
+      "completion_criteria": {
+        "required_fields": [
+          { "field": "risk_profile", "rule": "exists", "message": "Risk profile must be built before classification" }
+        ],
+        "rules": [],
+        "soft_warnings": []
+      },
+      "quality_rubric": {}
+    },
+    {
+      "id": "phase_4_classification",
+      "name": "Risk Classification",
+      "description": "Score vendor across 5 dimensions (data_sensitivity, access_scope, security_maturity, regulatory_exposure, business_criticality) each 1-5. Determine tier: critical (any dimension >= 4 and average >= 3.5), low (all dimensions <= 2 and average <= 2.0), standard (everything else). Record rationale.",
+      "completion_criteria": {
+        "required_fields": [
+          { "field": "risk_classification", "rule": "exists", "message": "Risk classification must be completed" }
+        ],
+        "rules": [
+          {
+            "id": "tprm_triage_classification_complete",
+            "description": "Risk classification must have tier and rationale (min 20 words)",
+            "severity": "required",
+            "message_template": "Risk classification incomplete: {details}"
+          }
+        ],
+        "soft_warnings": []
+      },
+      "quality_rubric": {}
+    },
+    {
+      "id": "phase_5_recommendation",
+      "name": "Recommendation",
+      "description": "Produce go/conditional/no_go recommendation based on risk classification, key concerns, and blocking findings. Conditional decisions require specific conditions with deadlines. No-go decisions require blocking findings. Set monitoring cadence based on tier.",
+      "completion_criteria": {
+        "required_fields": [
+          { "field": "recommendation", "rule": "exists", "message": "Recommendation must be recorded" }
+        ],
+        "rules": [
+          {
+            "id": "tprm_triage_recommendation_complete",
+            "description": "Recommendation must have decision and rationale (min 30 words)",
+            "severity": "required",
+            "message_template": "Recommendation incomplete: {details}"
+          },
+          {
+            "id": "tprm_conditional_has_conditions",
+            "description": "Conditional decision must list at least one condition",
+            "severity": "required",
+            "message_template": "Decision is 'conditional' but conditions array is empty"
+          },
+          {
+            "id": "tprm_nogo_has_blocking_findings",
+            "description": "No-go decision must list at least one blocking finding",
+            "severity": "required",
+            "message_template": "Decision is 'no_go' but blocking_findings array is empty"
+          }
+        ],
+        "soft_warnings": []
+      },
+      "quality_rubric": {},
+      "deliverable": {
+        "format": "markdown",
+        "sections": [
+          "Vendor Summary — name, legal name, LEI status, sanctions status, country, sector",
+          "Risk Profile — signal sources, security posture summary, key concerns",
+          "Risk Classification — tier, dimension scores table, rationale",
+          "Recommendation — decision, rationale, conditions (if conditional), blocking findings (if no-go)",
+          "Monitoring — recommended cadence and next review date",
+          "Triage Limitations — assumptions, missing data sources, confidence caveats"
+        ],
+        "instructions": "Present the triage result as a structured vendor risk triage report. The triage state feeds directly into vendor_risk_assessment — no rework needed if the vendor proceeds to full assessment."
+      }
+    }
+  ]
+}

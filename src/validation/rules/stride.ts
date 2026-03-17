@@ -30,6 +30,11 @@ interface Threat {
   likelihood?: string;
   likelihood_rationale?: string;
   document_citations?: DocumentCitation[];
+  impact_index?: number;
+  likelihood_index?: number;
+  risk_score?: number;
+  severity_override_rationale?: string;
+  affected_entry_points?: string[];
   [key: string]: unknown;
 }
 
@@ -66,6 +71,10 @@ interface StrideState {
   domain_experts_used?: DomainExpertUsed[];
   domain_findings?: DomainFinding[];
   domain_attestations?: string[];
+  entry_points?: Array<{ id: string; name: string; [key: string]: unknown }>;
+  qa_findings?: Array<{ id: string; category: string; severity: string; resolved: boolean; description: string; [key: string]: unknown }>;
+  enrichment_coverage?: { total_threats: number; enrichment_ratio: number; [key: string]: unknown };
+  report_markdown?: string;
 }
 
 interface EvidenceManifest {
@@ -624,6 +633,165 @@ export function checkLargeThreatModelsUseBatching(
   ];
 }
 
+const RISK_BANDS: Array<{ min: number; max: number; severity: string }> = [
+  { min: 1, max: 4, severity: "low" },
+  { min: 5, max: 9, severity: "medium" },
+  { min: 10, max: 15, severity: "high" },
+  { min: 16, max: 25, severity: "critical" },
+];
+
+function riskScoreToBand(score: number): string {
+  for (const band of RISK_BANDS) {
+    if (score >= band.min && score <= band.max) return band.severity;
+  }
+  return "unknown";
+}
+
+/**
+ * Severity label must match the L×I risk band.
+ * Threats missing impact_index or likelihood_index are flagged as incomplete.
+ * Mismatches are allowed only when severity_override_rationale is provided.
+ */
+export function checkSeverityMatchesRiskScore(
+  state: Record<string, unknown>,
+): RuleFailure[] {
+  const s = asStride(state);
+  const threats = threatList(s);
+  const failures: RuleFailure[] = [];
+
+  for (const threat of threats) {
+    const severity = normalizeSeverity(threat.severity);
+    if (severity === "informational") continue;
+
+    const impactIndex = typeof threat.impact_index === "number" ? threat.impact_index : null;
+    const likelihoodIndex = typeof threat.likelihood_index === "number" ? threat.likelihood_index : null;
+
+    if (impactIndex === null || likelihoodIndex === null) {
+      failures.push({
+        rule: "severity_matches_risk_score",
+        severity: "required",
+        details: `Threat '${threat.id}' is missing impact_index or likelihood_index`,
+      });
+      continue;
+    }
+
+    const riskScore = impactIndex * likelihoodIndex;
+    const expectedBand = riskScoreToBand(riskScore);
+
+    if (severity !== expectedBand && !nonEmptyString(threat.severity_override_rationale)) {
+      failures.push({
+        rule: "severity_matches_risk_score",
+        severity: "required",
+        details: `Threat '${threat.id}' has severity '${severity}' but risk_score ${riskScore} falls in the '${expectedBand}' band with no override rationale`,
+      });
+    }
+  }
+
+  return failures;
+}
+
+/**
+ * Warn when more than 20% of threats are rated Critical.
+ * Minimum 5 threats before the check applies — small models are exempt.
+ */
+export function checkSeverityInflation(state: Record<string, unknown>): RuleFailure[] {
+  const s = asStride(state);
+  const threats = threatList(s);
+  if (threats.length < 5) return [];
+  const criticalCount = threats.filter(t => normalizeSeverity(t.severity) === "critical").length;
+  const percentage = Math.round((criticalCount / threats.length) * 100);
+  if (percentage <= 20) return [];
+  return [{
+    rule: "severity_inflation_check",
+    severity: "warning",
+    details: `${percentage}% of threats are Critical (${criticalCount}/${threats.length}). Review whether all Critical threats meet impact_index>=4 AND likelihood_index>=4.`,
+    field: "threats",
+  }];
+}
+
+/**
+ * Flag Critical threats with likelihood_index <= 2.
+ * Critical threats without likelihood_index are not flagged here —
+ * that missing-index case is caught by checkSeverityMatchesRiskScore.
+ */
+export function checkCriticalLowLikelihood(state: Record<string, unknown>): RuleFailure[] {
+  const s = asStride(state);
+  const threats = threatList(s);
+  const failures: RuleFailure[] = [];
+  for (const threat of threats) {
+    if (normalizeSeverity(threat.severity) !== "critical") continue;
+    const likelihoodIndex = typeof threat.likelihood_index === "number" ? threat.likelihood_index : null;
+    if (likelihoodIndex !== null && likelihoodIndex <= 2) {
+      failures.push({
+        rule: "critical_low_likelihood_flag",
+        severity: "warning",
+        details: `Threat '${threat.id}' is Critical severity with likelihood_index=${likelihoodIndex}. Critical threats should reflect both high impact AND realistic exploitability.`,
+      });
+    }
+  }
+  return failures;
+}
+
+const MANDATORY_THREAT_FIELDS = [
+  "id", "stride_category", "component_id", "title", "mcp_source",
+  "severity", "business_impact", "likelihood",
+] as const;
+
+const SCORING_FIELDS = [
+  "cvss_vector", "cvss_score", "impact_index", "likelihood_index",
+] as const;
+
+/**
+ * Every retained threat must have all mandatory fields populated.
+ * Informational threats are exempt from scoring fields.
+ */
+export function checkThreatTemplateCompleteness(
+  state: Record<string, unknown>,
+): RuleFailure[] {
+  const s = asStride(state);
+  const threats = threatList(s);
+  const failures: RuleFailure[] = [];
+
+  for (const threat of threats) {
+    const missing: string[] = [];
+    const isInformational = normalizeSeverity(threat.severity) === "informational";
+
+    for (const field of MANDATORY_THREAT_FIELDS) {
+      const value = threat[field];
+      if (value === undefined || value === null || (typeof value === "string" && value.trim() === "")) {
+        missing.push(field);
+      }
+    }
+
+    // Description: must exist AND have >= 10 words
+    const desc = typeof threat["description"] === "string" ? threat["description"].trim() : "";
+    if (!desc) {
+      missing.push("description");
+    } else if (desc.split(/\s+/).length < 10) {
+      missing.push("description (>=10 words)");
+    }
+
+    if (!isInformational) {
+      for (const field of SCORING_FIELDS) {
+        const value = threat[field];
+        if (value === undefined || value === null || (typeof value === "string" && value.trim() === "")) {
+          missing.push(field);
+        }
+      }
+    }
+
+    if (missing.length > 0) {
+      failures.push({
+        rule: "threat_template_completeness",
+        severity: "required",
+        details: `Threat '${threat.id}' is missing mandatory fields: ${missing.join(", ")}`,
+      });
+    }
+  }
+
+  return failures;
+}
+
 /**
  * Domain challenge coherence: when domains are detected, experts should
  * have been consulted. All findings must have source attribution.
@@ -684,4 +852,67 @@ export function checkDomainChallengeCoherence(
   }
 
   return failures;
+}
+
+/**
+ * Entry point enumeration: either the state carries at least one entry point,
+ * or the gaps register explicitly notes the omission. At validation time the
+ * report has not been generated yet, so this does not inspect report_markdown.
+ */
+export function checkEntryPointsDocumented(state: Record<string, unknown>): RuleFailure[] {
+  const s = asStride(state);
+  const entryPoints = s.entry_points ?? [];
+  const gaps = (state.gaps as Array<{ description?: string }>) ?? [];
+
+  if (entryPoints.length > 0) return [];
+
+  const gapMentionsEntryPoints = gaps.some(
+    (g) => (g.description ?? "").toLowerCase().includes("entry point"),
+  );
+  if (gapMentionsEntryPoints) return [];
+
+  return [{
+    rule: "entry_points_documented",
+    severity: "required",
+    details: "No entry points enumerated and no gap documented for the omission",
+  }];
+}
+
+/**
+ * All QA findings with severity "blocking" must be resolved before the phase
+ * can be considered complete.
+ */
+export function checkQaBlockingResolved(state: Record<string, unknown>): RuleFailure[] {
+  const s = asStride(state);
+  const findings = s.qa_findings ?? [];
+  const failures: RuleFailure[] = [];
+  for (const finding of findings) {
+    if (finding.severity === "blocking" && !finding.resolved) {
+      failures.push({
+        rule: "qa_blocking_resolved",
+        severity: "required",
+        details: `Blocking QA finding '${finding.id}' (${finding.category}) is unresolved: ${finding.description}`,
+      });
+    }
+  }
+  return failures;
+}
+
+/**
+ * At least 80 % of threats should have taxonomy enrichment. Below that
+ * threshold a warning is raised — it does not block completion but signals
+ * that enrichment coverage should be reviewed.
+ */
+export function checkEnrichmentRatioSufficient(state: Record<string, unknown>): RuleFailure[] {
+  const s = asStride(state);
+  const coverage = s.enrichment_coverage;
+  if (!coverage) return [];
+  if (coverage.enrichment_ratio >= 0.8) return [];
+  const percentage = Math.round(coverage.enrichment_ratio * 100);
+  return [{
+    rule: "enrichment_ratio_sufficient",
+    severity: "warning",
+    details: `Only ${percentage}% of threats have taxonomy enrichment — review whether remaining threats were skipped`,
+    field: "enrichment_coverage",
+  }];
 }

@@ -12,6 +12,7 @@ import {
   wkflDeleteAssessment,
 } from "./state.js";
 import { wkflExportReport } from "./export-report.js";
+import { getManifest } from "./get-manifest.js";
 
 export interface ToolResult {
   content: Array<{ type: "text"; text: string }>;
@@ -32,6 +33,7 @@ export const TOOL_HANDLERS: Record<string, ToolHandler> = {
   wkfl_list_states: wkflListStates,
   wkfl_delete_assessment: wkflDeleteAssessment,
   wkfl_export_report: wkflExportReport,
+  get_manifest: getManifest,
   about,
   list_sources: listSources,
 };
@@ -234,6 +236,21 @@ export const TOOL_DEFINITIONS = [
         },
       },
       required: ["assessment_id"],
+    },
+  },
+  {
+    name: "get_manifest",
+    description:
+      "Load an article manifest for a known framework. Returns the full manifest with all leaf refs and topic descriptions. Call without framework_id to list available manifests. Use the returned manifest as input to check_stage_completeness for Phase 4b validation.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        framework_id: {
+          type: "string",
+          description:
+            'Framework identifier (e.g., "DORA", "NIS2"). Case-sensitive. Omit to list available manifests.',
+        },
+      },
     },
   },
   {

@@ -254,6 +254,37 @@ export interface StrideReportBuildInput {
     merged_as_threat_id?: string;
   }>;
   domainAttestations?: string[];
+  entryPoints?: Array<{
+    id: string;
+    name: string;
+    component_id: string;
+    protocol: string;
+    authentication: string;
+    exposed_to: string;
+    data_classification?: string;
+    rate_limited?: boolean | string;
+    source?: string;
+  }>;
+  riskScoringMethodology?: {
+    impact_scale?: Array<{ index: number; label: string; criteria: string }>;
+    likelihood_scale?: Array<{ index: number; label: string; criteria: string }>;
+    risk_bands?: Array<{ range_min: number; range_max: number; severity: string }>;
+  } | null;
+  qaFindings?: Array<{
+    id: string;
+    category: string;
+    severity: string;
+    description: string;
+    resolved: boolean;
+    remediation?: string;
+  }>;
+  enrichmentCoverage?: {
+    total_threats: number;
+    fully_enriched?: number;
+    partially_enriched?: number;
+    unenriched?: number;
+    enrichment_ratio: number;
+  } | null;
 }
 
 const STRIDE_ORDER = [
@@ -648,6 +679,10 @@ export function buildStrideReport(input: StrideReportBuildInput): string {
     domainExpertsUsed = [],
     domainFindings = [],
     domainAttestations = [],
+    entryPoints = [],
+    riskScoringMethodology,
+    qaFindings = [],
+    enrichmentCoverage,
   } = input;
 
   const lines: string[] = [];
@@ -810,7 +845,49 @@ export function buildStrideReport(input: StrideReportBuildInput): string {
   lines.push("---");
   lines.push("");
 
-  lines.push("## 2. Scope, Evidence, and Limitations");
+  lines.push("## 2. Risk Scoring Methodology");
+  lines.push("");
+  if (riskScoringMethodology) {
+    if (riskScoringMethodology.impact_scale?.length) {
+      lines.push("### Impact Scale");
+      lines.push("");
+      lines.push("| Index | Label | Criteria |");
+      lines.push("|------:|-------|----------|");
+      for (const level of riskScoringMethodology.impact_scale) {
+        lines.push(`| ${level.index} | ${esc(level.label)} | ${esc(level.criteria)} |`);
+      }
+      lines.push("");
+    }
+    if (riskScoringMethodology.likelihood_scale?.length) {
+      lines.push("### Likelihood Scale");
+      lines.push("");
+      lines.push("| Index | Label | Criteria |");
+      lines.push("|------:|-------|----------|");
+      for (const level of riskScoringMethodology.likelihood_scale) {
+        lines.push(`| ${level.index} | ${esc(level.label)} | ${esc(level.criteria)} |`);
+      }
+      lines.push("");
+    }
+    if (riskScoringMethodology.risk_bands?.length) {
+      lines.push("### Risk Score Bands");
+      lines.push("");
+      lines.push("| Score Range | Severity |");
+      lines.push("|-------------|----------|");
+      for (const band of riskScoringMethodology.risk_bands) {
+        lines.push(`| ${band.range_min}-${band.range_max} | ${esc(band.severity)} |`);
+      }
+      lines.push("");
+    }
+    lines.push("**Override policy:** Severity may deviate from the computed band when `severity_override_rationale` documents the reason.");
+    lines.push("");
+  } else {
+    lines.push("Risk scoring methodology was not recorded for this assessment.");
+    lines.push("");
+  }
+  lines.push("---");
+  lines.push("");
+
+  lines.push("## 3. Scope, Evidence, and Limitations");
   lines.push("");
 
   if (evidenceManifest) {
@@ -959,7 +1036,7 @@ export function buildStrideReport(input: StrideReportBuildInput): string {
   lines.push("---");
   lines.push("");
 
-  lines.push("## 3. Architecture Summary");
+  lines.push("## 4. Architecture Summary");
   lines.push("");
 
   if (components.length > 0) {
@@ -1009,10 +1086,24 @@ export function buildStrideReport(input: StrideReportBuildInput): string {
     lines.push("DFD was not generated for this assessment.");
   }
   lines.push("");
+
+  if (entryPoints.length > 0) {
+    lines.push("### Entry Point Inventory");
+    lines.push("");
+    lines.push("| ID | Name | Component | Protocol | Authentication | Exposed To | Source |");
+    lines.push("|----|------|-----------|----------|----------------|------------|--------|");
+    for (const ep of entryPoints) {
+      lines.push(
+        `| ${esc(ep.id)} | ${esc(ep.name)} | ${esc(ep.component_id)} | ${esc(ep.protocol)} | ${esc(labelize(ep.authentication))} | ${esc(labelize(ep.exposed_to))} | ${esc(labelize(ep.source) || "\u2014")} |`,
+      );
+    }
+    lines.push("");
+  }
+
   lines.push("---");
   lines.push("");
 
-  lines.push("## 4. Detailed Threat Register");
+  lines.push("## 5. Detailed Threat Register");
   lines.push("");
   if (sortedThreats.length === 0) {
     lines.push("No retained threats recorded.");
@@ -1314,7 +1405,7 @@ export function buildStrideReport(input: StrideReportBuildInput): string {
     lines.push("");
   }
 
-  lines.push("## 5. Remediation Priorities");
+  lines.push("## 6. Remediation Priorities");
   lines.push("");
   const threatsWithControls = sortedThreats.filter((threat) => remediationNames(threat, mitigationMap).length > 0);
   if (threatsWithControls.length === 0) {
@@ -1335,7 +1426,7 @@ export function buildStrideReport(input: StrideReportBuildInput): string {
   lines.push("---");
   lines.push("");
 
-  lines.push("## 6. Attack Paths");
+  lines.push("## 7. Attack Paths");
   lines.push("");
   if (attackPaths.length === 0) {
     lines.push("No attack paths were synthesized.");
@@ -1375,7 +1466,7 @@ export function buildStrideReport(input: StrideReportBuildInput): string {
   lines.push("---");
   lines.push("");
 
-  lines.push("## 7. Verification Test Cases");
+  lines.push("## 8. Verification Test Cases");
   lines.push("");
   if (verificationTests.length === 0) {
     lines.push("No verification test cases were generated.");
@@ -1419,7 +1510,7 @@ export function buildStrideReport(input: StrideReportBuildInput): string {
   lines.push("---");
   lines.push("");
 
-  lines.push("## 8. Traceability Appendix");
+  lines.push("## 9. Traceability Appendix");
   lines.push("");
   if (sortedThreats.length === 0) {
     lines.push("No retained threats recorded.");
@@ -1438,7 +1529,35 @@ export function buildStrideReport(input: StrideReportBuildInput): string {
   lines.push("---");
   lines.push("");
 
-  lines.push("## 9. Gaps and Assumptions Register");
+  lines.push("## 10. Quality Assurance Summary");
+  lines.push("");
+  if (qaFindings.length > 0) {
+    const blocking = qaFindings.filter(f => f.severity === "blocking");
+    const warnings = qaFindings.filter(f => f.severity === "warning");
+    const resolved = blocking.filter(f => f.resolved);
+    lines.push(`**Blocking findings:** ${blocking.length} (${resolved.length} resolved)  `);
+    lines.push(`**Warnings:** ${warnings.length}`);
+    lines.push("");
+    lines.push("| Finding | Category | Severity | Status | Description |");
+    lines.push("|---------|----------|----------|--------|-------------|");
+    for (const finding of qaFindings) {
+      lines.push(
+        `| ${esc(finding.id)} | ${esc(finding.category)} | ${esc(finding.severity)} | ${finding.resolved ? "Resolved" : "Open"} | ${esc(finding.description)} |`,
+      );
+    }
+    lines.push("");
+  } else {
+    lines.push("No QA findings recorded.");
+    lines.push("");
+  }
+  if (enrichmentCoverage) {
+    lines.push(`**Enrichment coverage:** ${Math.round(enrichmentCoverage.enrichment_ratio * 100)}% of threats have taxonomy enrichment`);
+    lines.push("");
+  }
+  lines.push("---");
+  lines.push("");
+
+  lines.push("## 11. Gaps and Assumptions Register");
   lines.push("");
   if (gaps.length === 0) {
     lines.push("No gaps or assumptions recorded.");

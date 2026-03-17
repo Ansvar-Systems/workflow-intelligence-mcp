@@ -19,5 +19,6 @@ COPY src/definitions/ dist/definitions/
 # State storage directory (mount a volume for persistence)
 RUN mkdir -p /app/data && chown node:node /app/data
 
+EXPOSE 3000
 USER node
 ENTRYPOINT ["node", "dist/http-server.js"]

@@ -49,6 +49,38 @@ describe("get_task_definition", () => {
     expect(data.mcp_tools[0].guidance).toBeDefined();
   });
 
+  it("returns vendor_risk_triage definition with correct metadata", async () => {
+    const result = await getTaskDefinition({ task_id: "vendor_risk_triage" });
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed.id).toBe("vendor_risk_triage");
+    expect(parsed.category).toBe("tprm");
+    expect(parsed.version).toBe("1.0");
+    expect(parsed.standalone).toBe(true);
+    expect(parsed.stage_state_schema).toBeDefined();
+    expect(parsed.completion_criteria).toBeDefined();
+    expect(parsed.phases).toBeDefined();
+    expect(parsed.phases.length).toBe(5);
+    expect(parsed.mcp_tools).toBeDefined();
+  });
+
+  it("returns vendor_risk_assessment definition with authority detection and 7 phases", async () => {
+    const result = await getTaskDefinition({ task_id: "vendor_risk_assessment" });
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed.id).toBe("vendor_risk_assessment");
+    expect(parsed.category).toBe("tprm");
+    expect(parsed.phases.length).toBe(7);
+    expect(parsed.authority_detection).toBeDefined();
+    expect(parsed.authority_detection.signals).toBeDefined();
+    expect(parsed.authority_detection.authority_expert_hints).toBeDefined();
+    expect(parsed.stage_state_schema).toBeDefined();
+    expect(parsed.stage_state_schema.properties.intake_from_triage).toBeDefined();
+    expect(parsed.stage_state_schema.properties.findings_register).toBeDefined();
+    expect(parsed.stage_state_schema.properties.domain_scores).toBeDefined();
+    expect(parsed.stage_state_schema.properties.overall_score).toBeDefined();
+    expect(parsed.vendor_risk_entry_schema).toBeDefined();
+    expect(parsed.mcp_tools.length).toBe(11);
+  });
+
   it("exposes the expanded STRIDE workflow backbone and MCP grounding surface", async () => {
     const result = await getTaskDefinition({ task_id: "stride_threat_model" });
     expect(result.isError).toBeUndefined();

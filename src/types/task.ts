@@ -55,6 +55,14 @@ export interface PhaseDefinition {
   description: string;
   completion_criteria: CompletionCriteria;
   quality_rubric: Record<string, QualityRubricEntry>;
+  skip_conditions?: string[];
+  config?: Record<string, unknown>;
+  deliverable?: {
+    format: string;
+    tool: string;
+    sections: string[];
+    instructions: string;
+  };
 }
 
 export interface TaskDefinition {

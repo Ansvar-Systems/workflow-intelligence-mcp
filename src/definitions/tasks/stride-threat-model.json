@@ -71,7 +71,7 @@
       "guidance": "Store state after each phase completion. Key format: phase_{phase_id} for phase results, specialist_{category}_{component_id} for per-specialist results. Use check_stage_completeness to validate phase gates. Call wkfl_export_report in Phase 6 to assemble the final deliverable."
     }
   ],
-  "prompting_guidance": "You are leading a STRIDE threat model. The user's prompt and uploaded documents set the scope — there is no fixed questionnaire.\n\n**Core rules:**\n1. Assess what you know vs. what you need. Ask specific questions about what is actually missing. Do not present a form.\n2. Run an evidence-manifest check before DFD or STRIDE work. Refuse to proceed on unresolved document/system mismatches.\n3. Run a dedicated scope-gap analysis immediately after Phase 1. Batch questions into a single round where possible. Ask only load-bearing questions that change the threat model.\n4. Never block on missing information indefinitely. If the user does not answer, record the gap, state the assumption, lower confidence, and proceed.\n5. Every threat must trace to an MCP tool call (mcp_source field) or be explicitly marked 'llm-reasoned' with lower confidence.\n6. Every system fact from an uploaded document must cite the source section (document_citations).\n7. Every user-provided clarification must be stored as client_questions/client_attestations with answer provenance. Distinguish document_evidence, user_attested, and assumed facts.\n8. No regulation references. This is pure technical security analysis. Regulation mapping happens downstream in a separate compliance pipeline.\n9. Delegate DFD construction to dfd-architect, STRIDE enumeration to the 6 category specialists, domain challenge to domain experts, enrichment to MCP-grounding specialists, and attack/test synthesis to dedicated follow-on analysts. You orchestrate, you do not analyze.\n10. Detect the domain (automotive, healthcare, ICS/OT, financial, AI/ML) from user input and add domain experts to the fan-out alongside STRIDE specialists.\n11. Store state after each phase via wkfl_store_state. Use wkfl_check_stage_completeness to validate before proceeding.\n12. Mid-phase questions are allowed: if a specialist returns uncertainty, pause to ask the user, then resume.\n13. The report must include a Gaps and Assumptions Register — every unknown, every assumption, impact if wrong.\n14. Taxonomy badges, CVE links, D3FEND mappings, ATLAS mappings, and exploitability claims must be grounded in explicit MCP calls. If the tool evidence is missing, label the content as pattern-mapped or assumed instead of presenting it as authoritative.\n15. When retained threats or architecture size grows large, record a scale_out_plan and shard enrichment/calibration work into grounding_batches rather than overloading one agent prompt.\n\n**Phase flow:**\n- Phase 0: Build an evidence manifest from authorized documents. Confirm system identity, document coverage, and mismatch flags before further work.\n- Phase 1: Build scope and DFD from user input + documents. Delegate to dfd-architect. Proceed when >= 2 components and >= 1 data flow exist.\n- Phase 1b: Run scope-gap analysis. Assess readiness (ready / partial / blocked / minimal), identify blocking gaps, generate up to 5 batched client questions, and capture answers or assumptions with provenance.\n- Phase 2: Fan out per STRIDE category to specialists with full system context. Build coverage matrix. Every component must have all 6 categories assessed.\n- Phase 2b: Run domain challenge for system-specific blind spots and red flags.\n- Phase 3: Deduplicate similar threats. Preserve a retained threat list and dedup_log.\n- Phase 3b: Enrich retained threats with ATT&CK/CAPEC/CWE/D3FEND/ATLAS, source type, citations, and grounded badge metadata.\n- Phase 3c: Calibrate business risk, likelihood, CVSS v4, EPSS/KEV context, and residual risk.\n- Phase 4a: Synthesize attack paths from retained threats, trust boundaries, and data flows.\n- Phase 4b: Generate verification tests and detection opportunities linked to retained threats.\n- Phase 5: Map mitigations using Security Controls MCP. Every high/critical threat must have >= 1 control.\n- Phase 6: Assemble report from stored state via wkfl_export_report, including business risk rollups, traceability, remediation priorities, attack paths, and verification tests.",
+  "prompting_guidance": "You are leading a STRIDE threat model. The user's prompt and uploaded documents set the scope — there is no fixed questionnaire.\n\n**Core rules:**\n1. Assess what you know vs. what you need. Ask specific questions about what is actually missing. Do not present a form.\n2. Run an evidence-manifest check before DFD or STRIDE work. Refuse to proceed on unresolved document/system mismatches.\n3. Run a dedicated scope-gap analysis immediately after Phase 1. Batch questions into a single round where possible. Ask only load-bearing questions that change the threat model.\n4. Never block on missing information indefinitely. If the user does not answer, record the gap, state the assumption, lower confidence, and proceed.\n5. Every threat must trace to an MCP tool call (mcp_source field) or be explicitly marked 'llm-reasoned' with lower confidence.\n6. Every system fact from an uploaded document must cite the source section (document_citations).\n7. Every user-provided clarification must be stored as client_questions/client_attestations with answer provenance. Distinguish document_evidence, user_attested, and assumed facts.\n8. No regulation references. This is pure technical security analysis. Regulation mapping happens downstream in a separate compliance pipeline.\n9. Delegate DFD construction to dfd-architect, STRIDE enumeration to the 6 category specialists, domain challenge to domain experts, enrichment to MCP-grounding specialists, and attack/test synthesis to dedicated follow-on analysts. You orchestrate, you do not analyze.\n10. Detect the domain (automotive, healthcare, ICS/OT, financial, AI/ML) from user input and add domain experts to the fan-out alongside STRIDE specialists.\n11. Store state after each phase via wkfl_store_state. Use wkfl_check_stage_completeness to validate before proceeding.\n12. Mid-phase questions are allowed: if a specialist returns uncertainty, pause to ask the user, then resume.\n13. The report must include a Gaps and Assumptions Register — every unknown, every assumption, impact if wrong.\n14. Taxonomy badges, CVE links, D3FEND mappings, ATLAS mappings, and exploitability claims must be grounded in explicit MCP calls. If the tool evidence is missing, label the content as pattern-mapped or assumed instead of presenting it as authoritative.\n15. When retained threats or architecture size grows large, record a scale_out_plan and shard enrichment/calibration work into grounding_batches rather than overloading one agent prompt.\n16. Every threat must have impact_index (1-5) and likelihood_index (1-5) using the calibration criteria below. risk_score = impact_index * likelihood_index. Severity must match the derived band (1-4 Low, 5-9 Medium, 10-15 High, 16-25 Critical) unless severity_override_rationale explains the deviation. Store the methodology in risk_scoring_methodology and include it as a report section.\n17. Enumerate entry points during Phase 1. Every API endpoint, webhook receiver, message queue consumer, admin interface, file upload handler, or external-facing service that accepts input is an entry point. Record the protocol, authentication mechanism, and exposure scope.\n18. Phase 5b is mandatory. Run wkfl_check_stage_completeness for the full stride_threat_model task. For each required rule failure, create a qa_finding with category and remediation action. Fix blocking findings. Proceed to Phase 6 only when all blocking findings are resolved.\n\n**Phase flow:**\n- Phase 0: Build an evidence manifest from authorized documents. Confirm system identity, document coverage, and mismatch flags before further work.\n- Phase 1: Build scope and DFD from user input + documents. Delegate to dfd-architect. Enumerate entry points. Proceed when >= 2 components and >= 1 data flow exist.\n- Phase 1b: Run scope-gap analysis. Assess readiness (ready / partial / blocked / minimal), identify blocking gaps, generate up to 5 batched client questions, and capture answers or assumptions with provenance.\n- Phase 2: Fan out per STRIDE category to specialists with full system context. Build coverage matrix. Every component must have all 6 categories assessed.\n- Phase 2b: Run domain challenge for system-specific blind spots and red flags.\n- Phase 3: Deduplicate similar threats. Preserve a retained threat list and dedup_log.\n- Phase 3b: Enrich retained threats with ATT&CK/CAPEC/CWE/D3FEND/ATLAS, source type, citations, and grounded badge metadata.\n- Phase 3c: Calibrate business risk, likelihood, CVSS v4, EPSS/KEV context, and residual risk using impact_index * likelihood_index scoring methodology.\n- Phase 4a: Synthesize attack paths from retained threats, trust boundaries, and data flows.\n- Phase 4b: Generate verification tests and detection opportunities linked to retained threats.\n- Phase 5: Map mitigations using Security Controls MCP. Every high/critical threat must have >= 1 control.\n- Phase 5b: Run quality assurance review. Fix blocking findings. Proceed only when the QA gate passes.\n- Phase 6: Assemble report from stored state via wkfl_export_report, including business risk rollups, traceability, remediation priorities, attack paths, and verification tests.",
   "domain_vocabulary": {
     "healthcare": ["PHI", "HIPAA", "HL7", "FHIR", "medical_device", "FDA", "IEC_81001", "clinical", "EHR", "EMR"],
     "automotive": ["CAN_bus", "UDS", "ISO_21434", "UN_R155", "TISAX", "V2X", "ECU", "OBD"],
@@ -500,7 +500,10 @@
                   "tool_call": { "type": "string" }
                 }
               }
-            }
+            },
+            "risk_score": { "type": "integer", "minimum": 1, "maximum": 25, "description": "impact_index * likelihood_index" },
+            "severity_override_rationale": { "type": "string", "description": "Required when assigned severity differs from the L*I derived band" },
+            "affected_entry_points": { "type": "array", "items": { "type": "string" }, "description": "Entry point IDs targeted by this threat" }
           },
           "required": ["id", "stride_category", "component_id", "title", "mcp_source"]
         }
@@ -748,6 +751,92 @@
           },
           "required": ["id", "stride_category", "title", "severity"]
         }
+      },
+      "risk_scoring_methodology": {
+        "type": "object",
+        "properties": {
+          "impact_scale": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "index": { "type": "integer", "minimum": 1, "maximum": 5 },
+                "label": { "type": "string" },
+                "criteria": { "type": "string" }
+              },
+              "required": ["index", "label", "criteria"]
+            }
+          },
+          "likelihood_scale": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "index": { "type": "integer", "minimum": 1, "maximum": 5 },
+                "label": { "type": "string" },
+                "criteria": { "type": "string" }
+              },
+              "required": ["index", "label", "criteria"]
+            }
+          },
+          "risk_bands": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "range_min": { "type": "integer" },
+                "range_max": { "type": "integer" },
+                "severity": { "type": "string" }
+              },
+              "required": ["range_min", "range_max", "severity"]
+            }
+          }
+        },
+        "required": ["impact_scale", "likelihood_scale", "risk_bands"]
+      },
+      "entry_points": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "string" },
+            "name": { "type": "string" },
+            "component_id": { "type": "string" },
+            "protocol": { "type": "string" },
+            "authentication": { "type": "string", "enum": ["none", "api_key", "oauth2", "mtls", "basic", "saml", "session_cookie", "jwt", "custom", "unknown"] },
+            "exposed_to": { "type": "string", "enum": ["internet", "partner_network", "internal_network", "localhost", "vpn", "unknown"] },
+            "data_classification": { "type": "string" },
+            "rate_limited": { "type": ["boolean", "string"] },
+            "source": { "type": "string", "enum": ["document_evidence", "user_attested", "inferred"] }
+          },
+          "required": ["id", "name", "component_id", "protocol", "authentication", "exposed_to"]
+        }
+      },
+      "qa_findings": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "string" },
+            "category": { "type": "string", "enum": ["template_gap", "severity_mismatch", "severity_inflation", "enrichment_gap", "entry_point_gap", "cross_ref_broken", "dedup_candidate", "gap_register_incomplete"] },
+            "severity": { "type": "string", "enum": ["blocking", "warning"] },
+            "threat_id": { "type": "string" },
+            "description": { "type": "string" },
+            "remediation": { "type": "string" },
+            "resolved": { "type": "boolean" }
+          },
+          "required": ["id", "category", "severity", "description", "resolved"]
+        }
+      },
+      "enrichment_coverage": {
+        "type": "object",
+        "properties": {
+          "total_threats": { "type": "integer" },
+          "fully_enriched": { "type": "integer" },
+          "partially_enriched": { "type": "integer" },
+          "unenriched": { "type": "integer" },
+          "enrichment_ratio": { "type": "number" }
+        }
       }
     },
     "additionalProperties": false
@@ -764,7 +853,9 @@
       { "field": "attack_paths", "rule": "min_count", "value": 1, "message": "At least 1 attack path is required before final export" },
       { "field": "verification_tests", "rule": "min_count", "value": 1, "message": "At least 1 verification test is required before final export" },
       { "field": "threat_mitigations", "rule": "min_count", "value": 1, "message": "At least 1 mitigation mapping is required" },
-      { "field": "report_markdown", "rule": "exists", "message": "Final report must be assembled" }
+      { "field": "report_markdown", "rule": "exists", "message": "Final report must be assembled" },
+      { "field": "qa_findings", "rule": "exists", "message": "QA review (Phase 5b) must be completed before report assembly" },
+      { "field": "enrichment_coverage", "rule": "exists", "message": "Enrichment coverage (Phase 5b) must be computed before report assembly" }
     ],
     "rules": [
       {
@@ -868,6 +959,36 @@
         "description": "Verification tests must only reference retained threat IDs that still exist",
         "severity": "required",
         "message_template": "Verification test references an unknown retained threat"
+      },
+      {
+        "id": "severity_matches_risk_score",
+        "description": "Assigned severity must match the risk_score band from impact_index * likelihood_index, unless severity_override_rationale explains the deviation",
+        "severity": "required",
+        "message_template": "Threat '{id}' has severity '{severity}' but risk_score {risk_score} falls in the '{expected_band}' band with no override rationale"
+      },
+      {
+        "id": "severity_inflation_check",
+        "description": "Warn when more than 20% of retained threats are rated Critical (minimum 5 threats)",
+        "severity": "warning",
+        "message_template": "{percentage}% of threats are Critical ({count}/{total})."
+      },
+      {
+        "id": "critical_low_likelihood_flag",
+        "description": "Flag threats with Critical severity but likelihood_index <= 2",
+        "severity": "warning",
+        "message_template": "Threat '{id}' is Critical severity with likelihood_index={likelihood_index}."
+      },
+      {
+        "id": "threat_template_completeness",
+        "description": "Every retained threat must have all mandatory fields populated",
+        "severity": "required",
+        "message_template": "Threat '{id}' is missing mandatory fields: {missing_fields}"
+      },
+      {
+        "id": "entry_points_documented",
+        "description": "If entry points exist, they must appear in the report. If none exist, the Gaps register must note the omission.",
+        "severity": "required",
+        "message_template": "Entry points not documented in report or gaps register"
       }
     ],
     "soft_warnings": [
@@ -927,7 +1048,8 @@
           { "field": "trust_boundaries", "rule": "min_count", "value": 1, "message": "No trust boundaries defined — threat analysis may miss boundary-crossing risks" },
           { "field": "existing_controls", "rule": "min_count", "value": 1, "message": "No existing controls specified — all mitigations will be treated as new" },
           { "field": "deployment_environment", "rule": "exists", "message": "Deployment environment unknown — infrastructure-layer threats may be missed" },
-          { "field": "actors", "rule": "min_count", "value": 1, "message": "No actors defined — spoofing and privilege escalation analysis may be incomplete" }
+          { "field": "actors", "rule": "min_count", "value": 1, "message": "No actors defined — spoofing and privilege escalation analysis may be incomplete" },
+          { "field": "entry_points", "rule": "min_count", "value": 1, "message": "No entry points enumerated — attack surface analysis may be incomplete" }
         ]
       },
       "quality_rubric": {}
@@ -1154,6 +1276,24 @@
             "description": "Large retained threat sets should record scale_out_plan or grounding_batches so enrichment/calibration can be sharded across agents",
             "severity": "warning",
             "message_template": "Large threat model has no batching metadata"
+          },
+          {
+            "id": "severity_matches_risk_score",
+            "description": "Severity must match L*I band or have override rationale",
+            "severity": "required",
+            "message_template": "Threat severity-risk mismatch"
+          },
+          {
+            "id": "severity_inflation_check",
+            "description": "Warn when >20% Critical (min 5 threats)",
+            "severity": "warning",
+            "message_template": "Severity inflation detected"
+          },
+          {
+            "id": "critical_low_likelihood_flag",
+            "description": "Flag Critical + low likelihood",
+            "severity": "warning",
+            "message_template": "Critical threat with low likelihood"
           }
         ],
         "soft_warnings": []
@@ -1260,6 +1400,57 @@
       }
     },
     {
+      "id": "phase_5b_quality_assurance",
+      "name": "Quality Assurance Review",
+      "description": "Self-review checkpoint before report assembly. Run wkfl_check_stage_completeness for the full stride_threat_model task. For each required rule that fails, create a qa_finding, fix the underlying data, and re-validate. This phase exists because enrichment and calibration happen across multiple agent delegations — inconsistencies accumulate and must be caught before report generation.",
+      "completion_criteria": {
+        "required_fields": [
+          { "field": "qa_findings", "rule": "exists", "message": "QA review must be completed before report assembly" },
+          { "field": "enrichment_coverage", "rule": "exists", "message": "Enrichment coverage must be computed" }
+        ],
+        "rules": [
+          {
+            "id": "qa_blocking_resolved",
+            "description": "All blocking QA findings must be resolved",
+            "severity": "required",
+            "message_template": "Blocking QA finding unresolved"
+          },
+          {
+            "id": "threat_template_completeness",
+            "description": "Every threat must have complete attribute template",
+            "severity": "required",
+            "message_template": "Threat missing fields"
+          },
+          {
+            "id": "severity_matches_risk_score",
+            "description": "Severity must match L*I band",
+            "severity": "required",
+            "message_template": "Severity-risk mismatch"
+          },
+          {
+            "id": "severity_inflation_check",
+            "description": "Warn on >20% Critical",
+            "severity": "warning",
+            "message_template": "Severity inflation"
+          },
+          {
+            "id": "critical_low_likelihood_flag",
+            "description": "Flag Critical + low likelihood",
+            "severity": "warning",
+            "message_template": "Critical with low likelihood"
+          },
+          {
+            "id": "enrichment_ratio_sufficient",
+            "description": "At least 80% of threats should have taxonomy enrichment",
+            "severity": "warning",
+            "message_template": "Enrichment ratio below 80%"
+          }
+        ],
+        "soft_warnings": []
+      },
+      "quality_rubric": {}
+    },
+    {
       "id": "phase_6_report_assembly",
       "name": "Report Assembly",
       "description": "Assemble the final report from stored state via wkfl_export_report. Populate threat_summary for the frontend ThreatSummary component, including business-risk badges, traceability, attack paths, verification tests, and remediation priorities.",
@@ -1269,7 +1460,9 @@
           { "field": "attack_paths", "rule": "min_count", "value": 1, "message": "Attack paths must be present in the final report state" },
           { "field": "verification_tests", "rule": "min_count", "value": 1, "message": "Verification tests must be present in the final report state" },
           { "field": "report_markdown", "rule": "exists", "message": "Final report must be assembled" },
-          { "field": "threat_summary", "rule": "min_count", "value": 1, "message": "Threat summary for frontend must be populated" }
+          { "field": "threat_summary", "rule": "min_count", "value": 1, "message": "Threat summary for frontend must be populated" },
+          { "field": "qa_findings", "rule": "exists", "message": "QA review must be completed before report assembly" },
+          { "field": "enrichment_coverage", "rule": "exists", "message": "Enrichment coverage must be computed" }
         ],
         "rules": [
           {
@@ -1325,6 +1518,18 @@
             "description": "Verification tests must only reference retained threat IDs that still exist",
             "severity": "required",
             "message_template": "Verification test references an unknown retained threat"
+          },
+          {
+            "id": "threat_template_completeness",
+            "description": "Every threat must have complete attribute template",
+            "severity": "required",
+            "message_template": "Threat missing fields"
+          },
+          {
+            "id": "entry_points_documented",
+            "description": "Entry points must be in report or gaps",
+            "severity": "required",
+            "message_template": "Entry points undocumented"
           }
         ],
         "soft_warnings": []
@@ -1339,12 +1544,17 @@
         "format": "markdown",
         "tool": "wkfl_export_report",
         "sections": [
+          "Executive Summary — system assessed, threat count by severity, top 3 risks, key recommendations",
+          "Risk Scoring Methodology — impact and likelihood scales with calibration criteria, risk score bands, override policy",
           "Scope and Limitations — authorized evidence manifest, system assessed, scope readiness, client clarifications, documents reviewed, gaps and assumptions, what was NOT assessed",
           "Data Flow Diagram — from DFD Architect output, trust boundaries, component inventory",
-          "Threats by STRIDE Category — grouped findings with evidence citations, MCP sources, confidence levels, and taxonomy badges",
-          "Risk Matrix — business risk tiers, likelihood, CVSS v4 scores, severity distribution, EPSS/KEV enrichment",
+          "Entry Point Inventory — enumerated attack surface with protocol, authentication method, and exposure scope",
+          "Threats by STRIDE Category — grouped findings with full attribute template, evidence citations, MCP sources, confidence levels, and taxonomy badges",
+          "Risk Matrix — L*I scores, CVSS v4 scores, severity distribution, EPSS/KEV enrichment",
           "Attack Paths and Verification Tests — exploitation chains, validation procedures, and expected results",
           "Mitigations — controls per threat, implementation guidance, framework references, and remediation priorities",
+          "Remediation Roadmap — prioritized by risk_score, with suggested owners and timelines",
+          "Quality Assurance Summary — QA findings resolved, warnings acknowledged, enrichment coverage",
           "Gaps and Assumptions Register — every unknown, every assumption, impact if wrong"
         ],
         "instructions": "Before calling wkfl_export_report, store these keys via wkfl_store_state: evidence_manifest (Phase 0 bundle), scope_and_dfd (Phase 1 output bundle containing at least system_name, components, dfd_markdown, and any document_citations/documents_reviewed), scope_gap_analysis (Phase 1b bundle containing scope_readiness, client_questions, and any client_attestations), threats (canonical retained threat list after enrichment and calibration), coverage_matrix, attack_paths, verification_tests, threat_mitigations, gaps, and optionally document_citations at the top level. Legacy flattened keys like system_name, components, dfd_markdown, and stride_threats are also accepted for backwards compatibility, but the report should prefer the canonical retained threat list. Then call wkfl_export_report to assemble. Populate threat_summary with the Threat[] array for the frontend ThreatSummary component via message.metadata.threat_summary."

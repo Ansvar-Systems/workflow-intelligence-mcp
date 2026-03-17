@@ -1,0 +1,1006 @@
+{
+  "id": "vendor_risk_assessment",
+  "name": "Vendor Risk Assessment",
+  "category": "tprm",
+  "version": "1.0",
+  "standalone": true,
+  "used_in_workflows": [],
+  "dependencies": [],
+  "description": "Full vendor risk assessment. Industry-agnostic — authority detection determines applicable frameworks (DORA, EBA, GDPR, NIS2, ISO 27001, PCI DSS, etc.). Questionnaire generation from detected frameworks, document-based baseline assessment, parallel expert delegation, external validation against third-party data sources, per-domain risk scoring with worst-domain-wins aggregation, and structured deliverables including vendor scorecard, findings register, remediation requirements, and contractual checklist. Accepts prior triage state for zero-rework handoff. Sub-processor chain assessment when DORA or GDPR detected.",
+  "estimated_duration": "30-120 min",
+  "authority_detection": {
+    "signals": {
+      "DORA_ICT": ["ICT services", "critical function", "important function", "DORA", "digital operational resilience", "2022/2554"],
+      "EBA_OUTSOURCING": ["EBA", "outsourcing arrangement", "cloud outsourcing", "material outsourcing", "GL/2019/04"],
+      "GDPR_PROCESSOR": ["personal data", "processor", "sub-processor", "data processing agreement", "DPA", "Art. 28"],
+      "NIS2_SUPPLY_CHAIN": ["essential entity", "important entity", "NIS2", "supply chain security", "2022/2555"],
+      "ISO_27001": ["ISO 27001", "ISO27001", "ISMS", "information security management", "Annex A"],
+      "SOC2": ["SOC 2", "SOC2", "trust services criteria", "AICPA"],
+      "PCI_DSS": ["PCI", "PCI DSS", "cardholder data", "payment card"],
+      "CRA": ["CRA", "Cyber Resilience Act", "product with digital elements"],
+      "HIPAA": ["HIPAA", "protected health information", "covered entity", "business associate"],
+      "NIST_CSF": ["NIST CSF", "cybersecurity framework", "NIST 800-53"],
+      "NIST_SCRM": ["NIST 800-161", "supply chain risk management", "C-SCRM"]
+    },
+    "authority_expert_hints": {
+      "DORA_ICT": ["dora-expert", "banking-expert"],
+      "EBA_OUTSOURCING": ["banking-expert"],
+      "GDPR_PROCESSOR": ["gdpr-expert"],
+      "NIS2_SUPPLY_CHAIN": ["nis2-expert"],
+      "ISO_27001": ["controls-mapper"],
+      "SOC2": ["controls-mapper"],
+      "PCI_DSS": ["controls-mapper"],
+      "CRA": ["cra-expert"],
+      "HIPAA": ["healthcare-expert"],
+      "NIST_CSF": ["controls-mapper"],
+      "NIST_SCRM": ["controls-mapper"]
+    }
+  },
+  "vendor_risk_entry_schema": {
+    "type": "object",
+    "properties": {
+      "domain": {
+        "type": "string",
+        "enum": ["information_security", "data_protection", "business_continuity", "contractual", "financial_stability", "regulatory_compliance", "concentration_risk"],
+        "description": "Risk assessment domain. Used for per-domain scoring and worst-domain-wins aggregation."
+      },
+      "requirement_id": {
+        "type": "string",
+        "description": "Identifier for the specific requirement (e.g., 'DORA_ICT_Art.28(2)', 'ISO27001_A.5.19', 'GDPR_Art.28(3)(a)')."
+      },
+      "requirement_text": {
+        "type": "string",
+        "description": "The requirement text, sourced from MCP tool call, questionnaire, or uploaded document. Verbatim where possible."
+      },
+      "framework_ref": {
+        "type": "string",
+        "description": "Framework or authority reference (e.g., 'DORA 2022/2554', 'ISO 27001:2022 Annex A', 'GDPR Art. 28')."
+      },
+      "source_kind": {
+        "type": "string",
+        "enum": ["mcp_grounded", "external_validated", "document_extracted", "user_specified", "assumed"],
+        "description": "How this requirement was sourced. mcp_grounded = from a regulatory/standards MCP. external_validated = corroborated by external intelligence. document_extracted = from an uploaded vendor document. user_specified = user named it directly. assumed = inferred by the analyst."
+      },
+      "source_ref": {
+        "type": "string",
+        "description": "Traceability reference — MCP tool name + arguments, or doc_id + section_ref. Enables verification."
+      },
+      "vendor_response": {
+        "type": "string",
+        "description": "The vendor's response to this requirement, from questionnaire response or document content."
+      },
+      "verdict": {
+        "type": "string",
+        "enum": ["adequate", "partially_adequate", "inadequate", "not_addressed", "not_applicable", "requires_verification"],
+        "description": "Assessment verdict. adequate = requirement met with evidence. partially_adequate = partial evidence, gaps remain. inadequate = evidence contradicts or fails requirement. not_addressed = no evidence found. not_applicable = excluded per scope. requires_verification = needs on-site/interview verification."
+      },
+      "evidence_refs": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "doc_id": { "type": "string" },
+            "section_ref": { "type": "string" },
+            "filename": { "type": "string" },
+            "verbatim_quote": { "type": "string" },
+            "evidence_type": {
+              "type": "string",
+              "enum": ["policy_evidence", "procedural_evidence", "record_evidence", "certification_evidence"]
+            }
+          },
+          "required": ["doc_id", "section_ref"]
+        },
+        "description": "Document evidence backing the verdict. Every adequate verdict must have at least one entry with a verbatim_quote."
+      },
+      "external_validation": {
+        "type": "object",
+        "properties": {
+          "source": { "type": "string", "description": "External data source (e.g., 'vendor-intelligence-mcp', 'cve-mcp', 'sanctions-mcp')" },
+          "finding": { "type": "string", "description": "What the external source reported" },
+          "corroborates": { "type": "boolean", "description": "Whether the external finding supports the vendor's claim" }
+        },
+        "description": "External validation result from third-party data sources."
+      },
+      "gap_description": {
+        "type": "string",
+        "description": "For partially_adequate, inadequate, and not_addressed verdicts — what is missing and why it matters."
+      },
+      "remediation_requirement": {
+        "type": "string",
+        "description": "Concrete remediation requirement for the vendor. What the vendor must do, with a specific deliverable."
+      },
+      "risk_impact": {
+        "type": "string",
+        "enum": ["critical", "high", "medium", "low"],
+        "description": "Impact if this requirement remains unmet."
+      },
+      "confidence": {
+        "type": "string",
+        "enum": ["high", "medium", "low"],
+        "description": "Assessment confidence. high = MCP-grounded + verbatim evidence. medium = one side inferred. low = both sides inferred or assumed."
+      },
+      "sub_processor_relevant": {
+        "type": "boolean",
+        "description": "True if this requirement relates to the vendor's sub-processor chain (DORA Art. 29, GDPR Art. 28(2))."
+      },
+      "language": {
+        "type": "string",
+        "description": "ISO 639-1 code for the language of the requirement_text and evidence_refs."
+      }
+    },
+    "required": [
+      "domain", "requirement_id", "requirement_text",
+      "source_kind", "verdict", "confidence"
+    ],
+    "if": {
+      "properties": { "source_kind": { "enum": ["mcp_grounded", "document_extracted", "external_validated"] } }
+    },
+    "then": {
+      "required": ["source_ref"]
+    }
+  },
+  "scoring_model": {
+    "verdict_scores": {
+      "adequate": 1.0,
+      "partially_adequate": 0.5,
+      "inadequate": 0.0,
+      "not_addressed": 0.0,
+      "not_applicable": null,
+      "requires_verification": null
+    },
+    "tier_thresholds": {
+      "low": 0.80,
+      "medium": 0.50,
+      "high": 0.20,
+      "critical": 0.0
+    },
+    "domain_weights_default": {
+      "information_security": 1.0,
+      "data_protection": 0.8,
+      "business_continuity": 0.8,
+      "contractual": 0.6,
+      "financial_stability": 0.4,
+      "regulatory_compliance": 0.6,
+      "concentration_risk": 0.4
+    },
+    "rules": [
+      "overall_tier = max(domain_tiers)",
+      "overall_score = weighted_average(domain_scores, domain_weights)",
+      "denominator excludes not_applicable and requires_verification",
+      "requires_verification > 30% triggers soft warning"
+    ]
+  },
+  "mcp_tools": [
+    {
+      "mcp": "document-index-mcp",
+      "tools": ["docidx_index_document", "docidx_search", "docidx_get_section", "docidx_get_document", "docidx_list_documents", "docidx_get_surrounding"],
+      "when": "phase_1_intake, phase_3_baseline",
+      "guidance": "Index all uploaded vendor documents in Phase 1 (SOC 2 reports, ISO certificates, pentest reports, security questionnaire responses, DPAs, BAAs). In Phase 3, search indexed content for evidence against each questionnaire requirement. Only content retrieved via these tools counts as document evidence."
+    },
+    {
+      "mcp": "vendor-intelligence-mcp",
+      "tools": ["search_vendors", "assess_vendor_risk"],
+      "when": "phase_1_intake, phase_5_external_validation",
+      "guidance": "Use search_vendors in Phase 1 to retrieve known vendor intelligence and enrich vendor_profile. Use assess_vendor_risk in Phase 5 to pull automated risk signals for external validation. Record findings with source_kind 'external_validated'."
+    },
+    {
+      "mcp": "gleif-mcp",
+      "tools": ["search_entities", "get_entity"],
+      "when": "phase_1_intake",
+      "guidance": "Non-blocking LEI lookup. Use search_entities with vendor legal name. If match found, call get_entity for full LEI record. Record lei and lei_status in vendor_profile. If no match, set lei_status to 'not_found' — LEI absence is a risk signal, not a blocker."
+    },
+    {
+      "mcp": "sanctions-mcp",
+      "tools": ["screen_entity", "search_sanctions"],
+      "when": "phase_1_intake, phase_5_external_validation",
+      "guidance": "Blocking on positive match in Phase 1. Use screen_entity with vendor name and country. Confirmed sanctions match is a blocking finding — record in findings_register with verdict 'inadequate' and risk_impact 'critical'. In Phase 5, re-screen if vendor profile was enriched with aliases or subsidiaries."
+    },
+    {
+      "mcp": "tprm-frameworks-mcp",
+      "tools": ["generate_questionnaire", "evaluate_responses", "map_compliance", "list_frameworks", "get_framework", "get_question", "search_questions", "compare_frameworks", "get_domain_questions", "list_domains", "get_scoring_criteria", "validate_response", "get_control_mapping", "export_assessment", "get_assessment_template", "list_assessment_templates"],
+      "when": "phase_2_authority_questionnaire, phase_3_baseline, phase_6_merge_score",
+      "guidance": "Primary TPRM framework source. In Phase 2, use generate_questionnaire with detected authorities to produce the assessment questionnaire. Use get_domain_questions for domain-specific requirement sets. In Phase 3, use evaluate_responses and validate_response to assess vendor evidence against requirements. In Phase 6, use get_scoring_criteria for domain scoring and export_assessment for structured output."
+    },
+    {
+      "mcp": "security-controls-mcp",
+      "tools": ["search_controls", "get_control", "map_frameworks", "get_framework_controls"],
+      "when": "phase_2_authority_questionnaire, phase_4_expert_challenge",
+      "guidance": "Use in Phase 2 to map detected frameworks to specific control requirements (ISO 27001, NIST CSF, SOC 2). In Phase 4, experts use map_frameworks for cross-framework control mapping and get_control for detailed control guidance."
+    },
+    {
+      "mcp": "eu-regulations-mcp",
+      "tools": ["get_article", "search_regulations", "get_definitions", "check_applicability", "get_evidence_requirements"],
+      "when": "phase_2_authority_questionnaire, phase_4_expert_challenge",
+      "guidance": "Primary grounding source for EU regulatory requirements (DORA, GDPR, NIS2, CRA). Use get_article for specific provisions (e.g., 'DORA Article 28', 'GDPR Article 28'). Use check_applicability to confirm whether a regulation applies to the vendor relationship. Use get_evidence_requirements for framework-specific evidence needs."
+    },
+    {
+      "mcp": "law-mcp-proxy",
+      "tools": ["law_search_legislation", "law_get_provision", "law_list_legislation"],
+      "when": "phase_4_expert_challenge",
+      "guidance": "For jurisdiction-specific legal requirements that extend framework obligations. Experts use law_search_legislation to find national implementation laws (e.g., German BSIG for NIS2, Dutch Wbni). Use law_get_provision for specific provisions."
+    },
+    {
+      "mcp": "cve-mcp",
+      "tools": ["search_cves"],
+      "when": "phase_5_external_validation",
+      "guidance": "Only when CPE identifiers are available from vendor_profile or document extraction. Search for known vulnerabilities in vendor products. Record findings in external_validations with fidelity assessment. Skip if no CPE data — do not guess product identifiers."
+    },
+    {
+      "mcp": "supply-chain-security-mcp",
+      "tools": ["search_supply_chain_controls", "get_supply_chain_control"],
+      "when": "phase_4_expert_challenge",
+      "guidance": "For supply chain risk requirements when NIS2, DORA, or NIST_SCRM authorities are detected. Use search_supply_chain_controls for supply chain-specific control requirements. Cross-reference with sub-processor chain findings."
+    },
+    {
+      "mcp": "workflow-intelligence-mcp",
+      "tools": ["wkfl_store_state", "wkfl_load_state", "wkfl_list_states", "wkfl_export_report", "wkfl_check_stage_completeness", "wkfl_get_task_definition"],
+      "when": "all_phases",
+      "guidance": "Call wkfl_list_states on every message for session resume. Store phase outputs after each phase completes. Use wkfl_check_stage_completeness before advancing phases. Use wkfl_get_task_definition with phase parameter to load phase-specific guidance. Call wkfl_export_report in Phase 7 to assemble the final deliverable."
+    }
+  ],
+  "prompting_guidance": "WORKFLOW INSTRUCTIONS FOR VENDOR RISK ASSESSMENT ORCHESTRATOR:\n\n1. RESUME CHECK: Call wkfl_list_states on every message. If prior state exists, load the last completed phase and resume from the next phase. Never restart from scratch.\n\n2. TRIAGE HANDOFF (Phase 1): If intake_from_triage is set, load the referenced triage state. Import org_profile, vendor_profile, and documents directly — these are designed for zero-rework handoff. Skip LEI lookup and sanctions screening already completed in triage. If no triage state exists, run full Phase 1 intake (identity verification, document indexing, profile building).\n\n3. AUTHORITY DETECTION (Phase 2): Scan user request, org_profile sector, vendor_profile service_description, and all indexed documents for authority signals using the authority_detection map. Each detected authority gets an entry in detected_authorities with authority_id, authority_type, detection_signals, and confidence. If DORA_ICT or GDPR_PROCESSOR is detected, set sub_processor_relevant: true on the authority and inject sub-processor chain questions into the questionnaire.\n\n4. QUESTIONNAIRE GENERATION (Phase 2): Use generate_questionnaire from tprm-frameworks-mcp with detected authority IDs. The questionnaire covers all detected frameworks in domain-organized sections. Use get_domain_questions for domain-specific deep dives. Total questions depend on authority scope — expect 30-80 for a typical multi-framework assessment.\n\n5. SUB-PROCESSOR INJECTION: When DORA_ICT or GDPR_PROCESSOR is detected, add sub-processor chain questions to the questionnaire: sub-processor register, notification obligations (DORA Art. 29(2)), right to object (GDPR Art. 28(2)), audit rights over sub-processors, geographic restrictions, and incident propagation chain. Mark these entries with sub_processor_relevant: true.\n\n6. BASELINE ASSESSMENT (Phase 3): Assess each questionnaire requirement against indexed vendor documents. For each requirement, search documents for relevant evidence, extract verbatim quotes, and produce a vendor_risk_entry with verdict, evidence_refs, and confidence. This phase runs before expert delegation — it produces the document-only baseline that experts then challenge.\n\n7. PARALLEL EXPERT DELEGATION (Phase 4): Discover relevant experts via list_delegatable_agents. Cross-reference with authority_expert_hints from this task definition. Select up to 6 experts (cap). Delegate in parallel — each expert receives: detected authorities in their scope, baseline entries for those authorities, vendor_profile, and indexed document IDs. Experts return challenged entries with upgraded source_kind (mcp_grounded > document_extracted). If an expert fails or times out, log the failure and let baseline entries stand. SSE progress events: delegating_batch (at dispatch), specialist_complete (per expert, with success field).\n\n8. EXTERNAL VALIDATION (Phase 5): Run external checks against third-party data sources. vendor-intelligence-mcp for risk signals, cve-mcp for vulnerability exposure (only with CPE data), sanctions-mcp for re-screening if vendor profile was enriched. Record each finding in external_validations with source, finding, corroborates boolean, related_requirement_id, and fidelity (high/medium/low based on source reliability and data freshness). External validation can upgrade or downgrade verdict confidence but does not change the verdict itself — record the validation and flag discrepancies.\n\n9. SCORING RULES (Phase 6): Calculate per-domain scores using the scoring_model. For each domain: domain_score = sum(verdict_scores) / denominator. Denominator excludes not_applicable and requires_verification entries. Map domain_score to tier via tier_thresholds (>= 0.80 = low, >= 0.50 = medium, >= 0.20 = high, < 0.20 = critical). Overall tier = worst domain tier (worst-domain-wins). Overall weighted score = weighted average of domain scores using domain_weights_default. If requires_verification entries exceed 30% of total entries, add a soft warning. Set concentration_risk_flag if the vendor provides services to > 30% of the organization's critical functions.\n\n10. EVIDENCE RULES:\n- Every adequate verdict MUST have evidence_refs with at least one verbatim_quote.\n- Every partially_adequate verdict MUST have gap_description explaining what is missing.\n- Every inadequate verdict MUST have gap_description AND remediation_requirement.\n- Every not_addressed verdict MUST have gap_description AND remediation_requirement.\n- Every mcp_grounded, document_extracted, or external_validated entry MUST have source_ref.\n- Certification evidence (ISO certificates, SOC 2 reports) uses evidence_type: certification_evidence.\n\n11. LANGUAGE: Respond in the user's language. Legal entity names and regulatory citations in their original form. requirement_text and evidence in their source language.\n\n12. STATE PERSISTENCE: Store phase outputs via wkfl_store_state after each phase completes. The full assessment state supports export to vendor scorecard, findings register, remediation requirements, and contractual checklist.",
+  "stage_state_schema": {
+    "type": "object",
+    "properties": {
+      "intake_from_triage": {
+        "type": "string",
+        "description": "Assessment ID of a completed vendor_risk_triage. When set, Phase 1 imports triage state for zero-rework handoff."
+      },
+      "org_profile": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "sector": { "type": "string" },
+          "jurisdiction": { "type": "string" },
+          "vendor_portfolio": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        }
+      },
+      "vendor_profile": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "legal_name": { "type": "string" },
+          "lei": { "type": "string" },
+          "lei_status": {
+            "type": "string",
+            "enum": ["active", "inactive", "lapsed", "not_found", "not_checked"]
+          },
+          "sanctions_status": {
+            "type": "string",
+            "enum": ["clear", "match", "inconclusive", "not_checked"]
+          },
+          "sanctions_details": { "type": "string" },
+          "country": { "type": "string" },
+          "sector": { "type": "string" },
+          "service_description": { "type": "string" },
+          "certifications": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "breach_history": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "date": { "type": "string" },
+                "description": { "type": "string" },
+                "severity": { "type": "string" },
+                "source": { "type": "string" }
+              }
+            }
+          },
+          "cve_exposure": {
+            "type": "object",
+            "properties": {
+              "cpe_identifiers": { "type": "array", "items": { "type": "string" } },
+              "critical_cves": { "type": "integer" },
+              "high_cves": { "type": "integer" },
+              "total_cves": { "type": "integer" },
+              "last_checked": { "type": "string" }
+            }
+          },
+          "financial_indicators": {
+            "type": "object",
+            "properties": {
+              "revenue_range": { "type": "string" },
+              "employee_count": { "type": "string" },
+              "year_founded": { "type": "string" },
+              "publicly_traded": { "type": "boolean" }
+            }
+          }
+        }
+      },
+      "documents": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "doc_id": { "type": "string" },
+            "filename": { "type": "string" },
+            "sections_count": { "type": "integer" },
+            "document_type": {
+              "type": "string",
+              "enum": ["soc2_report", "iso_certificate", "pentest_report", "security_questionnaire", "privacy_policy", "contract", "dpa", "baa", "other"]
+            }
+          },
+          "required": ["doc_id", "filename"]
+        }
+      },
+      "detected_authorities": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "authority_id": { "type": "string" },
+            "authority_type": {
+              "type": "string",
+              "enum": ["law", "regulation", "directive", "standard", "contract", "policy", "custom"]
+            },
+            "authority_title": { "type": "string" },
+            "detection_signals": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "confidence": { "type": "string", "enum": ["high", "medium", "low"] },
+            "sub_processor_relevant": { "type": "boolean" }
+          },
+          "required": ["authority_id", "authority_type", "authority_title"]
+        }
+      },
+      "questionnaire": {
+        "type": "object",
+        "properties": {
+          "framework_sources": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Frameworks that contributed questions to this questionnaire."
+          },
+          "sections": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "domain": {
+                  "type": "string",
+                  "enum": ["information_security", "data_protection", "business_continuity", "contractual", "financial_stability", "regulatory_compliance", "concentration_risk"]
+                },
+                "questions": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "requirement_id": { "type": "string" },
+                      "requirement_text": { "type": "string" },
+                      "framework_ref": { "type": "string" },
+                      "sub_processor_relevant": { "type": "boolean" }
+                    },
+                    "required": ["requirement_id", "requirement_text"]
+                  }
+                }
+              },
+              "required": ["domain", "questions"]
+            }
+          },
+          "total_questions": { "type": "integer" }
+        }
+      },
+      "baseline_entries": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "domain": {
+              "type": "string",
+              "enum": ["information_security", "data_protection", "business_continuity", "contractual", "financial_stability", "regulatory_compliance", "concentration_risk"]
+            },
+            "requirement_id": { "type": "string" },
+            "requirement_text": { "type": "string" },
+            "framework_ref": { "type": "string" },
+            "source_kind": {
+              "type": "string",
+              "enum": ["mcp_grounded", "external_validated", "document_extracted", "user_specified", "assumed"]
+            },
+            "source_ref": { "type": "string" },
+            "vendor_response": { "type": "string" },
+            "verdict": {
+              "type": "string",
+              "enum": ["adequate", "partially_adequate", "inadequate", "not_addressed", "not_applicable", "requires_verification"]
+            },
+            "evidence_refs": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "doc_id": { "type": "string" },
+                  "section_ref": { "type": "string" },
+                  "filename": { "type": "string" },
+                  "verbatim_quote": { "type": "string" },
+                  "evidence_type": {
+                    "type": "string",
+                    "enum": ["policy_evidence", "procedural_evidence", "record_evidence", "certification_evidence"]
+                  }
+                },
+                "required": ["doc_id", "section_ref"]
+              }
+            },
+            "external_validation": {
+              "type": "object",
+              "properties": {
+                "source": { "type": "string" },
+                "finding": { "type": "string" },
+                "corroborates": { "type": "boolean" }
+              }
+            },
+            "gap_description": { "type": "string" },
+            "remediation_requirement": { "type": "string" },
+            "risk_impact": { "type": "string", "enum": ["critical", "high", "medium", "low"] },
+            "confidence": { "type": "string", "enum": ["high", "medium", "low"] },
+            "sub_processor_relevant": { "type": "boolean" },
+            "language": { "type": "string" }
+          },
+          "required": [
+            "domain", "requirement_id", "requirement_text",
+            "source_kind", "verdict", "confidence"
+          ]
+        }
+      },
+      "experts_used": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "agent_id": { "type": "string" },
+            "display_name": { "type": "string" },
+            "authority_ids": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "status": {
+              "type": "string",
+              "enum": ["delegated", "complete", "failed", "skipped"]
+            },
+            "entries_count": { "type": "integer" }
+          },
+          "required": ["agent_id", "status"]
+        }
+      },
+      "external_validations": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "source": { "type": "string" },
+            "finding": { "type": "string" },
+            "corroborates": { "type": "boolean" },
+            "related_requirement_id": { "type": "string" },
+            "fidelity": {
+              "type": "string",
+              "enum": ["high", "medium", "low"],
+              "description": "Reliability of the external validation based on source freshness and data quality."
+            }
+          },
+          "required": ["source", "finding", "corroborates"]
+        }
+      },
+      "findings_register": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "domain": {
+              "type": "string",
+              "enum": ["information_security", "data_protection", "business_continuity", "contractual", "financial_stability", "regulatory_compliance", "concentration_risk"]
+            },
+            "requirement_id": { "type": "string" },
+            "requirement_text": { "type": "string" },
+            "framework_ref": { "type": "string" },
+            "source_kind": {
+              "type": "string",
+              "enum": ["mcp_grounded", "external_validated", "document_extracted", "user_specified", "assumed"]
+            },
+            "source_ref": { "type": "string" },
+            "vendor_response": { "type": "string" },
+            "verdict": {
+              "type": "string",
+              "enum": ["adequate", "partially_adequate", "inadequate", "not_addressed", "not_applicable", "requires_verification"]
+            },
+            "evidence_refs": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "doc_id": { "type": "string" },
+                  "section_ref": { "type": "string" },
+                  "filename": { "type": "string" },
+                  "verbatim_quote": { "type": "string" },
+                  "evidence_type": {
+                    "type": "string",
+                    "enum": ["policy_evidence", "procedural_evidence", "record_evidence", "certification_evidence"]
+                  }
+                },
+                "required": ["doc_id", "section_ref"]
+              }
+            },
+            "external_validation": {
+              "type": "object",
+              "properties": {
+                "source": { "type": "string" },
+                "finding": { "type": "string" },
+                "corroborates": { "type": "boolean" }
+              }
+            },
+            "gap_description": { "type": "string" },
+            "remediation_requirement": { "type": "string" },
+            "risk_impact": { "type": "string", "enum": ["critical", "high", "medium", "low"] },
+            "confidence": { "type": "string", "enum": ["high", "medium", "low"] },
+            "sub_processor_relevant": { "type": "boolean" },
+            "language": { "type": "string" }
+          },
+          "required": [
+            "domain", "requirement_id", "requirement_text",
+            "source_kind", "verdict", "confidence"
+          ]
+        }
+      },
+      "superseded_entries": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "domain": {
+              "type": "string",
+              "enum": ["information_security", "data_protection", "business_continuity", "contractual", "financial_stability", "regulatory_compliance", "concentration_risk"]
+            },
+            "requirement_id": { "type": "string" },
+            "requirement_text": { "type": "string" },
+            "framework_ref": { "type": "string" },
+            "source_kind": {
+              "type": "string",
+              "enum": ["mcp_grounded", "external_validated", "document_extracted", "user_specified", "assumed"]
+            },
+            "source_ref": { "type": "string" },
+            "vendor_response": { "type": "string" },
+            "verdict": {
+              "type": "string",
+              "enum": ["adequate", "partially_adequate", "inadequate", "not_addressed", "not_applicable", "requires_verification"]
+            },
+            "evidence_refs": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "doc_id": { "type": "string" },
+                  "section_ref": { "type": "string" },
+                  "filename": { "type": "string" },
+                  "verbatim_quote": { "type": "string" },
+                  "evidence_type": {
+                    "type": "string",
+                    "enum": ["policy_evidence", "procedural_evidence", "record_evidence", "certification_evidence"]
+                  }
+                },
+                "required": ["doc_id", "section_ref"]
+              }
+            },
+            "external_validation": {
+              "type": "object",
+              "properties": {
+                "source": { "type": "string" },
+                "finding": { "type": "string" },
+                "corroborates": { "type": "boolean" }
+              }
+            },
+            "gap_description": { "type": "string" },
+            "remediation_requirement": { "type": "string" },
+            "risk_impact": { "type": "string", "enum": ["critical", "high", "medium", "low"] },
+            "confidence": { "type": "string", "enum": ["high", "medium", "low"] },
+            "sub_processor_relevant": { "type": "boolean" },
+            "language": { "type": "string" }
+          },
+          "required": [
+            "domain", "requirement_id", "requirement_text",
+            "source_kind", "verdict", "confidence"
+          ]
+        }
+      },
+      "domain_scores": {
+        "type": "object",
+        "properties": {
+          "information_security": {
+            "type": "object",
+            "properties": {
+              "tier": { "type": "string", "enum": ["low", "medium", "high", "critical"] },
+              "score": { "type": "number" },
+              "weight": { "type": "number" },
+              "total_entries": { "type": "integer" },
+              "denominator_count": { "type": "integer" },
+              "adequate_count": { "type": "integer" },
+              "partially_adequate_count": { "type": "integer" },
+              "inadequate_count": { "type": "integer" },
+              "not_addressed_count": { "type": "integer" },
+              "not_applicable_count": { "type": "integer" },
+              "requires_verification_count": { "type": "integer" }
+            }
+          },
+          "data_protection": {
+            "type": "object",
+            "properties": {
+              "tier": { "type": "string", "enum": ["low", "medium", "high", "critical"] },
+              "score": { "type": "number" },
+              "weight": { "type": "number" },
+              "total_entries": { "type": "integer" },
+              "denominator_count": { "type": "integer" },
+              "adequate_count": { "type": "integer" },
+              "partially_adequate_count": { "type": "integer" },
+              "inadequate_count": { "type": "integer" },
+              "not_addressed_count": { "type": "integer" },
+              "not_applicable_count": { "type": "integer" },
+              "requires_verification_count": { "type": "integer" }
+            }
+          },
+          "business_continuity": {
+            "type": "object",
+            "properties": {
+              "tier": { "type": "string", "enum": ["low", "medium", "high", "critical"] },
+              "score": { "type": "number" },
+              "weight": { "type": "number" },
+              "total_entries": { "type": "integer" },
+              "denominator_count": { "type": "integer" },
+              "adequate_count": { "type": "integer" },
+              "partially_adequate_count": { "type": "integer" },
+              "inadequate_count": { "type": "integer" },
+              "not_addressed_count": { "type": "integer" },
+              "not_applicable_count": { "type": "integer" },
+              "requires_verification_count": { "type": "integer" }
+            }
+          },
+          "contractual": {
+            "type": "object",
+            "properties": {
+              "tier": { "type": "string", "enum": ["low", "medium", "high", "critical"] },
+              "score": { "type": "number" },
+              "weight": { "type": "number" },
+              "total_entries": { "type": "integer" },
+              "denominator_count": { "type": "integer" },
+              "adequate_count": { "type": "integer" },
+              "partially_adequate_count": { "type": "integer" },
+              "inadequate_count": { "type": "integer" },
+              "not_addressed_count": { "type": "integer" },
+              "not_applicable_count": { "type": "integer" },
+              "requires_verification_count": { "type": "integer" }
+            }
+          },
+          "financial_stability": {
+            "type": "object",
+            "properties": {
+              "tier": { "type": "string", "enum": ["low", "medium", "high", "critical"] },
+              "score": { "type": "number" },
+              "weight": { "type": "number" },
+              "total_entries": { "type": "integer" },
+              "denominator_count": { "type": "integer" },
+              "adequate_count": { "type": "integer" },
+              "partially_adequate_count": { "type": "integer" },
+              "inadequate_count": { "type": "integer" },
+              "not_addressed_count": { "type": "integer" },
+              "not_applicable_count": { "type": "integer" },
+              "requires_verification_count": { "type": "integer" }
+            }
+          },
+          "regulatory_compliance": {
+            "type": "object",
+            "properties": {
+              "tier": { "type": "string", "enum": ["low", "medium", "high", "critical"] },
+              "score": { "type": "number" },
+              "weight": { "type": "number" },
+              "total_entries": { "type": "integer" },
+              "denominator_count": { "type": "integer" },
+              "adequate_count": { "type": "integer" },
+              "partially_adequate_count": { "type": "integer" },
+              "inadequate_count": { "type": "integer" },
+              "not_addressed_count": { "type": "integer" },
+              "not_applicable_count": { "type": "integer" },
+              "requires_verification_count": { "type": "integer" }
+            }
+          },
+          "concentration_risk": {
+            "type": "object",
+            "properties": {
+              "tier": { "type": "string", "enum": ["low", "medium", "high", "critical"] },
+              "score": { "type": "number" },
+              "weight": { "type": "number" },
+              "total_entries": { "type": "integer" },
+              "denominator_count": { "type": "integer" },
+              "adequate_count": { "type": "integer" },
+              "partially_adequate_count": { "type": "integer" },
+              "inadequate_count": { "type": "integer" },
+              "not_addressed_count": { "type": "integer" },
+              "not_applicable_count": { "type": "integer" },
+              "requires_verification_count": { "type": "integer" }
+            }
+          }
+        },
+        "description": "Per-domain risk scores with verdict distribution. Each domain maps to a tier via scoring_model.tier_thresholds."
+      },
+      "overall_score": {
+        "type": "object",
+        "properties": {
+          "tier": {
+            "type": "string",
+            "enum": ["low", "medium", "high", "critical"],
+            "description": "Overall vendor risk tier — worst-domain-wins."
+          },
+          "weighted_score": {
+            "type": "number",
+            "description": "Weighted average of domain scores using domain_weights_default."
+          },
+          "worst_domain": {
+            "type": "string",
+            "description": "Domain that determined the overall tier."
+          },
+          "concentration_risk_flag": {
+            "type": "boolean",
+            "description": "True if vendor provides services to > 30% of organization's critical functions."
+          }
+        }
+      },
+      "scope_and_methodology": {
+        "type": "object",
+        "properties": {
+          "assessment_date": { "type": "string" },
+          "frameworks_assessed": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "documents_analyzed": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "experts_consulted": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "external_sources_used": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "methodology": { "type": "string" },
+          "limitations": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        }
+      },
+      "report_ready": { "type": "boolean" }
+    },
+    "additionalProperties": false
+  },
+  "completion_criteria": {
+    "required_fields": [
+      { "field": "vendor_profile", "rule": "exists", "message": "Vendor profile must be recorded" },
+      { "field": "detected_authorities", "rule": "min_count", "value": 1, "message": "At least one regulatory authority must be detected" },
+      { "field": "baseline_entries", "rule": "min_count", "value": 1, "message": "At least one baseline entry must be produced" },
+      { "field": "findings_register", "rule": "min_count", "value": 1, "message": "Findings register must contain at least one entry" },
+      { "field": "domain_scores", "rule": "exists", "message": "Per-domain risk scores must be calculated" },
+      { "field": "overall_score", "rule": "exists", "message": "Overall vendor risk score must be calculated" },
+      { "field": "scope_and_methodology", "rule": "exists", "message": "Scope and methodology must be recorded" },
+      { "field": "report_ready", "rule": "equals", "value": true, "message": "Report must be marked as ready" }
+    ],
+    "rules": [
+      {
+        "id": "adequate_has_evidence",
+        "description": "Every adequate verdict must have at least one evidence reference with a verbatim quote",
+        "severity": "required",
+        "message_template": "Entry '{requirement_id}' is marked adequate but has no evidence references"
+      },
+      {
+        "id": "partially_adequate_has_gap",
+        "description": "Every partially_adequate verdict must include a gap_description",
+        "severity": "required",
+        "message_template": "Entry '{requirement_id}' is marked partially_adequate but has no gap description"
+      },
+      {
+        "id": "inadequate_has_gap_and_remediation",
+        "description": "Every inadequate verdict must have gap_description and remediation_requirement",
+        "severity": "required",
+        "message_template": "Entry '{requirement_id}' is marked inadequate but missing gap description or remediation requirement"
+      },
+      {
+        "id": "not_addressed_has_gap_and_remediation",
+        "description": "Every not_addressed verdict must have gap_description and remediation_requirement",
+        "severity": "required",
+        "message_template": "Entry '{requirement_id}' is marked not_addressed but missing gap description or remediation requirement"
+      },
+      {
+        "id": "tprm_grounded_has_source_ref",
+        "description": "Every entry with source_kind mcp_grounded, document_extracted, or external_validated must have a source_ref",
+        "severity": "required",
+        "message_template": "Entry '{requirement_id}' has source_kind '{source_kind}' but no source_ref"
+      }
+    ],
+    "soft_warnings": [
+      { "field": "findings_register", "rule": "min_count", "value": 10, "message": "Most vendor assessments produce 10+ findings — verify coverage is complete" },
+      { "field": "experts_used", "rule": "min_count", "value": 1, "message": "No experts were consulted — assessment relies entirely on document-extracted baseline" }
+    ]
+  },
+  "quality_rubric": {
+    "findings_register": {
+      "per_item": {
+        "gap_description": {
+          "min_words": 5,
+          "severity": "warning",
+          "message": "Finding for '{requirement_id}' has a vague gap description. Specify what is missing and the risk impact."
+        },
+        "remediation_requirement": {
+          "min_words": 5,
+          "severity": "warning",
+          "message": "Remediation for '{requirement_id}' should be a concrete deliverable, not a vague recommendation."
+        }
+      }
+    }
+  },
+  "phases": [
+    {
+      "id": "phase_1_intake",
+      "name": "Intake & Vendor Identification",
+      "description": "If intake_from_triage is set, import triage state (org_profile, vendor_profile, documents) for zero-rework handoff. Otherwise, run full intake: verify vendor identity via GLEIF LEI lookup and sanctions screening, index all uploaded vendor documents, build vendor_profile and org_profile. Sanctions match is blocking.",
+      "completion_criteria": {
+        "required_fields": [
+          { "field": "vendor_profile", "rule": "exists", "message": "Vendor profile must be recorded with identity verification results" }
+        ],
+        "rules": [],
+        "soft_warnings": [
+          { "field": "documents", "rule": "min_count", "value": 1, "message": "No vendor documents indexed — assessment will rely on external sources and expert judgment" }
+        ]
+      },
+      "quality_rubric": {}
+    },
+    {
+      "id": "phase_2_authority_questionnaire",
+      "name": "Authority Detection & Questionnaire Generation",
+      "description": "Scan all available context (user request, org_profile sector, vendor_profile service_description, indexed documents) for authority signals. Generate assessment questionnaire from detected frameworks via tprm-frameworks-mcp. Inject sub-processor chain questions when DORA_ICT or GDPR_PROCESSOR detected.",
+      "completion_criteria": {
+        "required_fields": [
+          { "field": "detected_authorities", "rule": "min_count", "value": 1, "message": "At least one regulatory authority must be detected" },
+          { "field": "questionnaire", "rule": "exists", "message": "Assessment questionnaire must be generated from detected frameworks" }
+        ],
+        "rules": [],
+        "soft_warnings": []
+      },
+      "quality_rubric": {}
+    },
+    {
+      "id": "phase_3_baseline",
+      "name": "Baseline Assessment",
+      "description": "Assess each questionnaire requirement against indexed vendor documents. For each requirement, search documents for evidence, extract verbatim quotes, and produce a vendor_risk_entry with verdict, evidence_refs, and confidence. This produces the document-only baseline before expert delegation.",
+      "completion_criteria": {
+        "required_fields": [
+          { "field": "baseline_entries", "rule": "min_count", "value": 1, "message": "At least one baseline entry must be produced from document assessment" }
+        ],
+        "rules": [
+          {
+            "id": "adequate_has_evidence",
+            "description": "Every adequate baseline verdict must have evidence references",
+            "severity": "required",
+            "message_template": "Baseline entry '{requirement_id}' is marked adequate but has no evidence references"
+          },
+          {
+            "id": "tprm_grounded_has_source_ref",
+            "description": "Every document_extracted baseline entry must have source_ref",
+            "severity": "required",
+            "message_template": "Baseline entry '{requirement_id}' has source_kind '{source_kind}' but no source_ref"
+          }
+        ],
+        "soft_warnings": []
+      },
+      "quality_rubric": {}
+    },
+    {
+      "id": "phase_4_expert_challenge",
+      "name": "Expert Challenge",
+      "description": "Discover relevant experts via list_delegatable_agents, cross-reference with authority_expert_hints. Select up to 6 experts. Delegate in parallel — each expert receives detected authorities in their scope, baseline entries, vendor_profile, and document IDs. Experts return challenged entries with upgraded source_kind. Expert failure does not block.",
+      "skip_conditions": ["No authority signals matched any available expert"],
+      "completion_criteria": {
+        "required_fields": [],
+        "rules": [],
+        "soft_warnings": [
+          { "field": "experts_used", "rule": "min_count", "value": 1, "message": "No experts were consulted — assessment relies entirely on document-extracted baseline" }
+        ]
+      },
+      "quality_rubric": {}
+    },
+    {
+      "id": "phase_5_external_validation",
+      "name": "External Validation",
+      "description": "Run external checks against third-party data sources: vendor-intelligence-mcp for risk signals, cve-mcp for vulnerability exposure (only with CPE data), sanctions-mcp re-screening if vendor profile was enriched. Record findings in external_validations with source, finding, corroborates, related_requirement_id, and fidelity. External validation affects confidence but does not change verdicts directly.",
+      "completion_criteria": {
+        "required_fields": [],
+        "rules": [],
+        "soft_warnings": [
+          { "field": "external_validations", "rule": "min_count", "value": 1, "message": "No external validations were performed — consider running vendor intelligence and CVE checks" }
+        ]
+      },
+      "quality_rubric": {}
+    },
+    {
+      "id": "phase_6_merge_score",
+      "name": "Merge & Score",
+      "description": "Merge baseline entries and expert entries into findings_register. Expert entries upgrade baseline entries when source_kind is higher (mcp_grounded > external_validated > document_extracted > user_specified > assumed). Preserve replaced entries in superseded_entries. Calculate per-domain scores using scoring_model. Overall tier = worst domain tier. Flag concentration risk if applicable.",
+      "completion_criteria": {
+        "required_fields": [
+          { "field": "findings_register", "rule": "min_count", "value": 1, "message": "Findings register must contain at least one merged entry" },
+          { "field": "domain_scores", "rule": "exists", "message": "Per-domain risk scores must be calculated" },
+          { "field": "overall_score", "rule": "exists", "message": "Overall vendor risk score must be calculated" }
+        ],
+        "rules": [
+          {
+            "id": "adequate_has_evidence",
+            "description": "Every adequate verdict in findings_register must have evidence references",
+            "severity": "required",
+            "message_template": "Finding '{requirement_id}' is marked adequate but has no evidence references"
+          },
+          {
+            "id": "partially_adequate_has_gap",
+            "description": "Every partially_adequate verdict must include a gap_description",
+            "severity": "required",
+            "message_template": "Finding '{requirement_id}' is marked partially_adequate but has no gap description"
+          },
+          {
+            "id": "inadequate_has_gap_and_remediation",
+            "description": "Every inadequate verdict must have gap_description and remediation_requirement",
+            "severity": "required",
+            "message_template": "Finding '{requirement_id}' is marked inadequate but missing gap description or remediation requirement"
+          },
+          {
+            "id": "not_addressed_has_gap_and_remediation",
+            "description": "Every not_addressed verdict must have gap_description and remediation_requirement",
+            "severity": "required",
+            "message_template": "Finding '{requirement_id}' is marked not_addressed but missing gap description or remediation requirement"
+          },
+          {
+            "id": "tprm_grounded_has_source_ref",
+            "description": "Every grounded entry must have a source_ref for traceability",
+            "severity": "required",
+            "message_template": "Finding '{requirement_id}' has source_kind '{source_kind}' but no source_ref"
+          }
+        ],
+        "soft_warnings": [
+          { "field": "findings_register", "rule": "min_count", "value": 10, "message": "Most vendor assessments produce 10+ findings — verify coverage is complete" }
+        ]
+      },
+      "quality_rubric": {}
+    },
+    {
+      "id": "phase_7_report",
+      "name": "Report Assembly",
+      "description": "Record scope and methodology, call wkfl_export_report with task_id: vendor_risk_assessment, and set report_ready: true. Produce vendor scorecard, findings register, remediation requirements, and contractual checklist.",
+      "completion_criteria": {
+        "required_fields": [
+          { "field": "scope_and_methodology", "rule": "exists", "message": "Scope and methodology must be recorded" },
+          { "field": "report_ready", "rule": "equals", "value": true, "message": "Report must be marked as ready" }
+        ],
+        "rules": [],
+        "soft_warnings": []
+      },
+      "quality_rubric": {},
+      "deliverable": {
+        "format": "markdown",
+        "tool": "wkfl_export_report",
+        "sections": [
+          "Executive Summary — overall risk tier, weighted score, worst domain, key findings count, concentration risk flag",
+          "Vendor Profile — name, legal name, LEI status, sanctions status, country, sector, certifications, breach history",
+          "Scope & Methodology — frameworks assessed, documents analyzed, experts consulted, external sources used, methodology, limitations",
+          "Vendor Scorecard — per-domain tier and score table with verdict distribution, overall tier with worst-domain-wins explanation",
+          "Findings Register — one table across all domains with requirement_id, framework_ref, verdict, confidence, evidence summary, gap description",
+          "Sub-Processor Chain Assessment — sub-processor register status, notification obligations, audit rights, geographic restrictions (if DORA/GDPR detected)",
+          "Remediation Requirements — prioritized by risk_impact (critical > high > medium > low) with specific deliverables and deadlines",
+          "External Validation Summary — third-party findings with fidelity assessment and corroboration status",
+          "Contractual Checklist — required contract clauses derived from detected frameworks (DORA Art. 30, GDPR Art. 28, EBA GL/2019/04)",
+          "Assumptions & Limitations — every limitation, missing data source, confidence caveat"
+        ],
+        "instructions": "Before calling wkfl_export_report, store these keys: org_profile, vendor_profile, documents, detected_authorities, questionnaire, baseline_entries, experts_used, external_validations, findings_register, superseded_entries, domain_scores, overall_score, scope_and_methodology. The tool assembles everything into a single Markdown report. Present the report to the user as the vendor risk assessment deliverable."
+      }
+    }
+  ]
+}
