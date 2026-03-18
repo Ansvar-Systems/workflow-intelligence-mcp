@@ -2,11 +2,11 @@
   "id": "vendor_risk_assessment",
   "name": "Vendor Risk Assessment",
   "category": "tprm",
-  "version": "1.0",
+  "version": "1.1",
   "standalone": true,
   "used_in_workflows": [],
   "dependencies": [],
-  "description": "Full vendor risk assessment. Industry-agnostic — authority detection determines applicable frameworks (DORA, EBA, GDPR, NIS2, ISO 27001, PCI DSS, etc.). Questionnaire generation from detected frameworks, document-based baseline assessment, parallel expert delegation, external validation against third-party data sources, per-domain risk scoring with worst-domain-wins aggregation, and structured deliverables including vendor scorecard, findings register, remediation requirements, and contractual checklist. Accepts prior triage state for zero-rework handoff. Sub-processor chain assessment when DORA or GDPR detected.",
+  "description": "Full vendor risk assessment. Industry-agnostic — authority detection determines applicable frameworks (DORA, EBA, GDPR, NIS2, ISO 27001, PCI DSS, AI Act, etc.). Questionnaire generation from detected frameworks, document-based baseline assessment, parallel expert delegation, external validation against third-party data sources, per-domain risk scoring with worst-domain-wins aggregation and severity modifiers (breach history, external corroboration gaps, AI data sensitivity), and structured deliverables including vendor scorecard, findings register, remediation requirements, exit strategy, contractual checklist, and reference appendix. Accepts prior triage state for zero-rework handoff. Sub-processor chain assessment when DORA or GDPR detected. Critical ICT TPP designation assessment (DORA Art. 28(3) / Art. 31) for hyperscalers.",
   "estimated_duration": "30-120 min",
   "authority_detection": {
     "signals": {
@@ -20,7 +20,8 @@
       "CRA": ["CRA", "Cyber Resilience Act", "product with digital elements"],
       "HIPAA": ["HIPAA", "protected health information", "covered entity", "business associate"],
       "NIST_CSF": ["NIST CSF", "cybersecurity framework", "NIST 800-53"],
-      "NIST_SCRM": ["NIST 800-161", "supply chain risk management", "C-SCRM"]
+      "NIST_SCRM": ["NIST 800-161", "supply chain risk management", "C-SCRM"],
+      "AI_SERVICES": ["AI", "artificial intelligence", "machine learning", "generative AI", "Copilot", "GPT", "LLM", "large language model", "AI Act", "2024/1689", "model training", "automated decision"]
     },
     "authority_expert_hints": {
       "DORA_ICT": ["dora-expert", "banking-expert"],
@@ -33,7 +34,8 @@
       "CRA": ["cra-expert"],
       "HIPAA": ["healthcare-expert"],
       "NIST_CSF": ["controls-mapper"],
-      "NIST_SCRM": ["controls-mapper"]
+      "NIST_SCRM": ["controls-mapper"],
+      "AI_SERVICES": ["ai-governance-expert", "controls-mapper"]
     }
   },
   "vendor_risk_entry_schema": {
@@ -168,7 +170,48 @@
       "overall_score = weighted_average(domain_scores, domain_weights)",
       "denominator excludes not_applicable and requires_verification",
       "requires_verification > 30% triggers soft warning"
-    ]
+    ],
+    "severity_modifiers": [
+      {
+        "id": "recent_critical_breach",
+        "trigger": "breach_history contains entry with severity 'critical' or 'high' within lookback_months",
+        "effect": "information_security tier cannot be lower than 'medium'",
+        "lookback_months": {
+          "default": 24,
+          "hyperscaler": 48,
+          "critical_ict_tpp": 48
+        },
+        "rationale": "Recent severe breaches indicate unresolved systemic risk regardless of questionnaire scores. Hyperscalers and Critical ICT TPPs use longer lookback because their breach impact is systemic and remediation programs take years to mature."
+      },
+      {
+        "id": "unclassified_breach_severity",
+        "trigger": "breach_history contains entries without severity classification and source_kind is 'assumed' or absent",
+        "effect": "default severity to 'high' for scoring modifier purposes",
+        "rationale": "Breach entries sourced from general knowledge rather than structured intelligence feeds lack severity classification. Defaulting to 'high' prevents under-rating when structured data is unavailable."
+      },
+      {
+        "id": "external_corroboration_gap",
+        "trigger": "external_validation corroborates=false on >20% of scored entries in a domain",
+        "effect": "domain tier increases by one level (e.g., low → medium)",
+        "rationale": "Significant discrepancy between vendor claims and external evidence indicates documentation does not reflect actual practice."
+      },
+      {
+        "id": "ai_data_exfiltration_calibration",
+        "trigger": "AI_SERVICES detected and vendor processes data classified as 'confidential' or higher",
+        "effect": "prompt injection / data exfiltration findings inherit the data classification severity — payment data or PII exposure via prompt injection is Critical, not High",
+        "rationale": "AI attack vectors that lead to data exfiltration must be rated by the sensitivity of the exposed data, not by the novelty of the attack vector."
+      }
+    ],
+    "tier_override_schema": {
+      "type": "object",
+      "properties": {
+        "original_tier": { "type": "string", "enum": ["low", "medium", "high", "critical"] },
+        "applied_tier": { "type": "string", "enum": ["low", "medium", "high", "critical"] },
+        "modifier_id": { "type": "string" },
+        "justification": { "type": "string" }
+      },
+      "description": "When a severity modifier fires, the domain_score entry includes this override object for audit trail. The applied_tier replaces the arithmetic tier."
+    }
   },
   "mcp_tools": [
     {
@@ -238,7 +281,7 @@
       "guidance": "Call wkfl_list_states on every message for session resume. Store phase outputs after each phase completes. Use wkfl_check_stage_completeness before advancing phases. Use wkfl_get_task_definition with phase parameter to load phase-specific guidance. Call wkfl_export_report in Phase 7 to assemble the final deliverable."
     }
   ],
-  "prompting_guidance": "WORKFLOW INSTRUCTIONS FOR VENDOR RISK ASSESSMENT ORCHESTRATOR:\n\n1. RESUME CHECK: Call wkfl_list_states on every message. If prior state exists, load the last completed phase and resume from the next phase. Never restart from scratch.\n\n2. TRIAGE HANDOFF (Phase 1): If intake_from_triage is set, load the referenced triage state. Import org_profile, vendor_profile, and documents directly — these are designed for zero-rework handoff. Skip LEI lookup and sanctions screening already completed in triage. If no triage state exists, run full Phase 1 intake (identity verification, document indexing, profile building).\n\n3. AUTHORITY DETECTION (Phase 2): Scan user request, org_profile sector, vendor_profile service_description, and all indexed documents for authority signals using the authority_detection map. Each detected authority gets an entry in detected_authorities with authority_id, authority_type, detection_signals, and confidence. If DORA_ICT or GDPR_PROCESSOR is detected, set sub_processor_relevant: true on the authority and inject sub-processor chain questions into the questionnaire.\n\n4. QUESTIONNAIRE GENERATION (Phase 2): Use generate_questionnaire from tprm-frameworks-mcp with detected authority IDs. The questionnaire covers all detected frameworks in domain-organized sections. Use get_domain_questions for domain-specific deep dives. Total questions depend on authority scope — expect 30-80 for a typical multi-framework assessment.\n\n5. SUB-PROCESSOR INJECTION: When DORA_ICT or GDPR_PROCESSOR is detected, add sub-processor chain questions to the questionnaire: sub-processor register, notification obligations (DORA Art. 29(2)), right to object (GDPR Art. 28(2)), audit rights over sub-processors, geographic restrictions, and incident propagation chain. Mark these entries with sub_processor_relevant: true.\n\n6. BASELINE ASSESSMENT (Phase 3): Assess each questionnaire requirement against indexed vendor documents. For each requirement, search documents for relevant evidence, extract verbatim quotes, and produce a vendor_risk_entry with verdict, evidence_refs, and confidence. This phase runs before expert delegation — it produces the document-only baseline that experts then challenge.\n\n7. PARALLEL EXPERT DELEGATION (Phase 4): Discover relevant experts via list_delegatable_agents. Cross-reference with authority_expert_hints from this task definition. Select up to 6 experts (cap). Delegate in parallel — each expert receives: detected authorities in their scope, baseline entries for those authorities, vendor_profile, and indexed document IDs. Experts return challenged entries with upgraded source_kind (mcp_grounded > document_extracted). If an expert fails or times out, log the failure and let baseline entries stand. SSE progress events: delegating_batch (at dispatch), specialist_complete (per expert, with success field).\n\n8. EXTERNAL VALIDATION (Phase 5): Run external checks against third-party data sources. vendor-intelligence-mcp for risk signals, cve-mcp for vulnerability exposure (only with CPE data), sanctions-mcp for re-screening if vendor profile was enriched. Record each finding in external_validations with source, finding, corroborates boolean, related_requirement_id, and fidelity (high/medium/low based on source reliability and data freshness). External validation can upgrade or downgrade verdict confidence but does not change the verdict itself — record the validation and flag discrepancies.\n\n9. SCORING RULES (Phase 6): Calculate per-domain scores using the scoring_model. For each domain: domain_score = sum(verdict_scores) / denominator. Denominator excludes not_applicable and requires_verification entries. Map domain_score to tier via tier_thresholds (>= 0.80 = low, >= 0.50 = medium, >= 0.20 = high, < 0.20 = critical). Overall tier = worst domain tier (worst-domain-wins). Overall weighted score = weighted average of domain scores using domain_weights_default. If requires_verification entries exceed 30% of total entries, add a soft warning. Set concentration_risk_flag if the vendor provides services to > 30% of the organization's critical functions.\n\n10. EVIDENCE RULES:\n- Every adequate verdict MUST have evidence_refs with at least one verbatim_quote.\n- Every partially_adequate verdict MUST have gap_description explaining what is missing.\n- Every inadequate verdict MUST have gap_description AND remediation_requirement.\n- Every not_addressed verdict MUST have gap_description AND remediation_requirement.\n- Every mcp_grounded, document_extracted, or external_validated entry MUST have source_ref.\n- Certification evidence (ISO certificates, SOC 2 reports) uses evidence_type: certification_evidence.\n\n11. LANGUAGE: Respond in the user's language. Legal entity names and regulatory citations in their original form. requirement_text and evidence in their source language.\n\n12. STATE PERSISTENCE: Store phase outputs via wkfl_store_state after each phase completes. The full assessment state supports export to vendor scorecard, findings register, remediation requirements, and contractual checklist.",
+  "prompting_guidance": "WORKFLOW INSTRUCTIONS FOR VENDOR RISK ASSESSMENT ORCHESTRATOR:\n\n1. RESUME CHECK: Call wkfl_list_states on every message. If prior state exists, load the last completed phase and resume from the next phase. Never restart from scratch.\n\n2. TRIAGE HANDOFF (Phase 1): If intake_from_triage is set, load the referenced triage state. Import org_profile, vendor_profile, and documents directly — these are designed for zero-rework handoff. Skip LEI lookup and sanctions screening already completed in triage. If no triage state exists, run full Phase 1 intake (identity verification, document indexing, profile building).\n\n3. AUTHORITY DETECTION (Phase 2): Scan user request, org_profile sector, vendor_profile service_description, and all indexed documents for authority signals using the authority_detection map. Each detected authority gets an entry in detected_authorities with authority_id, authority_type, detection_signals, and confidence. If DORA_ICT or GDPR_PROCESSOR is detected, set sub_processor_relevant: true on the authority and inject sub-processor chain questions into the questionnaire. If AI_SERVICES is detected, flag AI-specific risks for severity calibration (see point 9b).\n\n3b. CRITICAL ICT TPP ASSESSMENT (Phase 2): When DORA_ICT is detected and the vendor is a hyperscaler or systemically important ICT provider (Microsoft, AWS, Google, Oracle, SAP, Salesforce, IBM, or similar), assess DORA Art. 28(3) — the financial entity must evaluate whether the provider could be designated as a Critical ICT Third-Party Provider under Art. 31. Use get_article from eu-regulations-mcp for Art. 28(3) and Art. 31. Record the designation_status in vendor_profile.critical_ict_tpp_assessment. If designation is ongoing or likely, flag that direct ESA oversight would apply and this could change the regulatory relationship. This affects concentration_risk domain scoring and the exit_strategy requirements. For vendors likely to be designated, use the 48-month breach history lookback instead of 24.\n\n4. QUESTIONNAIRE GENERATION (Phase 2): Use generate_questionnaire from tprm-frameworks-mcp with detected authority IDs. The questionnaire covers all detected frameworks in domain-organized sections. Use get_domain_questions for domain-specific deep dives. Total questions depend on authority scope — expect 30-80 for a typical multi-framework assessment.\n\n5. SUB-PROCESSOR INJECTION: When DORA_ICT or GDPR_PROCESSOR is detected, add sub-processor chain questions to the questionnaire: sub-processor register, notification obligations (DORA Art. 29(2)), right to object (GDPR Art. 28(2)), audit rights over sub-processors, geographic restrictions, and incident propagation chain. Mark these entries with sub_processor_relevant: true.\n\n6. BASELINE ASSESSMENT (Phase 3): Assess each questionnaire requirement against indexed vendor documents. For each requirement, search documents for relevant evidence, extract verbatim quotes, and produce a vendor_risk_entry with verdict, evidence_refs, and confidence. This phase runs before expert delegation — it produces the document-only baseline that experts then challenge.\n\n6b. SECURITY POSTURE BEYOND CERTIFICATIONS (Phase 3): Certification evidence alone is insufficient for an 'adequate' verdict on information_security domain requirements. When breach_history contains entries, assess whether the vendor's remediation actions address the root cause and whether similar exposure remains relevant to the client's deployment scope. A vendor with ISO 27001 and a recent nation-state compromise of its own corporate infrastructure has a materially different risk profile than one without — the certification does not resolve the breach. Record both the certification evidence and the breach context in the same entry.\n\n6c. EXIT STRATEGY ASSESSMENT (Phase 3): When DORA_ICT is detected or overall_tier is Critical/High, extract exit-related terms from vendor contracts and DPAs. For each service in scope, assess data portability, migration complexity, vendor lock-in factors, and identify alternative providers. Estimate transition timeline per service type. This must be substantive — per-service analysis, not a checkbox. Use contract-law-mcp for exit clause templates and Art. 30(3)(e) requirements.\n\n7. PARALLEL EXPERT DELEGATION (Phase 4): Discover relevant experts via list_delegatable_agents. Cross-reference with authority_expert_hints from this task definition. Select up to 6 experts (cap). Delegate in parallel — each expert receives: detected authorities in their scope, baseline entries for those authorities, vendor_profile, and indexed document IDs. Experts return challenged entries with upgraded source_kind (mcp_grounded > document_extracted). If an expert fails or times out, log the failure and let baseline entries stand. SSE progress events: delegating_batch (at dispatch), specialist_complete (per expert, with success field).\n\n8. EXTERNAL VALIDATION (Phase 5): Run external checks against third-party data sources. vendor-intelligence-mcp for risk signals, cve-mcp for vulnerability exposure (only with CPE data), sanctions-mcp for re-screening if vendor profile was enriched. Record each finding in external_validations with source, finding, corroborates boolean, related_requirement_id, and fidelity (high/medium/low based on source reliability and data freshness). External validation can upgrade or downgrade verdict confidence but does not change the verdict itself — record the validation and flag discrepancies. For information_security domain specifically, search for vendor breach history and incident response track record — assess whether remediation programs are relevant to the client's deployment scope.\n\n9. SCORING RULES (Phase 6): Calculate per-domain scores using the scoring_model. For each domain: domain_score = sum(verdict_scores) / denominator. Denominator excludes not_applicable and requires_verification entries. Map domain_score to tier via tier_thresholds (>= 0.80 = low, >= 0.50 = medium, >= 0.20 = high, < 0.20 = critical). Overall tier = worst domain tier (worst-domain-wins). Overall weighted score = weighted average of domain scores using domain_weights_default. If requires_verification entries exceed 30% of total entries, add a soft warning. Set concentration_risk_flag if the vendor provides services to > 30% of the organization's critical functions.\n\n9b. SEVERITY MODIFIERS (Phase 6): After calculating arithmetic tiers, apply severity_modifiers from the scoring_model. Check each modifier's trigger condition against the assessment state. When a modifier fires, record a tier_override on the affected domain_score with original_tier, applied_tier, modifier_id, and justification. Modifiers can only increase tiers (make them worse), never decrease. Specific rules: (a) For breach_history entries without explicit severity classification (source_kind 'assumed' or severity field absent), default severity to 'high' for modifier evaluation — unstructured breach intelligence should not escape severity checks. (b) For hyperscalers and Critical ICT TPP candidates, use 48-month lookback for breach history instead of 24. (c) When AI_SERVICES is detected and the vendor processes data classified as confidential or higher, prompt injection and data exfiltration findings inherit the data classification severity — payment data exposure via prompt injection is Critical, not High.\n\n10. EVIDENCE RULES:\n- Every adequate verdict MUST have evidence_refs with at least one verbatim_quote.\n- Every partially_adequate verdict MUST have gap_description explaining what is missing.\n- Every inadequate verdict MUST have gap_description AND remediation_requirement.\n- Every not_addressed verdict MUST have gap_description AND remediation_requirement.\n- Every mcp_grounded, document_extracted, or external_validated entry MUST have source_ref.\n- Certification evidence (ISO certificates, SOC 2 reports) uses evidence_type: certification_evidence.\n\n11. LANGUAGE: Respond in the user's language. Legal entity names and regulatory citations in their original form. requirement_text and evidence in their source language.\n\n12. STATE PERSISTENCE: Store phase outputs via wkfl_store_state after each phase completes. The full assessment state supports export to vendor scorecard, findings register, remediation requirements, contractual checklist, exit strategy, and reference appendix.\n\n13. REFERENCE APPENDIX (Phase 7): Before calling wkfl_export_report, compile a reference appendix from all source_ref entries in findings_register and external_validations. Map each numbered citation [N] to a human-readable label — document title + section for document evidence (e.g., 'Vendor SOC 2 Type II Report 2025, Section CC6.1'), regulation name + article for regulatory provisions (e.g., 'DORA Art. 30(2)(a)'), descriptive source label for external data (e.g., 'Vendor Intelligence — Microsoft risk profile, retrieved 2026-03-18'). Never expose raw MCP tool names or call arguments in the reference appendix. Every numbered citation in the report body must have a corresponding entry.",
   "stage_state_schema": {
     "type": "object",
     "properties": {
@@ -310,6 +353,20 @@
               "year_founded": { "type": "string" },
               "publicly_traded": { "type": "boolean" }
             }
+          },
+          "critical_ict_tpp_assessment": {
+            "type": "object",
+            "properties": {
+              "is_hyperscaler": { "type": "boolean", "description": "True if vendor is a major cloud/SaaS platform (Microsoft, AWS, Google, Oracle, SAP, Salesforce, IBM)." },
+              "designation_status": {
+                "type": "string",
+                "enum": ["designated", "under_review", "not_designated", "likely_candidate", "unknown"],
+                "description": "Current DORA Art. 31 Critical ICT TPP designation status at ESA level."
+              },
+              "esa_oversight_implications": { "type": "string", "description": "What direct ESA oversight would mean for the contractual relationship and the financial entity's obligations." },
+              "assessment_basis": { "type": "string", "description": "Source for the designation status — ESA publication, regulatory announcement, or analyst assessment." }
+            },
+            "description": "DORA Art. 28(3) / Art. 31 assessment. Required when DORA_ICT is detected and vendor is a hyperscaler or systemically important ICT provider."
           }
         }
       },
@@ -621,7 +678,17 @@
               "inadequate_count": { "type": "integer" },
               "not_addressed_count": { "type": "integer" },
               "not_applicable_count": { "type": "integer" },
-              "requires_verification_count": { "type": "integer" }
+              "requires_verification_count": { "type": "integer" },
+              "tier_override": {
+                "type": "object",
+                "properties": {
+                  "original_tier": { "type": "string", "enum": ["low", "medium", "high", "critical"] },
+                  "applied_tier": { "type": "string", "enum": ["low", "medium", "high", "critical"] },
+                  "modifier_id": { "type": "string" },
+                  "justification": { "type": "string" }
+                },
+                "description": "Present only when a severity modifier overrides the arithmetic tier. Provides audit trail."
+              }
             }
           },
           "data_protection": {
@@ -637,7 +704,17 @@
               "inadequate_count": { "type": "integer" },
               "not_addressed_count": { "type": "integer" },
               "not_applicable_count": { "type": "integer" },
-              "requires_verification_count": { "type": "integer" }
+              "requires_verification_count": { "type": "integer" },
+              "tier_override": {
+                "type": "object",
+                "properties": {
+                  "original_tier": { "type": "string", "enum": ["low", "medium", "high", "critical"] },
+                  "applied_tier": { "type": "string", "enum": ["low", "medium", "high", "critical"] },
+                  "modifier_id": { "type": "string" },
+                  "justification": { "type": "string" }
+                },
+                "description": "Present only when a severity modifier overrides the arithmetic tier. Provides audit trail."
+              }
             }
           },
           "business_continuity": {
@@ -653,7 +730,17 @@
               "inadequate_count": { "type": "integer" },
               "not_addressed_count": { "type": "integer" },
               "not_applicable_count": { "type": "integer" },
-              "requires_verification_count": { "type": "integer" }
+              "requires_verification_count": { "type": "integer" },
+              "tier_override": {
+                "type": "object",
+                "properties": {
+                  "original_tier": { "type": "string", "enum": ["low", "medium", "high", "critical"] },
+                  "applied_tier": { "type": "string", "enum": ["low", "medium", "high", "critical"] },
+                  "modifier_id": { "type": "string" },
+                  "justification": { "type": "string" }
+                },
+                "description": "Present only when a severity modifier overrides the arithmetic tier. Provides audit trail."
+              }
             }
           },
           "contractual": {
@@ -669,7 +756,17 @@
               "inadequate_count": { "type": "integer" },
               "not_addressed_count": { "type": "integer" },
               "not_applicable_count": { "type": "integer" },
-              "requires_verification_count": { "type": "integer" }
+              "requires_verification_count": { "type": "integer" },
+              "tier_override": {
+                "type": "object",
+                "properties": {
+                  "original_tier": { "type": "string", "enum": ["low", "medium", "high", "critical"] },
+                  "applied_tier": { "type": "string", "enum": ["low", "medium", "high", "critical"] },
+                  "modifier_id": { "type": "string" },
+                  "justification": { "type": "string" }
+                },
+                "description": "Present only when a severity modifier overrides the arithmetic tier. Provides audit trail."
+              }
             }
           },
           "financial_stability": {
@@ -685,7 +782,17 @@
               "inadequate_count": { "type": "integer" },
               "not_addressed_count": { "type": "integer" },
               "not_applicable_count": { "type": "integer" },
-              "requires_verification_count": { "type": "integer" }
+              "requires_verification_count": { "type": "integer" },
+              "tier_override": {
+                "type": "object",
+                "properties": {
+                  "original_tier": { "type": "string", "enum": ["low", "medium", "high", "critical"] },
+                  "applied_tier": { "type": "string", "enum": ["low", "medium", "high", "critical"] },
+                  "modifier_id": { "type": "string" },
+                  "justification": { "type": "string" }
+                },
+                "description": "Present only when a severity modifier overrides the arithmetic tier. Provides audit trail."
+              }
             }
           },
           "regulatory_compliance": {
@@ -701,7 +808,17 @@
               "inadequate_count": { "type": "integer" },
               "not_addressed_count": { "type": "integer" },
               "not_applicable_count": { "type": "integer" },
-              "requires_verification_count": { "type": "integer" }
+              "requires_verification_count": { "type": "integer" },
+              "tier_override": {
+                "type": "object",
+                "properties": {
+                  "original_tier": { "type": "string", "enum": ["low", "medium", "high", "critical"] },
+                  "applied_tier": { "type": "string", "enum": ["low", "medium", "high", "critical"] },
+                  "modifier_id": { "type": "string" },
+                  "justification": { "type": "string" }
+                },
+                "description": "Present only when a severity modifier overrides the arithmetic tier. Provides audit trail."
+              }
             }
           },
           "concentration_risk": {
@@ -717,7 +834,17 @@
               "inadequate_count": { "type": "integer" },
               "not_addressed_count": { "type": "integer" },
               "not_applicable_count": { "type": "integer" },
-              "requires_verification_count": { "type": "integer" }
+              "requires_verification_count": { "type": "integer" },
+              "tier_override": {
+                "type": "object",
+                "properties": {
+                  "original_tier": { "type": "string", "enum": ["low", "medium", "high", "critical"] },
+                  "applied_tier": { "type": "string", "enum": ["low", "medium", "high", "critical"] },
+                  "modifier_id": { "type": "string" },
+                  "justification": { "type": "string" }
+                },
+                "description": "Present only when a severity modifier overrides the arithmetic tier. Provides audit trail."
+              }
             }
           }
         },
@@ -744,6 +871,31 @@
             "description": "True if vendor provides services to > 30% of organization's critical functions."
           }
         }
+      },
+      "exit_strategy": {
+        "type": "object",
+        "properties": {
+          "services_in_scope": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "service_name": { "type": "string" },
+                "data_portability": { "type": "string", "enum": ["full", "partial", "none", "unknown"] },
+                "migration_complexity": { "type": "string", "enum": ["low", "medium", "high", "critical"] },
+                "estimated_transition_months": { "type": "integer" },
+                "vendor_lock_in_factors": { "type": "array", "items": { "type": "string" } },
+                "alternative_providers": { "type": "array", "items": { "type": "string" } }
+              },
+              "required": ["service_name", "data_portability", "migration_complexity"]
+            }
+          },
+          "contractual_exit_provisions": { "type": "string", "description": "Summary of exit-related contract terms — notice period, transition support, data return format." },
+          "data_return_mechanism": { "type": "string", "description": "How the vendor returns client data — API export, bulk download, manual handover, etc." },
+          "transition_support_period": { "type": "string", "description": "Contractual transition assistance period after termination notice." },
+          "estimated_total_exit_cost": { "type": "string", "description": "Estimated total cost of migration including licensing, migration tooling, staff, and parallel-run period." }
+        },
+        "description": "Exit strategy assessment. Required for Critical/High-tier vendors and all DORA ICT assessments per Art. 30(3)(e). Must be substantive — per-service migration complexity, not a checkbox."
       },
       "scope_and_methodology": {
         "type": "object",
@@ -821,7 +973,8 @@
     ],
     "soft_warnings": [
       { "field": "findings_register", "rule": "min_count", "value": 10, "message": "Most vendor assessments produce 10+ findings — verify coverage is complete" },
-      { "field": "experts_used", "rule": "min_count", "value": 1, "message": "No experts were consulted — assessment relies entirely on document-extracted baseline" }
+      { "field": "experts_used", "rule": "min_count", "value": 1, "message": "No experts were consulted — assessment relies entirely on document-extracted baseline" },
+      { "field": "exit_strategy", "rule": "exists", "message": "Exit strategy is required for Critical/High-tier vendors and all DORA ICT assessments — verify whether this assessment needs one" }
     ]
   },
   "quality_rubric": {
@@ -997,9 +1150,11 @@
           "Remediation Requirements — prioritized by risk_impact (critical > high > medium > low) with specific deliverables and deadlines",
           "External Validation Summary — third-party findings with fidelity assessment and corroboration status",
           "Contractual Checklist — required contract clauses derived from detected frameworks (DORA Art. 30, GDPR Art. 28, EBA GL/2019/04)",
-          "Assumptions & Limitations — every limitation, missing data source, confidence caveat"
+          "Exit Strategy — per-service data portability, migration complexity, vendor lock-in factors, alternative providers, estimated transition timeline and cost, contractual exit provisions. Required for Critical/High-tier vendors and all DORA ICT assessments",
+          "Assumptions & Limitations — every limitation, missing data source, confidence caveat",
+          "Reference Appendix — numbered citation key mapping each [N] to its source. Use human-readable labels: document title + section (e.g., 'Vendor SOC 2 Type II Report 2025, Section CC6.1') for document evidence, regulation name + article (e.g., 'DORA Art. 30(2)(a)') for regulatory provisions, and descriptive source labels (e.g., 'Vendor Intelligence — Microsoft risk profile, retrieved 2026-03-18') for external data. Never expose raw MCP tool names or call arguments in the reference appendix."
         ],
-        "instructions": "Before calling wkfl_export_report, store these keys: org_profile, vendor_profile, documents, detected_authorities, questionnaire, baseline_entries, experts_used, external_validations, findings_register, superseded_entries, domain_scores, overall_score, scope_and_methodology. The tool assembles everything into a single Markdown report. Present the report to the user as the vendor risk assessment deliverable."
+        "instructions": "Before calling wkfl_export_report, store these keys: org_profile, vendor_profile, documents, detected_authorities, questionnaire, baseline_entries, experts_used, external_validations, findings_register, superseded_entries, domain_scores, overall_score, exit_strategy, scope_and_methodology. The tool assembles everything into a single Markdown report including exit strategy and reference appendix. Present the report to the user as the vendor risk assessment deliverable."
       }
     }
   ]
