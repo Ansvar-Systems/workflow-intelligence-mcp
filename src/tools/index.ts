@@ -4,6 +4,7 @@ import { listTasks } from "./list-tasks.js";
 import { getTaskDefinition } from "./get-task-definition.js";
 import { checkStageCompleteness } from "./check-stage-completeness.js";
 import { suggestTrustBoundaries } from "./suggest-trust-boundaries.js";
+import { requestReview } from "./request-review.js";
 import { about, listSources } from "./meta.js";
 import {
   wkflStoreState,
@@ -34,6 +35,7 @@ export const TOOL_HANDLERS: Record<string, ToolHandler> = {
   wkfl_delete_assessment: wkflDeleteAssessment,
   wkfl_export_report: wkflExportReport,
   get_manifest: getManifest,
+  request_review: requestReview,
   about,
   list_sources: listSources,
 };
@@ -251,6 +253,34 @@ export const TOOL_DEFINITIONS = [
             'Framework identifier (e.g., "DORA", "NIS2"). Case-sensitive. Omit to list available manifests.',
         },
       },
+    },
+  },
+  {
+    name: "request_review",
+    description:
+      "Pause the workflow and request user review before continuing to the next phase. Call this after wkfl_check_stage_completeness passes for a phase that requires customer approval. The workflow will stop and show a review card to the user.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        phase_id: {
+          type: "string",
+          description: "Phase identifier (e.g., 'phase_2_dfd_construction')",
+        },
+        phase_name: {
+          type: "string",
+          description: "Human-readable phase name shown to the user",
+        },
+        summary: {
+          type: "string",
+          description:
+            "Summary of completed work for the user to review. Include key outputs, counts, and any decisions made.",
+        },
+        assessment_id: {
+          type: "string",
+          description: "Assessment ID for state retrieval (optional)",
+        },
+      },
+      required: ["phase_id", "phase_name", "summary"],
     },
   },
   {
