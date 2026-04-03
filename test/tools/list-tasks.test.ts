@@ -14,7 +14,7 @@ describe("list_tasks", () => {
   it("filters by category", async () => {
     const result = await listTasks({ category: "threat_modeling" });
     const data = JSON.parse(result.content[0].text);
-    expect(data.tasks).toHaveLength(2);
+    expect(data.tasks).toHaveLength(3);
 
     const empty = await listTasks({ category: "nonexistent" });
     const emptyData = JSON.parse(empty.content[0].text);
