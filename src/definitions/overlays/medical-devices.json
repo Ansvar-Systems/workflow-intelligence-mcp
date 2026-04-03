@@ -44,7 +44,7 @@
     {
       "mcp": "eu-regulations-mcp",
       "tools": ["search_regulations", "get_article"],
-      "guidance": "Search MDR 2017/745 for Annex I General Safety and Performance Requirements (GSPRs). Focus on GSPR 14 (software as medical device), GSPR 17.1-17.4 (IT security measures for devices with software). Search IVDR 2017/746 if the device is an in-vitro diagnostic. Also search GDPR Article 9 for health data special category provisions."
+      "guidance": "Use regulation IDs: 'MDR' for Medical Device Regulation 2017/745, 'IVDR' for In Vitro Diagnostic Regulation 2017/746, 'GDPR' for data protection. Search MDR for Annex I General Safety and Performance Requirements (GSPRs). Focus on GSPR 14 (software as medical device), GSPR 17.1-17.4 (IT security measures for devices with software). Search IVDR if the device is an in-vitro diagnostic. Search GDPR Article 9 for health data special category provisions."
     }
   ],
 
