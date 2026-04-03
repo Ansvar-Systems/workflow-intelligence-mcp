@@ -13,6 +13,7 @@ import {
 } from "./state.js";
 import { wkflExportReport } from "./export-report.js";
 import { getManifest } from "./get-manifest.js";
+import { wkflGetDomainOverlay } from "./get-domain-overlay.js";
 
 export interface ToolResult {
   content: Array<{ type: "text"; text: string }>;
@@ -34,6 +35,7 @@ export const TOOL_HANDLERS: Record<string, ToolHandler> = {
   wkfl_delete_assessment: wkflDeleteAssessment,
   wkfl_export_report: wkflExportReport,
   get_manifest: getManifest,
+  wkfl_get_domain_overlay: wkflGetDomainOverlay,
   about,
   list_sources: listSources,
 };
@@ -117,22 +119,69 @@ export const TOOL_DEFINITIONS = [
       properties: {
         processes: {
           type: "array",
+          items: {
+            type: "object",
+            properties: {
+              id: { type: "string" },
+              name: { type: "string" },
+              description: { type: "string" },
+            },
+            required: ["id", "name"],
+          },
           description: "Array of DFD processes.",
         },
         data_stores: {
           type: "array",
+          items: {
+            type: "object",
+            properties: {
+              id: { type: "string" },
+              name: { type: "string" },
+              data_classification: { type: "string", enum: ["public", "internal", "confidential", "restricted"] },
+            },
+            required: ["id", "name"],
+          },
           description: "Array of DFD data stores.",
         },
         external_entities: {
           type: "array",
+          items: {
+            type: "object",
+            properties: {
+              id: { type: "string" },
+              name: { type: "string" },
+              trust_level: { type: "string", enum: ["trusted", "semi_trusted", "untrusted"] },
+            },
+            required: ["id", "name"],
+          },
           description: "Array of DFD external entities.",
         },
         data_flows: {
           type: "array",
+          items: {
+            type: "object",
+            properties: {
+              id: { type: "string" },
+              source_id: { type: "string" },
+              destination_id: { type: "string" },
+              data_description: { type: "string" },
+              protocol: { type: "string" },
+            },
+            required: ["id", "source_id", "destination_id"],
+          },
           description: "Array of DFD data flows.",
         },
         existing_boundaries: {
           type: "array",
+          items: {
+            type: "object",
+            properties: {
+              id: { type: "string" },
+              name: { type: "string" },
+              enclosed_ids: { type: "array", items: { type: "string" } },
+            },
+            required: ["id", "name", "enclosed_ids"],
+          },
           description: "Already-defined trust boundaries (optional). Suggestions will exclude elements already enclosed.",
         },
       },
@@ -211,7 +260,7 @@ export const TOOL_DEFINITIONS = [
         task_id: {
           type: "string",
           description:
-            'Task identifier for explicit format routing. Takes precedence over report_format and state-key detection. Values: "dpia_assessment", "stride_threat_model", "gap_analysis".',
+            'Task identifier for explicit format routing. Takes precedence over report_format and state-key detection. Values: "dpia_assessment", "stride_threat_model", "ai_tara", "gap_analysis".',
         },
         report_format: {
           type: "string",
@@ -249,6 +298,22 @@ export const TOOL_DEFINITIONS = [
           type: "string",
           description:
             'Framework identifier (e.g., "DORA", "NIS2"). Case-sensitive. Omit to list available manifests.',
+        },
+      },
+    },
+  },
+  {
+    name: "wkfl_get_domain_overlay",
+    description:
+      "Get domain-specific overlay guidance for workflow adaptation. Returns additional asset categories, MCP tools to consult, impact/feasibility calibration, compliance frameworks, and report addenda. Call during Phase 1 when domain context is detected. Multiple domains can be requested for composite systems (e.g., medical device with robotic actuators). Call without domains to list available overlays.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        domains: {
+          type: "array",
+          items: { type: "string" },
+          description:
+            'Domain IDs to load (e.g., ["medical-devices"] or ["robotics", "medical-devices"]). Omit to list available overlays.',
         },
       },
     },

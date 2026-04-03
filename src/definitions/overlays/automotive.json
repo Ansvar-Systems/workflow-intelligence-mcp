@@ -1,0 +1,110 @@
+{
+  "id": "automotive",
+  "name": "Automotive Cybersecurity",
+  "version": "1.0",
+  "applies_to": ["ai_tara", "stride_threat_model"],
+
+  "detection_signals": [
+    "automotive", "vehicle", "ADAS", "autonomous driving", "V2X",
+    "CAN bus", "ECU", "OBD", "telematics", "ISO 21434", "UNECE R155",
+    "UNECE R156", "SAE J3061", "CSMS", "perception system",
+    "lidar", "radar", "camera fusion", "OTA update"
+  ],
+
+  "asset_categories": [
+    {
+      "id": "ecu_firmware",
+      "description": "Electronic Control Unit firmware — safety-critical embedded software controlling vehicle functions"
+    },
+    {
+      "id": "can_bus_network",
+      "description": "Controller Area Network and other in-vehicle networks (LIN, FlexRay, Ethernet)"
+    },
+    {
+      "id": "v2x_communication",
+      "description": "Vehicle-to-Everything communication channels (V2V, V2I, V2N, V2P)"
+    },
+    {
+      "id": "ota_update_channel",
+      "description": "Over-the-air software update infrastructure and signing chain"
+    },
+    {
+      "id": "perception_pipeline",
+      "description": "Sensor fusion and perception stack (camera, lidar, radar, ultrasonic)"
+    },
+    {
+      "id": "driving_policy_model",
+      "description": "AI/ML model governing driving decisions (path planning, obstacle avoidance, lane keeping)"
+    }
+  ],
+
+  "threat_sources": [
+    {
+      "mcp": "automotive-cybersecurity-mcp",
+      "tools": ["search_requirements", "get_requirement", "list_work_products", "export_compliance_matrix"],
+      "guidance": "Search ISO 21434 requirements for TARA alignment. Use list_work_products to identify WP-15 deliverables (WP-15-01 Asset Identification through WP-15-09 Cybersecurity Claims). Use export_compliance_matrix for R155 Annex 5 traceability. Map each threat to the relevant WP-15 work product."
+    }
+  ],
+
+  "impact_calibration": {
+    "safety": "Use ISO 26262 ASIL classification to calibrate: ASIL D (life-threatening) = safety 5. ASIL C = safety 4. ASIL B = safety 3. ASIL A = safety 2. QM = safety 1. Any threat affecting driving decisions, braking, or steering is minimum safety 4.",
+    "financial": "Include recall costs (average EUR 500 per vehicle x fleet size), type-approval revocation risk, and UNECE R155 compliance costs. Fleet-wide OTA vulnerability = financial 4-5.",
+    "regulatory": "UNECE R155 (CSMS mandatory for type approval), R156 (software update management). Non-compliance blocks vehicle sales in all UNECE markets. ISO 21434 is the normative standard. EU Cyber Resilience Act may also apply to aftermarket components."
+  },
+
+  "feasibility_calibration": "CAN bus attacks typically rate high feasibility (sum 8-12) — public research abundant, standard equipment, unlimited window for physical access attacks. Remote attacks via telematics or V2X rate medium (sum 14-18) — require specialized knowledge but published PoCs exist. OTA update chain compromise rates low (sum 20-24) — requires compromising code signing infrastructure. Perception attacks (adversarial patches on road signs) rate medium-to-high (sum 10-16) — published research with demonstrated physical-world effectiveness.",
+
+  "compliance_frameworks": [
+    {
+      "id": "ISO_21434",
+      "name": "ISO/SAE 21434:2021",
+      "key_requirements": [
+        "Clause 8 — Risk assessment methods",
+        "Clause 9 — Concept phase cybersecurity",
+        "Clause 15 — TARA (15.1-15.9)",
+        "Annex F — Attack feasibility rating",
+        "Annex G — TARA example",
+        "Annex H — Impact rating"
+      ]
+    },
+    {
+      "id": "UNECE_R155",
+      "name": "UNECE R155",
+      "key_requirements": [
+        "7.2.2.2 — CSMS processes",
+        "7.2.2.3 — Risk assessment for vehicle types",
+        "Annex 5 — List of threats and mitigations"
+      ]
+    },
+    {
+      "id": "UNECE_R156",
+      "name": "UNECE R156",
+      "key_requirements": [
+        "7.1 — Software update management system",
+        "7.2 — Software update validation"
+      ]
+    },
+    {
+      "id": "ISO_26262",
+      "name": "ISO 26262:2018",
+      "key_requirements": [
+        "Part 3 — Concept phase (HARA)",
+        "Part 6 — Product development at software level",
+        "Part 9 — ASIL-oriented safety analysis"
+      ]
+    }
+  ],
+
+  "report_addenda": [
+    {
+      "id": "iso21434_wp_alignment",
+      "title": "ISO 21434 Work Product Alignment",
+      "guidance": "Map each TARA phase to ISO 21434 WP-15 work products: WP-15-01 (asset identification), WP-15-02 (threat scenarios), WP-15-03 (impact rating), WP-15-04 (attack path analysis), WP-15-05 (attack feasibility rating), WP-15-06 (risk determination), WP-15-07 (risk treatment decision), WP-15-08 (cybersecurity goals), WP-15-09 (cybersecurity claims). Show traceability from TARA findings to each work product."
+    },
+    {
+      "id": "r155_annex5_mapping",
+      "title": "UNECE R155 Annex 5 Threat Mapping",
+      "guidance": "Map identified threats to UNECE R155 Annex 5 threat categories. Show which R155 threats are addressed and which mitigations satisfy R155 requirements. This mapping is required for CSMS certification and type-approval."
+    }
+  ]
+}

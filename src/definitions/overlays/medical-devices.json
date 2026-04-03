@@ -1,0 +1,138 @@
+{
+  "id": "medical-devices",
+  "name": "Medical Devices",
+  "version": "1.0",
+  "applies_to": ["ai_tara", "stride_threat_model"],
+
+  "detection_signals": [
+    "medical device", "SaMD", "SiMD", "IEC 62304", "IEC 81001-5-1",
+    "MDR", "IVDR", "FDA", "clinical", "patient", "diagnostic",
+    "FHIR", "HL7", "DICOM", "health software", "clinical decision",
+    "medical imaging", "patient monitoring", "drug dosing",
+    "class I", "class IIa", "class IIb", "class III",
+    "notified body", "CE marking", "510(k)", "PMA"
+  ],
+
+  "asset_categories": [
+    {
+      "id": "clinical_decision_model",
+      "description": "AI/ML model making or supporting clinical decisions — diagnosis, prognosis, treatment recommendation, triage"
+    },
+    {
+      "id": "patient_data_pipeline",
+      "description": "Protected health information (PHI) data flows including FHIR/HL7/DICOM interfaces, EHR integrations"
+    },
+    {
+      "id": "calibration_data",
+      "description": "Reference datasets used for model calibration, validation, and performance monitoring in clinical context"
+    },
+    {
+      "id": "regulatory_submission_data",
+      "description": "Data, models, and documentation submitted to regulatory bodies (notified bodies, FDA) as part of device approval"
+    },
+    {
+      "id": "interoperability_interface",
+      "description": "Integration points with hospital IT systems — FHIR APIs, HL7v2 feeds, DICOM PACS, clinical workflows"
+    },
+    {
+      "id": "clinical_evidence_store",
+      "description": "Post-market clinical follow-up data, adverse event records, performance monitoring datasets"
+    }
+  ],
+
+  "threat_sources": [
+    {
+      "mcp": "eu-regulations-mcp",
+      "tools": ["search_regulations", "get_article"],
+      "guidance": "Search MDR 2017/745 for Annex I General Safety and Performance Requirements (GSPRs). Focus on GSPR 14 (software as medical device), GSPR 17.1-17.4 (IT security measures for devices with software). Search IVDR 2017/746 if the device is an in-vitro diagnostic. Also search GDPR Article 9 for health data special category provisions."
+    }
+  ],
+
+  "impact_calibration": {
+    "safety": "Use IEC 62304 software safety class to calibrate: Class C (could contribute to death or serious injury) = safety 4-5. Class B (could contribute to non-serious injury) = safety 3. Class A (no contribution to hazardous situation) = safety 1-2. For SaMD: use IMDRF risk categorization (Category IV = safety 5, III = 4, II = 3, I = 2). Any model making autonomous clinical decisions without human review is minimum safety 4.",
+    "financial": "Include regulatory penalties (MDR: up to EUR 2M per incident per Member State), product recall costs, clinical liability, malpractice litigation exposure. Misdiagnosis at scale = financial 5.",
+    "privacy": "Patient health data is GDPR special category (Article 9). Any exposure of PHI or re-identification risk = privacy 4-5. Consider HIPAA if US market. Inference attacks on medical training data can reveal patient conditions.",
+    "regulatory": "MDR Annex I GSPRs 14.1-14.5 (software requirements) and 17.1-17.4 (cybersecurity). IEC 62304 software lifecycle. IEC 81001-5-1 security activities. FDA premarket cybersecurity guidance (2023). Non-compliance blocks CE marking or FDA clearance — cannot sell the device.",
+    "ethical": "Clinical AI bias can lead to disparate care outcomes across demographics. Algorithmic discrimination in diagnosis disproportionately affects underserved populations. Patient autonomy requires transparency about AI involvement in clinical decisions."
+  },
+
+  "feasibility_calibration": "Medical devices in hospital networks often have constrained attack surface — dedicated VLANs, network segmentation, physical access controls. Adjust window_of_opportunity upward (harder access). However, home-use and remote patient monitoring devices have broad exposure — treat as consumer-grade attack surface. SOUP (Software of Unknown Provenance) components are a significant supply chain risk — known CVEs in medical device libraries are common. DICOM and HL7v2 protocols have limited built-in security — interoperability interfaces rate higher feasibility than isolated devices.",
+
+  "compliance_frameworks": [
+    {
+      "id": "IEC_81001_5_1",
+      "name": "IEC 81001-5-1:2021",
+      "key_requirements": [
+        "5.2 — Security risk management process",
+        "5.3 — Security requirements specification",
+        "5.4 — Security risk management during maintenance",
+        "6.2 — Secure design principles",
+        "7.2 — Secure coding practices",
+        "8.2 — Security testing (fuzz testing, penetration testing)",
+        "9.2 — Security guidance documentation"
+      ]
+    },
+    {
+      "id": "MDR_ANNEX_I",
+      "name": "MDR 2017/745 Annex I",
+      "key_requirements": [
+        "GSPR 14.1 — Repeatability, reliability, and performance",
+        "GSPR 14.2(d) — Risks from reasonably foreseeable misuse",
+        "GSPR 14.5 — Devices incorporating software or that are software",
+        "GSPR 17.1 — IT security measures including protection against unauthorized access",
+        "GSPR 17.2 — Minimum requirements for IT security (hardware, network, software)",
+        "GSPR 17.3 — Verification and validation of IT security",
+        "GSPR 17.4 — Security of the supply chain"
+      ]
+    },
+    {
+      "id": "IEC_62304",
+      "name": "IEC 62304:2006+A1:2015",
+      "key_requirements": [
+        "4.3 — Software safety classification (A/B/C)",
+        "5.1 — Software development planning",
+        "5.2 — Software requirements analysis",
+        "7.1 — Software risk analysis (integration with ISO 14971)",
+        "8.1 — Software configuration management"
+      ]
+    },
+    {
+      "id": "FDA_PREMARKET_CYBER",
+      "name": "FDA Premarket Cybersecurity Guidance (2023)",
+      "key_requirements": [
+        "Section V.A — Threat modeling",
+        "Section V.B — Security risk assessment",
+        "Section V.C — Security architecture",
+        "Section VI — SBOM requirements",
+        "Section VII — Labeling for cybersecurity"
+      ]
+    },
+    {
+      "id": "IMDRF_SAMD",
+      "name": "IMDRF SaMD Framework",
+      "key_requirements": [
+        "SaMD risk categorization (I-IV)",
+        "Clinical evaluation methodology for AI/ML",
+        "Good machine learning practice (GMLP)"
+      ]
+    }
+  ],
+
+  "report_addenda": [
+    {
+      "id": "samd_risk_classification",
+      "title": "SaMD Risk Classification",
+      "guidance": "Determine IMDRF SaMD risk category (I-IV) based on significance of information provided (treat, diagnose, drive clinical management, inform clinical management) and healthcare situation (critical, serious, non-serious). Map to IEC 62304 software safety class (A/B/C). This classification drives the depth of security activities required by IEC 81001-5-1."
+    },
+    {
+      "id": "gspr_traceability",
+      "title": "MDR GSPR Cybersecurity Traceability",
+      "guidance": "Map each R3-R5 threat to the MDR Annex I GSPRs it could violate (primarily 14.1-14.5 and 17.1-17.4). For each GSPR, show: which threats are relevant, what controls address them, and whether the GSPR is satisfied, partially satisfied, or not addressed. This traceability is required by notified bodies during conformity assessment."
+    },
+    {
+      "id": "iec81001_security_activities",
+      "title": "IEC 81001-5-1 Security Activity Mapping",
+      "guidance": "Map TARA phases to IEC 81001-5-1 security activities: Phase 1 → 5.2 (risk management process), Phase 2 → 5.2 (threat identification), Phase 3-5 → 5.2 (risk evaluation), Phase 6 → 5.3 (security requirements) + 6.2 (secure design), Phase 7 → 9.2 (security guidance documentation). Show which security activities are covered by the TARA output."
+    }
+  ]
+}
