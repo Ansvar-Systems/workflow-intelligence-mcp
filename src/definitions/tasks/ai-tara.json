@@ -1,0 +1,798 @@
+{
+  "id": "ai_tara",
+  "name": "AI System TARA",
+  "category": "threat_modeling",
+  "version": "1.0",
+  "standalone": true,
+  "used_in_workflows": [],
+  "description": "Threat Analysis and Risk Assessment for AI systems. Adapts ISO 21434 Clause 15 TARA methodology for AI/ML systems — LLMs, agent frameworks, ML pipelines — using the STRIPE-AI threat framework (Spoofing, Tampering, Repudiation, Information Disclosure, Poisoning, Elevation of Privilege, AI-Behavior). Seven phases with mandatory user confirmation at each gate: system definition, threat identification, impact assessment, feasibility assessment, risk determination, risk treatment, and documentation.",
+  "estimated_duration": "45-180 min depending on system complexity",
+  "dependencies": [],
+  "mcp_tools": [
+    {
+      "mcp": "document-index-mcp",
+      "tools": ["docidx_search", "docidx_get_section", "docidx_get_surrounding", "docidx_list_documents"],
+      "when": "system_definition, threat_identification",
+      "guidance": "Search uploaded documents for system architecture facts (components, model details, data flows, security controls). Every fact extracted from a document must cite the document name and section. Use docidx_get_surrounding when a match needs adjacent context."
+    },
+    {
+      "mcp": "stride-mcp",
+      "tools": ["search_stride_patterns", "get_stride_pattern"],
+      "when": "threat_identification",
+      "guidance": "Search with category filter matching the specialist's STRIPE-AI category (S/T/R/I/E map to STRIDE categories). Every threat must trace to an MCP pattern or be marked mcp_source: llm-reasoned with lower confidence."
+    },
+    {
+      "mcp": "threat-intel-mcp",
+      "tools": ["search_attack_techniques", "get_technique", "search_atlas_techniques", "get_atlas_technique"],
+      "when": "threat_identification, feasibility_assessment",
+      "guidance": "Map threats to MITRE ATT&CK and ATLAS techniques. ATLAS is primary for AI-specific threats (poisoning, prompt injection, model extraction). Use for Poisoning and AI-Behavior specialists primarily. During feasibility assessment, check for published PoCs and case studies."
+    },
+    {
+      "mcp": "cve-mcp",
+      "tools": ["get_cwe_details", "search_cwe", "get_epss_score", "check_kev_status"],
+      "when": "threat_identification, feasibility_assessment",
+      "guidance": "Use get_cwe_details for CWE references on identified threats. Use get_epss_score and check_kev_status during feasibility assessment to inform real-world exploitability."
+    },
+    {
+      "mcp": "owasp-mcp",
+      "tools": ["search_owasp", "get_owasp_item"],
+      "when": "threat_identification",
+      "guidance": "Cross-reference OWASP LLM Top 10 for AI-specific threats. Primary for Poisoning (LLM03), AI-Behavior (LLM01 Prompt Injection, LLM02 Insecure Output, LLM09 Overreliance), and Information Disclosure (LLM06 Sensitive Info)."
+    },
+    {
+      "mcp": "eu-regulations-mcp",
+      "tools": ["search_regulations", "get_article", "get_recital"],
+      "when": "impact_assessment, risk_determination, risk_treatment, documentation",
+      "guidance": "Cross-reference EU AI Act for risk classification (Art 6), risk management requirements (Art 9), data governance (Art 10), human oversight (Art 14), accuracy and robustness (Art 15). Use during impact assessment for regulatory dimension scoring and during risk determination for AI Act classification alignment."
+    },
+    {
+      "mcp": "security-controls-mcp",
+      "tools": ["search_controls", "get_control", "map_frameworks"],
+      "when": "risk_treatment, documentation",
+      "guidance": "Search for controls matching each threat during risk treatment. Use get_control for implementation details. Map to NIST AI RMF, ISO 42001, and sector-specific frameworks. One pass over the full threat set to avoid duplicate control recommendations."
+    },
+    {
+      "mcp": "automotive-cybersecurity-mcp",
+      "tools": ["search_requirements", "get_requirement", "list_work_products", "export_compliance_matrix"],
+      "when": "system_definition, threat_identification, documentation",
+      "guidance": "CONDITIONAL: Only use when domain_context includes 'automotive'. Search ISO 21434 requirements for TARA alignment. List WP-15-* work products. Export compliance matrix for R155 traceability. The automotive domain overlay adds vehicle-specific threat patterns and CSMS obligations."
+    },
+    {
+      "mcp": "visualization-mcp",
+      "tools": ["create_risk_matrix", "create_heatmap"],
+      "when": "risk_determination, documentation",
+      "guidance": "Used by orchestrator during risk determination and report assembly for risk matrices and impact heatmaps. Delegate DFD construction to dfd-architect if system decomposition warrants it."
+    },
+    {
+      "mcp": "workflow-intelligence-mcp",
+      "tools": ["wkfl_store_state", "wkfl_load_state", "wkfl_list_states", "wkfl_export_report", "check_stage_completeness"],
+      "when": "all phases",
+      "guidance": "Store state after each phase for context window management. Use check_stage_completeness to validate phase gates before advancing. Use wkfl_export_report at documentation phase for final assembly. ALWAYS store state before presenting results to the user — this ensures progress survives context limits."
+    }
+  ],
+  "phases": [
+    {
+      "id": "system_definition",
+      "name": "AI System Definition & Asset Identification",
+      "description": "Establish the boundaries, architecture, and asset inventory of the AI system under assessment. This is conversational and guided — not a questionnaire. Assess what is known from the user prompt and uploaded documents, ask targeted questions about gaps, and proceed when you have enough context to begin threat identification. Mark gaps explicitly.",
+      "assessment_dimensions": {
+        "_description": "Not a questionnaire. The agent assesses which of these are known vs unknown and asks about what is missing.",
+        "system_function": "What does this AI system do? What decisions does it make or support?",
+        "model_architecture": "What type of model(s)? LLM, CNN, ensemble, reinforcement learning, agent framework?",
+        "decision_chain_position": "Where in the decision chain? Advisory, human-in-the-loop, autonomous?",
+        "data_consumed": "What data at inference time? User inputs, sensor data, retrieved documents, tool outputs?",
+        "tools_and_integrations": "Does the system use external tools, APIs, MCP servers, function calling?",
+        "deployment_model": "Cloud-hosted, on-premise, edge, hybrid? Multi-tenant? Shared infrastructure?",
+        "users_and_trust": "Who are the intended users? What are their trust levels? Admin vs end-user vs API consumer?",
+        "domain_context": "What industry domain? Automotive, healthcare, financial, general? Regulatory regime?"
+      },
+      "stage_state_schema": {
+        "type": "object",
+        "properties": {
+          "system_name": { "type": "string" },
+          "system_description": { "type": "string" },
+          "model_architecture": {
+            "type": "object",
+            "properties": {
+              "model_type": { "type": "string" },
+              "model_provider": { "type": "string" },
+              "fine_tuned": { "type": "boolean" },
+              "agentic": { "type": "boolean" },
+              "multi_model": { "type": "boolean" },
+              "description": { "type": "string" }
+            }
+          },
+          "decision_chain_position": {
+            "type": "string",
+            "enum": ["advisory", "human_in_the_loop", "autonomous", "mixed"]
+          },
+          "data_pipeline": {
+            "type": "object",
+            "properties": {
+              "training_data_sources": { "type": "array", "items": { "type": "string" } },
+              "inference_inputs": { "type": "array", "items": { "type": "string" } },
+              "rag_corpora": { "type": "array", "items": { "type": "string" } },
+              "external_feeds": { "type": "array", "items": { "type": "string" } }
+            }
+          },
+          "tool_integrations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": { "type": "string" },
+                "type": { "type": "string" },
+                "trust_level": { "type": "string" },
+                "description": { "type": "string" }
+              }
+            }
+          },
+          "deployment_model": {
+            "type": "object",
+            "properties": {
+              "hosting": { "type": "string" },
+              "multi_tenant": { "type": "boolean" },
+              "regions": { "type": "array", "items": { "type": "string" } },
+              "description": { "type": "string" }
+            }
+          },
+          "actors": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": { "type": "string" },
+                "role": { "type": "string" },
+                "trust_level": { "type": "string", "enum": ["untrusted", "low", "medium", "high", "system"] }
+              }
+            }
+          },
+          "domain_context": { "type": "string" },
+          "regulatory_regime": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "assets": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": { "type": "string" },
+                "name": { "type": "string" },
+                "category": {
+                  "type": "string",
+                  "enum": [
+                    "training_data",
+                    "model_weights",
+                    "inference_infrastructure",
+                    "prompts_system_prompts",
+                    "rag_corpora",
+                    "tool_integrations",
+                    "session_data",
+                    "eval_pipelines",
+                    "output_channels",
+                    "traditional_it"
+                  ]
+                },
+                "description": { "type": "string" },
+                "confidentiality": { "type": "string", "enum": ["public", "internal", "confidential", "restricted"] },
+                "integrity_criticality": { "type": "string", "enum": ["low", "medium", "high", "critical"] },
+                "availability_requirement": { "type": "string", "enum": ["low", "medium", "high", "critical"] }
+              },
+              "required": ["id", "name", "category"]
+            }
+          },
+          "existing_controls": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "document_citations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "document": { "type": "string" },
+                "section": { "type": "string" },
+                "fact_extracted": { "type": "string" }
+              }
+            }
+          },
+          "gaps": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "dimension": { "type": "string" },
+                "description": { "type": "string" },
+                "assumed_value": { "type": "string" }
+              }
+            }
+          }
+        },
+        "required": ["system_name"]
+      },
+      "completion_criteria": {
+        "required_fields": [
+          { "field": "system_name", "rule": "exists", "message": "System name is required" },
+          { "field": "assets", "rule": "min_count", "value": 3, "message": "At least 3 assets must be identified" }
+        ],
+        "soft_warnings": [
+          { "field": "model_architecture", "rule": "exists", "message": "Model architecture not specified; threat identification will use generic AI patterns" },
+          { "field": "data_pipeline", "rule": "exists", "message": "Data pipeline not specified; poisoning threats will be assessed at high level only" },
+          { "field": "tool_integrations", "rule": "min_count", "value": 1, "message": "No tool integrations specified; if the system uses tools, poisoning and privilege escalation threats may be incomplete" },
+          { "field": "actors", "rule": "min_count", "value": 1, "message": "No actors specified; spoofing and privilege escalation threats will use assumed trust levels" },
+          { "field": "existing_controls", "rule": "min_count", "value": 1, "message": "No existing controls specified; treatment phase will assume no controls in place" },
+          { "field": "deployment_model", "rule": "exists", "message": "Deployment model not specified; infrastructure threats will be assessed generically" }
+        ],
+        "rules": [
+          {
+            "id": "ai_tara_min_assets",
+            "description": "At least 3 assets identified to ensure adequate threat coverage",
+            "severity": "required",
+            "message_template": "Only {details} assets identified — need at least 3 for meaningful threat analysis"
+          },
+          {
+            "id": "ai_tara_ai_asset_coverage",
+            "description": "At least 1 AI-specific asset category must be present (training_data, model_weights, prompts_system_prompts, rag_corpora, eval_pipelines)",
+            "severity": "required",
+            "message_template": "No AI-specific assets found. {details}"
+          }
+        ]
+      },
+      "quality_rubric": {
+        "system_description": {
+          "min_words": 20,
+          "severity": "warning",
+          "message": "System description should be detailed enough to inform threat identification"
+        },
+        "assets": {
+          "per_item": {
+            "description": {
+              "min_words": 5,
+              "severity": "warning",
+              "message": "Each asset should have a descriptive explanation"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "threat_identification",
+      "name": "STRIPE-AI Threat Identification",
+      "description": "Identify threats using the STRIPE-AI framework: Spoofing (S), Tampering (T), Repudiation (R), Information Disclosure (I), Poisoning (P), Elevation of Privilege (E), and AI-Behavior (AI). Fan-out: delegate to 8 specialists in parallel (6 existing STRIDE + poisoning-analyst + ai-behavior-analyst). Each specialist receives the full system context and asset inventory. Cross-reference MITRE ATLAS, OWASP LLM Top 10, and ATT&CK. For agentic systems: assess tool-use abuse, MCP server compromise, chain-of-thought manipulation. Coverage gate: every asset must have all 7 categories assessed.",
+      "stage_state_schema": {
+        "type": "object",
+        "properties": {
+          "threats": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": { "type": "string" },
+                "stripe_ai_category": {
+                  "type": "string",
+                  "enum": ["S", "T", "R", "I", "P", "E", "AI"]
+                },
+                "category_name": {
+                  "type": "string",
+                  "enum": ["Spoofing", "Tampering", "Repudiation", "Information Disclosure", "Poisoning", "Elevation of Privilege", "AI-Behavior"]
+                },
+                "asset_id": { "type": "string" },
+                "title": { "type": "string" },
+                "description": { "type": "string" },
+                "attack_vector": { "type": "string" },
+                "preconditions": { "type": "string" },
+                "mcp_source": { "type": "string" },
+                "confidence": { "type": "string", "enum": ["high", "medium", "low"] },
+                "atlas_technique_ids": { "type": "array", "items": { "type": "string" } },
+                "owasp_llm_refs": { "type": "array", "items": { "type": "string" } },
+                "cwe_ids": { "type": "array", "items": { "type": "string" } },
+                "capec_ids": { "type": "array", "items": { "type": "string" } },
+                "mitre_attack_ids": { "type": "array", "items": { "type": "string" } },
+                "document_citations": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "document": { "type": "string" },
+                      "doc_id": { "type": "string" },
+                      "section": { "type": "string" },
+                      "fact_extracted": { "type": "string" }
+                    }
+                  }
+                },
+                "agentic_concerns": {
+                  "type": "object",
+                  "properties": {
+                    "tool_abuse_risk": { "type": "string" },
+                    "chain_of_thought_manipulation": { "type": "string" },
+                    "multi_agent_collusion": { "type": "string" }
+                  }
+                }
+              },
+              "required": ["id", "stripe_ai_category", "asset_id", "title", "mcp_source"]
+            }
+          },
+          "coverage_matrix": {
+            "type": "object",
+            "description": "Keys are asset_id, values are objects with STRIPE-AI categories as keys and boolean assessed status",
+            "additionalProperties": {
+              "type": "object",
+              "properties": {
+                "S": { "type": "boolean" },
+                "T": { "type": "boolean" },
+                "R": { "type": "boolean" },
+                "I": { "type": "boolean" },
+                "P": { "type": "boolean" },
+                "E": { "type": "boolean" },
+                "AI": { "type": "boolean" }
+              }
+            }
+          },
+          "dedup_log": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "kept": { "type": "string" },
+                "removed": { "type": "string" },
+                "reason": { "type": "string" }
+              }
+            }
+          },
+          "domain_experts_used": { "type": "array", "items": { "type": "string" } }
+        },
+        "required": ["threats", "coverage_matrix"]
+      },
+      "completion_criteria": {
+        "required_fields": [
+          { "field": "threats", "rule": "min_count", "value": 1, "message": "At least 1 threat must be identified" },
+          { "field": "coverage_matrix", "rule": "exists", "message": "Coverage matrix is required" }
+        ],
+        "soft_warnings": [],
+        "rules": [
+          {
+            "id": "ai_tara_stripe_ai_coverage",
+            "description": "Every asset must have all 7 STRIPE-AI categories assessed in coverage_matrix",
+            "severity": "required",
+            "message_template": "Incomplete STRIPE-AI coverage: {details}"
+          },
+          {
+            "id": "ai_tara_no_duplicate_threat_ids",
+            "description": "No duplicate threat IDs in the threats array",
+            "severity": "required",
+            "message_template": "Duplicate threat IDs found: {details}"
+          },
+          {
+            "id": "ai_tara_mcp_grounding_ratio",
+            "description": "Threats with mcp_source 'llm-reasoned' must be less than 25% of total",
+            "severity": "warning",
+            "message_template": "MCP grounding ratio low: {details}"
+          },
+          {
+            "id": "ai_tara_ai_categories_populated",
+            "description": "Poisoning (P) and AI-Behavior (AI) categories must each have at least 1 threat for AI-specific assets",
+            "severity": "warning",
+            "message_template": "AI-specific categories underrepresented: {details}"
+          }
+        ]
+      },
+      "quality_rubric": {
+        "threats": {
+          "per_item": {
+            "description": {
+              "min_words": 15,
+              "severity": "warning",
+              "message": "Threat descriptions should be detailed enough for risk assessment"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "impact_assessment",
+      "name": "Impact Assessment (Multi-dimensional)",
+      "description": "Evaluate the potential consequences of each threat scenario across 7 dimensions: Safety, Financial, Privacy, Operational, Reputational, Regulatory, and Ethical. Each dimension rated 1-5 (Negligible, Low, Medium, High, Critical). Assess cascading effects, blast radius, reversibility, and detection latency. Use jurisdiction-specific regulatory context from the MCP ecosystem to inform regulatory and ethical impact scoring. Delegate to impact-assessor specialist.",
+      "stage_state_schema": {
+        "type": "object",
+        "properties": {
+          "impact_matrix": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "threat_id": { "type": "string" },
+                "safety": { "type": "integer", "minimum": 1, "maximum": 5 },
+                "financial": { "type": "integer", "minimum": 1, "maximum": 5 },
+                "privacy": { "type": "integer", "minimum": 1, "maximum": 5 },
+                "operational": { "type": "integer", "minimum": 1, "maximum": 5 },
+                "reputational": { "type": "integer", "minimum": 1, "maximum": 5 },
+                "regulatory": { "type": "integer", "minimum": 1, "maximum": 5 },
+                "ethical": { "type": "integer", "minimum": 1, "maximum": 5 },
+                "aggregate_impact": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 5,
+                  "description": "Highest single-dimension score (worst-case)"
+                },
+                "cascading_effects": { "type": "string" },
+                "blast_radius": {
+                  "type": "string",
+                  "enum": ["single_user", "user_cohort", "all_users", "downstream_systems", "public"]
+                },
+                "reversibility": {
+                  "type": "string",
+                  "enum": ["reversible", "partially_reversible", "irreversible"]
+                },
+                "detection_latency": {
+                  "type": "string",
+                  "enum": ["immediate", "hours", "days", "weeks", "months", "unknown"]
+                },
+                "regulatory_flags": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "regulation": { "type": "string" },
+                      "article": { "type": "string" },
+                      "obligation": { "type": "string" }
+                    }
+                  }
+                },
+                "rationale": { "type": "string" }
+              },
+              "required": ["threat_id", "safety", "financial", "privacy", "operational", "reputational", "regulatory", "ethical", "aggregate_impact"]
+            }
+          }
+        },
+        "required": ["impact_matrix"]
+      },
+      "completion_criteria": {
+        "required_fields": [
+          { "field": "impact_matrix", "rule": "min_count", "value": 1, "message": "At least 1 impact assessment must be completed" }
+        ],
+        "soft_warnings": [],
+        "rules": [
+          {
+            "id": "ai_tara_every_threat_has_impact",
+            "description": "Every threat from Phase 2 must have an impact assessment row",
+            "severity": "required",
+            "message_template": "Missing impact assessments: {details}"
+          },
+          {
+            "id": "ai_tara_all_dimensions_rated",
+            "description": "All 7 dimensions must have ratings (1-5) for each threat",
+            "severity": "required",
+            "message_template": "Incomplete dimension ratings: {details}"
+          }
+        ]
+      },
+      "quality_rubric": {
+        "impact_matrix": {
+          "per_item": {
+            "rationale": {
+              "min_words": 10,
+              "severity": "warning",
+              "message": "Impact rationale should explain the scoring"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "feasibility_assessment",
+      "name": "Attack Feasibility Assessment",
+      "description": "Assess the feasibility of each threat using the ISO 21434 Annex F attack-potential-based method, adapted for AI attack vectors. Six factors: Elapsed Time (0-4), Specialist Expertise (0-3), Knowledge of Target (0-3), Window of Opportunity (0-3), Equipment (0-4), Detection Difficulty (0-3). Sum maps to feasibility: 0-9 Very High, 10-13 High, 14-19 Medium, 20-24 Low, 25+ Very Low. Cross-reference published research, tooling availability, and ATLAS case studies. Delegate to feasibility-assessor specialist.",
+      "stage_state_schema": {
+        "type": "object",
+        "properties": {
+          "feasibility_ratings": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "threat_id": { "type": "string" },
+                "elapsed_time": {
+                  "type": "integer", "minimum": 0, "maximum": 4,
+                  "description": "0: < 1 day, 1: < 1 week, 2: < 1 month, 3: < 6 months, 4: > 6 months"
+                },
+                "specialist_expertise": {
+                  "type": "integer", "minimum": 0, "maximum": 3,
+                  "description": "0: Layman, 1: Proficient, 2: Expert, 3: Multiple experts"
+                },
+                "knowledge_of_target": {
+                  "type": "integer", "minimum": 0, "maximum": 3,
+                  "description": "0: Public info, 1: Restricted, 2: Confidential, 3: Strictly confidential"
+                },
+                "window_of_opportunity": {
+                  "type": "integer", "minimum": 0, "maximum": 3,
+                  "description": "0: Unlimited, 1: Easy, 2: Moderate, 3: Difficult"
+                },
+                "equipment": {
+                  "type": "integer", "minimum": 0, "maximum": 4,
+                  "description": "0: Standard, 1: Specialized, 2: Bespoke, 3: Multiple bespoke, 4: Multiple bespoke + custom"
+                },
+                "detection_difficulty": {
+                  "type": "integer", "minimum": 0, "maximum": 3,
+                  "description": "0: No detection, 1: Difficult to detect, 2: Moderate detection, 3: Easy detection"
+                },
+                "attack_potential_sum": {
+                  "type": "integer",
+                  "description": "Sum of all 6 factors"
+                },
+                "feasibility_rating": {
+                  "type": "string",
+                  "enum": ["very_high", "high", "medium", "low", "very_low"],
+                  "description": "0-9: very_high, 10-13: high, 14-19: medium, 20-24: low, 25+: very_low"
+                },
+                "published_research_available": { "type": "boolean" },
+                "poc_tooling_available": { "type": "boolean" },
+                "atlas_case_study_refs": { "type": "array", "items": { "type": "string" } },
+                "rationale": { "type": "string" }
+              },
+              "required": ["threat_id", "elapsed_time", "specialist_expertise", "knowledge_of_target", "window_of_opportunity", "equipment", "detection_difficulty", "attack_potential_sum", "feasibility_rating"]
+            }
+          }
+        },
+        "required": ["feasibility_ratings"]
+      },
+      "completion_criteria": {
+        "required_fields": [
+          { "field": "feasibility_ratings", "rule": "min_count", "value": 1, "message": "At least 1 feasibility rating must be completed" }
+        ],
+        "soft_warnings": [],
+        "rules": [
+          {
+            "id": "ai_tara_every_threat_has_feasibility",
+            "description": "Every threat from Phase 2 must have a feasibility rating",
+            "severity": "required",
+            "message_template": "Missing feasibility ratings: {details}"
+          },
+          {
+            "id": "ai_tara_feasibility_sum_coherent",
+            "description": "attack_potential_sum must equal the sum of the 6 individual factors, and feasibility_rating must match the sum ranges",
+            "severity": "required",
+            "message_template": "Incoherent feasibility calculation: {details}"
+          }
+        ]
+      },
+      "quality_rubric": {}
+    },
+    {
+      "id": "risk_determination",
+      "name": "Risk Determination",
+      "description": "Combine impact and feasibility into risk levels using a risk matrix. Map aggregate_impact (1-5) x feasibility_rating (very_high to very_low) to risk level R1-R5 (R1=Acceptable, R2=Low priority, R3=Medium priority, R4=High priority/ALARP, R5=Unacceptable). Cross-reference EU AI Act risk classification (unacceptable, high-risk, limited, minimal) and flag conflicts between TARA risk levels and regulatory classification. Apply precautionary principle for emergent AI threats with high uncertainty. Delegate to risk-determinator specialist.",
+      "stage_state_schema": {
+        "type": "object",
+        "properties": {
+          "risk_register": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "threat_id": { "type": "string" },
+                "impact_level": { "type": "integer", "minimum": 1, "maximum": 5 },
+                "feasibility_rating": {
+                  "type": "string",
+                  "enum": ["very_high", "high", "medium", "low", "very_low"]
+                },
+                "risk_level": {
+                  "type": "string",
+                  "enum": ["R1", "R2", "R3", "R4", "R5"],
+                  "description": "R1=Acceptable, R2=Low, R3=Medium, R4=High/ALARP, R5=Unacceptable"
+                },
+                "risk_label": {
+                  "type": "string",
+                  "enum": ["acceptable", "low_priority", "medium_priority", "high_priority", "unacceptable"]
+                },
+                "ai_act_classification": {
+                  "type": "string",
+                  "enum": ["unacceptable", "high_risk", "limited_risk", "minimal_risk", "not_classified"],
+                  "description": "EU AI Act risk classification for this threat context"
+                },
+                "regulatory_conflict": {
+                  "type": "boolean",
+                  "description": "True if TARA risk level conflicts with AI Act classification"
+                },
+                "precautionary_applied": {
+                  "type": "boolean",
+                  "description": "True if precautionary principle was applied (emergent AI threats with high uncertainty)"
+                },
+                "treatment_required": { "type": "boolean" },
+                "rationale": { "type": "string" }
+              },
+              "required": ["threat_id", "impact_level", "feasibility_rating", "risk_level", "treatment_required"]
+            }
+          },
+          "risk_matrix_summary": {
+            "type": "object",
+            "properties": {
+              "total_threats": { "type": "integer" },
+              "r5_count": { "type": "integer" },
+              "r4_count": { "type": "integer" },
+              "r3_count": { "type": "integer" },
+              "r2_count": { "type": "integer" },
+              "r1_count": { "type": "integer" },
+              "treatment_required_count": { "type": "integer" }
+            }
+          }
+        },
+        "required": ["risk_register"]
+      },
+      "completion_criteria": {
+        "required_fields": [
+          { "field": "risk_register", "rule": "min_count", "value": 1, "message": "Risk register must contain at least 1 entry" }
+        ],
+        "soft_warnings": [],
+        "rules": [
+          {
+            "id": "ai_tara_every_threat_in_register",
+            "description": "Every threat from Phase 2 must appear in the risk register",
+            "severity": "required",
+            "message_template": "Missing risk register entries: {details}"
+          },
+          {
+            "id": "ai_tara_r4_r5_flagged_for_treatment",
+            "description": "Every R4 and R5 risk must have treatment_required: true",
+            "severity": "required",
+            "message_template": "High risks not flagged for treatment: {details}"
+          }
+        ]
+      },
+      "quality_rubric": {}
+    },
+    {
+      "id": "risk_treatment",
+      "name": "Risk Treatment & Control Selection",
+      "description": "Propose risk treatment for each threat requiring treatment (R3-R5, or R2 at user discretion). Treatment strategies in priority order: Avoid (remove the capability), Reduce (apply controls), Transfer (insurance, contractual, human-in-the-loop), Accept (document residual risk with sign-off). AI-specific control categories: Input Controls, Model Controls, Architecture Controls, Data Controls, Monitoring Controls, Governance Controls. Map controls to established frameworks via Security Controls MCP. Calculate residual risk after controls.",
+      "stage_state_schema": {
+        "type": "object",
+        "properties": {
+          "treatment_plan": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "threat_id": { "type": "string" },
+                "treatment_strategy": {
+                  "type": "string",
+                  "enum": ["avoid", "reduce", "transfer", "accept"]
+                },
+                "controls": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "control_id": { "type": "string" },
+                      "control_name": { "type": "string" },
+                      "framework": { "type": "string" },
+                      "ai_control_category": {
+                        "type": "string",
+                        "enum": ["input_controls", "model_controls", "architecture_controls", "data_controls", "monitoring_controls", "governance_controls"]
+                      },
+                      "implementation_guidance": { "type": "string" },
+                      "implementation_priority": {
+                        "type": "string",
+                        "enum": ["immediate", "short_term", "medium_term", "long_term"]
+                      },
+                      "mcp_source": { "type": "string" }
+                    },
+                    "required": ["control_name", "ai_control_category"]
+                  }
+                },
+                "residual_risk_level": {
+                  "type": "string",
+                  "enum": ["R1", "R2", "R3", "R4", "R5"]
+                },
+                "residual_risk_rationale": { "type": "string" },
+                "acceptance_conditions": { "type": "string" },
+                "new_risks_introduced": { "type": "string" }
+              },
+              "required": ["threat_id", "treatment_strategy"]
+            }
+          }
+        },
+        "required": ["treatment_plan"]
+      },
+      "completion_criteria": {
+        "required_fields": [
+          { "field": "treatment_plan", "rule": "min_count", "value": 1, "message": "Treatment plan must have at least 1 entry" }
+        ],
+        "soft_warnings": [],
+        "rules": [
+          {
+            "id": "ai_tara_high_risk_threats_treated",
+            "description": "Every R4 and R5 threat must have a treatment plan entry with strategy != accept (unless explicitly justified)",
+            "severity": "required",
+            "message_template": "Untreated high risks: {details}"
+          },
+          {
+            "id": "ai_tara_reduce_has_controls",
+            "description": "Every treatment with strategy 'reduce' must have at least 1 control",
+            "severity": "required",
+            "message_template": "Reduce strategy without controls: {details}"
+          }
+        ]
+      },
+      "quality_rubric": {
+        "treatment_plan": {
+          "per_item": {
+            "residual_risk_rationale": {
+              "min_words": 10,
+              "severity": "warning",
+              "message": "Residual risk rationale should explain why the risk is acceptable after treatment"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "documentation",
+      "name": "Documentation & Compliance Mapping",
+      "description": "Assemble the final TARA report from stored state. Produce: executive summary, AI system model, STRIPE-AI threat catalog, impact assessment matrix, feasibility ratings, risk register, treatment plan, compliance mapping (EU AI Act Art 9, ISO 42001, NIST AI RMF, sector-specific), monitoring plan with KPIs and reassessment triggers, and gaps register. For automotive domain: include ISO 21434 WP-15-* alignment and R155 traceability.",
+      "stage_state_schema": {
+        "type": "object",
+        "properties": {
+          "report_markdown": { "type": "string" },
+          "compliance_mapping": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "framework": { "type": "string" },
+                "requirement": { "type": "string" },
+                "tara_section": { "type": "string" },
+                "status": { "type": "string", "enum": ["satisfied", "partially_satisfied", "not_addressed"] }
+              }
+            }
+          },
+          "monitoring_plan": {
+            "type": "object",
+            "properties": {
+              "kpis": { "type": "array", "items": { "type": "string" } },
+              "reassessment_triggers": { "type": "array", "items": { "type": "string" } },
+              "review_cadence": { "type": "string" }
+            }
+          },
+          "executive_summary": { "type": "string" }
+        },
+        "required": ["report_markdown"]
+      },
+      "completion_criteria": {
+        "required_fields": [
+          { "field": "report_markdown", "rule": "exists", "message": "Report must be generated" }
+        ],
+        "soft_warnings": [
+          { "field": "compliance_mapping", "rule": "min_count", "value": 1, "message": "Compliance mapping not generated — report will lack regulatory traceability" },
+          { "field": "monitoring_plan", "rule": "exists", "message": "Monitoring plan not generated — no reassessment triggers defined" }
+        ],
+        "rules": []
+      },
+      "quality_rubric": {
+        "report_markdown": {
+          "min_words": 500,
+          "severity": "warning",
+          "message": "Report should be comprehensive — minimum 500 words expected for a meaningful TARA"
+        },
+        "executive_summary": {
+          "min_words": 50,
+          "severity": "warning",
+          "message": "Executive summary should provide a concise overview for management"
+        }
+      }
+    }
+  ],
+  "prompting_guidance": "WORKFLOW INSTRUCTIONS FOR AI SYSTEM TARA\n\nYou are the AI TARA orchestrator. You lead a Threat Analysis and Risk Assessment for AI systems using the STRIPE-AI methodology — an extension of STRIDE adapted for AI/ML systems.\n\n## CRITICAL: USER GATES\n\nNEVER advance to the next phase without explicit user confirmation. After completing each phase:\n1. Store state via wkfl_store_state\n2. Present a structured summary of findings\n3. Ask: 'Please review these findings. Let me know if you want to add, remove, or modify anything before we proceed to [next phase].'\n4. Wait for the user to say 'proceed', 'looks good', 'next', or similar\n5. Only then call wkfl_check_stage_completeness and begin the next phase\n\n## RESUME CHECK\n\nOn every turn, call wkfl_list_states first. If prior state exists, load it and resume from where you left off. Never restart a phase that has stored state unless the user explicitly asks to redo it.\n\n## PHASE FLOW\n\n### Phase 1: System Definition (YOU lead — conversational, NOT a questionnaire)\nAssess what you know from the user's prompt and uploaded documents. Ask targeted questions about what is missing. Enumerate AI-specific assets (training data, model weights, prompts, RAG corpora, tool integrations, eval pipelines, session data, output channels). Identify domain context for specialist routing (automotive, healthcare, financial, general). Proceed when you have >= 3 assets and sufficient system understanding.\n\n### Phase 2: STRIPE-AI Threats (DELEGATE to 8 specialists in parallel)\nDelegate to ALL 8 specialists simultaneously:\n- spoofing-analyst (S), tampering-analyst (T), repudiation-analyst (R)\n- information-disclosure-analyst (I), denial-of-service-analyst (DoS)\n- privilege-escalation-analyst (E)\n- poisoning-analyst (P) — NEW: data poisoning, model poisoning, supply chain, adversarial inputs\n- ai-behavior-analyst (AI) — NEW: hallucination, drift, emergent behavior, prompt injection, jailbreaking\n\nPass each specialist: system_name, assets, model_architecture, data_pipeline, tool_integrations, document_citations.\n\nIf domain_context is automotive: also delegate to automotive-cybersecurity-expert.\nIf domain_context is healthcare: also delegate to healthcare-cybersecurity-expert.\nIf domain_context is financial: also delegate to financial-compliance-expert.\n\nBuild coverage_matrix: every asset x every STRIPE-AI category. Deduplicate semantically similar threats.\n\n### Phase 3: Impact Assessment (DELEGATE to impact-assessor)\nPass full threat list + assets + domain_context + regulatory_regime. The impact-assessor rates each threat across 7 dimensions (Safety, Financial, Privacy, Operational, Reputational, Regulatory, Ethical) on a 1-5 scale, plus cascading effects, blast radius, reversibility, and detection latency.\n\n### Phase 4: Feasibility Assessment (DELEGATE to feasibility-assessor)\nPass full threat list + assets + model_architecture + deployment_model. The feasibility-assessor uses ISO 21434 Annex F method with 6 factors. Sum maps to feasibility rating.\n\n### Phase 5: Risk Determination (DELEGATE to risk-determinator)\nPass threats + impact_matrix + feasibility_ratings + domain_context. Produces risk register with R1-R5 levels. Cross-references EU AI Act classification.\n\n### Phase 6: Risk Treatment (YOU lead, with Security Controls MCP)\nFor each R3-R5 threat: propose treatment strategy (avoid/reduce/transfer/accept). For 'reduce': search Security Controls MCP for matching controls. Categorize controls as: input, model, architecture, data, monitoring, or governance. Calculate residual risk.\n\n### Phase 7: Documentation (YOU assemble via wkfl_export_report)\nCall wkfl_export_report to assemble the final TARA report. Add compliance mapping (EU AI Act Art 9, ISO 42001, NIST AI RMF). Define monitoring plan with KPIs and reassessment triggers.\n\n## EVIDENCE RULES\n\nEvery threat must have mcp_source indicating provenance (stride-mcp, threat-intel-mcp, owasp-mcp, cve-mcp, or llm-reasoned). Threats marked llm-reasoned must be < 25% of total. Document-extracted facts must cite document name and section.\n\n## DOMAIN ADAPTATION\n\nWhen automotive is detected: use Automotive Cybersecurity MCP for ISO 21434 work product alignment (WP-15-01 through WP-15-09), R155 Annex 5 threat mapping, and CSMS obligation references. When healthcare: add HIPAA and MDR context. When financial: add DORA and PSD2 context.",
+  "report_sections": [
+    "executive_summary",
+    "ai_system_model",
+    "stripe_ai_threat_catalog",
+    "impact_assessment_matrix",
+    "feasibility_ratings",
+    "risk_register",
+    "treatment_plan",
+    "compliance_mapping",
+    "monitoring_plan",
+    "gaps_and_assumptions_register"
+  ]
+}

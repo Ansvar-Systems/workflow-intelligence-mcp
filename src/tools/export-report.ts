@@ -24,6 +24,7 @@ import {
 } from "./export-report-stride.js";
 import { buildDpiaReport, type DpiaReportInput } from "./export-report-dpia.js";
 import { buildTprmTriageReport, buildTprmAssessmentReport, type TprmTriageReportInput, type TprmAssessmentReportInput } from "./export-report-tprm.js";
+import { buildAiTaraReport, type AiTaraReportInput, type AiTaraAsset, type AiTaraThreat, type AiTaraImpactRow, type AiTaraFeasibilityRow, type AiTaraRiskEntry, type AiTaraTreatmentEntry, type AiTaraComplianceMapping } from "./export-report-ai-tara.js";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -595,6 +596,12 @@ export async function wkflExportReport(
       reportFormat === "tprm_assessment" ||
       (!taskId && !reportFormat && storedKeys.has("findings_register") && storedKeys.has("domain_scores") && storedKeys.has("vendor_profile")));
 
+  const isAiTara =
+    !isDpia && !isStride && !isTprmTriage && !isTprmAssessment &&
+    (taskId === "ai_tara" ||
+      reportFormat === "ai_tara" ||
+      (!taskId && !reportFormat && storedKeys.has("feasibility_ratings") && storedKeys.has("impact_matrix") && storedKeys.has("risk_register")));
+
   if (isDpia) {
     // Validate completeness before export (same pattern as STRIDE path)
     const dpiaState: Record<string, unknown> = {};
@@ -978,6 +985,38 @@ export async function wkflExportReport(
       scopeAndMethodology: scopeAndMethodology_tprm,
     });
     return { content: [{ type: "text", text: markdown }] };
+  }
+
+  if (isAiTara) {
+    const systemDef = (load("system_definition") ?? {}) as Record<string, unknown>;
+    const threatState = (load("threat_identification") ?? {}) as Record<string, unknown>;
+    const impactState = (load("impact_assessment") ?? {}) as Record<string, unknown>;
+    const feasibilityState = (load("feasibility_assessment") ?? {}) as Record<string, unknown>;
+    const riskState = (load("risk_determination") ?? {}) as Record<string, unknown>;
+    const treatmentState = (load("risk_treatment") ?? {}) as Record<string, unknown>;
+    const docState = (load("documentation") ?? {}) as Record<string, unknown>;
+
+    const taraReport = buildAiTaraReport({
+      assessmentId,
+      systemName: systemDef.system_name as string | undefined,
+      systemDescription: systemDef.system_description as string | undefined,
+      modelArchitecture: systemDef.model_architecture as Record<string, unknown> | undefined,
+      decisionChainPosition: systemDef.decision_chain_position as string | undefined,
+      domainContext: systemDef.domain_context as string | undefined,
+      assets: (systemDef.assets ?? []) as AiTaraAsset[],
+      threats: (threatState.threats ?? []) as AiTaraThreat[],
+      coverageMatrix: threatState.coverage_matrix as Record<string, Record<string, boolean>> | undefined,
+      impactMatrix: (impactState.impact_matrix ?? []) as AiTaraImpactRow[],
+      feasibilityRatings: (feasibilityState.feasibility_ratings ?? []) as AiTaraFeasibilityRow[],
+      riskRegister: (riskState.risk_register ?? []) as AiTaraRiskEntry[],
+      riskMatrixSummary: riskState.risk_matrix_summary as Record<string, unknown> | undefined,
+      treatmentPlan: (treatmentState.treatment_plan ?? []) as AiTaraTreatmentEntry[],
+      complianceMapping: (docState.compliance_mapping ?? []) as AiTaraComplianceMapping[],
+      monitoringPlan: docState.monitoring_plan as AiTaraReportInput["monitoringPlan"],
+      executiveSummary: docState.executive_summary as string | undefined,
+      gaps: (systemDef.gaps ?? []) as AiTaraReportInput["gaps"],
+    });
+    return { content: [{ type: "text", text: taraReport }] };
   }
 
   // --- Compliance report path ---

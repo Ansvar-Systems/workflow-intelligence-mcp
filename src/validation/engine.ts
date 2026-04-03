@@ -100,6 +100,22 @@ import {
   checkTprmConditionalHasConditions,
   checkTprmNogoHasBlockingFindings,
 } from "./rules/tprm.js";
+import {
+  checkAiTaraMinAssets,
+  checkAiTaraAiAssetCoverage,
+  checkAiTaraStripeAiCoverage,
+  checkAiTaraNoDuplicateThreatIds,
+  checkAiTaraMcpGroundingRatio,
+  checkAiTaraAiCategoriesPopulated,
+  checkAiTaraEveryThreatHasImpact,
+  checkAiTaraAllDimensionsRated,
+  checkAiTaraEveryThreatHasFeasibility,
+  checkAiTaraFeasibilitySumCoherent,
+  checkAiTaraEveryThreatInRegister,
+  checkAiTaraR4R5FlaggedForTreatment,
+  checkAiTaraHighRiskThreatsTreated,
+  checkAiTaraReduceHasControls,
+} from "./rules/ai-tara.js";
 
 // ---------------------------------------------------------------------------
 // Rule registry
@@ -238,6 +254,22 @@ registerStructuralRule("tprm_triage_classification_complete", checkTprmTriageCla
 registerStructuralRule("tprm_triage_recommendation_complete", checkTprmTriageRecommendationComplete);
 registerStructuralRule("tprm_conditional_has_conditions", checkTprmConditionalHasConditions);
 registerStructuralRule("tprm_nogo_has_blocking_findings", checkTprmNogoHasBlockingFindings);
+
+// AI TARA assessment rules
+registerStructuralRule("ai_tara_min_assets", checkAiTaraMinAssets);
+registerStructuralRule("ai_tara_ai_asset_coverage", checkAiTaraAiAssetCoverage);
+registerStructuralRule("ai_tara_stripe_ai_coverage", checkAiTaraStripeAiCoverage);
+registerStructuralRule("ai_tara_no_duplicate_threat_ids", checkAiTaraNoDuplicateThreatIds);
+registerStructuralRule("ai_tara_mcp_grounding_ratio", checkAiTaraMcpGroundingRatio);
+registerStructuralRule("ai_tara_ai_categories_populated", checkAiTaraAiCategoriesPopulated);
+registerStructuralRule("ai_tara_every_threat_has_impact", checkAiTaraEveryThreatHasImpact);
+registerStructuralRule("ai_tara_all_dimensions_rated", checkAiTaraAllDimensionsRated);
+registerStructuralRule("ai_tara_every_threat_has_feasibility", checkAiTaraEveryThreatHasFeasibility);
+registerStructuralRule("ai_tara_feasibility_sum_coherent", checkAiTaraFeasibilitySumCoherent);
+registerStructuralRule("ai_tara_every_threat_in_register", checkAiTaraEveryThreatInRegister);
+registerStructuralRule("ai_tara_r4_r5_flagged_for_treatment", checkAiTaraR4R5FlaggedForTreatment);
+registerStructuralRule("ai_tara_high_risk_threats_treated", checkAiTaraHighRiskThreatsTreated);
+registerStructuralRule("ai_tara_reduce_has_controls", checkAiTaraReduceHasControls);
 
 // ---------------------------------------------------------------------------
 // Engine
