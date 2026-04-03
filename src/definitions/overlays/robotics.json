@@ -51,6 +51,11 @@
       "mcp": "energy-security-mcp",
       "tools": ["search_energy_controls", "get_energy_standard"],
       "guidance": "Search for IEC 62443 controls applicable to industrial automation and control systems (IACS). Use get_energy_standard for zone and conduit security requirements. IEC 62443 security levels (SL-1 through SL-4) map to attack sophistication — align with feasibility assessment."
+    },
+    {
+      "mcp": "eu-regulations-mcp",
+      "tools": ["search_regulations", "get_article"],
+      "guidance": "Search MACHINERY regulation for Essential Health and Safety Requirements (EHSRs). Key article: Art 20 (Annex III 1.1.9 — protection against corruption). Also search for control system reliability (1.2.1) and moving parts risks (1.3.7). Use regulation ID 'MACHINERY' (not 'MACHINERY_REG')."
     }
   ],
 
