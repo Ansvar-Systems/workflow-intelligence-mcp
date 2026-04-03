@@ -1148,7 +1148,24 @@
           }
         ]
       },
-      "quality_rubric": {}
+      "quality_rubric": {},
+      "risk_matrix": {
+        "description": "Impact (1-5) x Feasibility (very_high to very_low) → Risk Level (R1-R5)",
+        "lookup": {
+          "5": {"very_high": "R5", "high": "R5", "medium": "R5", "low": "R4", "very_low": "R3"},
+          "4": {"very_high": "R5", "high": "R5", "medium": "R4", "low": "R3", "very_low": "R2"},
+          "3": {"very_high": "R4", "high": "R4", "medium": "R3", "low": "R2", "very_low": "R1"},
+          "2": {"very_high": "R3", "high": "R3", "medium": "R2", "low": "R1", "very_low": "R1"},
+          "1": {"very_high": "R2", "high": "R2", "medium": "R1", "low": "R1", "very_low": "R1"}
+        },
+        "risk_labels": {
+          "R1": "Acceptable — monitor only",
+          "R2": "Low Priority — treatment optional",
+          "R3": "Medium Priority — treatment recommended, plan within 6 months",
+          "R4": "High Priority (ALARP) — treatment required, plan within 3 months",
+          "R5": "Unacceptable — immediate treatment required"
+        }
+      }
     },
     {
       "id": "risk_treatment",
