@@ -6,7 +6,7 @@
   "main": "dist/server.js",
   "scripts": {
     "build": "tsc",
-    "postbuild": "mkdir -p dist/definitions/manifests && cp src/definitions/manifests/*.json dist/definitions/manifests/",
+    "postbuild": "mkdir -p dist/definitions/manifests dist/definitions/tasks dist/definitions/overlays && cp src/definitions/manifests/*.json dist/definitions/manifests/ && cp src/definitions/tasks/*.json dist/definitions/tasks/ && cp src/definitions/overlays/*.json dist/definitions/overlays/",
     "dev": "tsc --watch",
     "start": "node dist/server.js",
     "start:http": "node dist/http-server.js",

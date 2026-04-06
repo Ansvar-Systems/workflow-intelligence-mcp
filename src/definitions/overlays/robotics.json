@@ -1,0 +1,140 @@
+{
+  "id": "robotics",
+  "name": "Robotics & Industrial Automation",
+  "version": "1.0",
+  "applies_to": ["ai_tara", "stride_threat_model"],
+
+  "detection_signals": [
+    "robot", "robotic", "cobot", "collaborative robot", "industrial automation",
+    "actuator", "manipulator", "end effector", "PLC", "SCADA",
+    "IEC 62443", "ISO 10218", "ISO/TS 15066", "safety PLC",
+    "motion planning", "path planning", "kinematics", "ROS",
+    "digital twin", "servo", "motor controller", "safety zone",
+    "machine learning for control", "reinforcement learning",
+    "warehouse automation", "manufacturing", "pick and place",
+    "Machinery Regulation", "2023/1230", "CE marking"
+  ],
+
+  "asset_categories": [
+    {
+      "id": "actuator_effector",
+      "description": "Motors, servos, grippers, and end effectors that produce physical motion — safety-critical, direct physical harm potential"
+    },
+    {
+      "id": "sensor_array",
+      "description": "Sensors providing environmental awareness — cameras, lidar, force-torque sensors, proximity sensors, encoders"
+    },
+    {
+      "id": "motion_planning_system",
+      "description": "Path planning and trajectory generation algorithms — translates AI decisions into physical movements"
+    },
+    {
+      "id": "safety_plc",
+      "description": "Safety-rated PLC/controller enforcing safety functions (emergency stop, speed limiting, force limiting, safety zones)"
+    },
+    {
+      "id": "human_robot_interface",
+      "description": "Teach pendants, HMIs, voice commands, gesture recognition — operator interaction points"
+    },
+    {
+      "id": "digital_twin",
+      "description": "Virtual replica used for simulation, testing, and predictive maintenance — may diverge from physical twin"
+    },
+    {
+      "id": "control_network",
+      "description": "Industrial network connecting robot controllers, PLCs, SCADA — EtherNet/IP, PROFINET, Modbus, OPC UA"
+    }
+  ],
+
+  "threat_sources": [
+    {
+      "mcp": "energy-security-mcp",
+      "tools": ["search_energy_controls", "get_energy_standard"],
+      "guidance": "Search for IEC 62443 controls applicable to industrial automation and control systems (IACS). Use get_energy_standard for zone and conduit security requirements. IEC 62443 security levels (SL-1 through SL-4) map to attack sophistication — align with feasibility assessment."
+    },
+    {
+      "mcp": "eu-regulations-mcp",
+      "tools": ["search_regulations", "get_article"],
+      "guidance": "Search MACHINERY regulation for Essential Health and Safety Requirements (EHSRs). Key article: Art 20 (Annex III 1.1.9 — protection against corruption). Also search for control system reliability (1.2.1) and moving parts risks (1.3.7). Use regulation ID 'MACHINERY' (not 'MACHINERY_REG')."
+    }
+  ],
+
+  "impact_calibration": {
+    "safety": "Robots with actuators that can reach humans are inherently safety-critical. Use ISO 12100 risk estimation: severity of harm (S1 reversible, S2 irreversible) x frequency of exposure (F1 rare, F2 frequent) x possibility of avoidance (P1 possible, P2 not possible). Collaborative robots (cobots) in shared workspaces: safety >= 3 for any threat affecting motion control. Industrial robots behind safety fencing: safety depends on whether safety PLC can be bypassed. Any threat that could disable safety functions (e-stop, speed limiting, force limiting) = safety 5.",
+    "operational": "Robot downtime in manufacturing directly impacts production throughput. Calculate: hourly production value x expected downtime. Automotive manufacturing lines: ~EUR 20K/hour per cell. Warehouse automation: throughput degradation cascades to SLA breaches.",
+    "financial": "Include production loss, equipment damage (robots are EUR 50K-500K each), rework costs, and worker compensation claims. EU Machinery Regulation 2023/1230 non-compliance blocks CE marking — cannot sell or operate in EU.",
+    "regulatory": "EU Machinery Regulation 2023/1230 (replaces Directive 2006/42/EC from 2027-01-20) — mandatory EHSR compliance including cybersecurity requirements in new Article 1.1.9. IEC 62443 increasingly referenced by regulators for industrial cybersecurity. ISO 13849 for safety-related parts of control systems. Any threat compromising safety functions may require machine shutdown until resolved."
+  },
+
+  "feasibility_calibration": "Industrial control networks are often segmented but not air-gapped — OPC UA, MQTT, and cloud dashboards create attack surface. Adjust window_of_opportunity based on network architecture: air-gapped (difficult, 3), segmented with firewall (moderate, 2), flat network with IT/OT convergence (easy, 1). Physical access attacks on teach pendants and USB ports rate high feasibility in shared facilities. ROS (Robot Operating System) has minimal built-in authentication — ROS 2 DDS security is optional and often disabled. Supply chain attacks on ROS packages and controller firmware are a growing concern. Reinforcement learning control policies are vulnerable to adversarial perturbation of sensor inputs — published research exists for robotic manipulation tasks.",
+
+  "compliance_frameworks": [
+    {
+      "id": "IEC_62443",
+      "name": "IEC 62443 (Industrial Automation and Control Systems Security)",
+      "key_requirements": [
+        "2-1 — IACS security management system",
+        "3-2 — Security risk assessment and system design",
+        "3-3 — System security requirements and security levels (SL-1 to SL-4)",
+        "4-2 — Technical security requirements for IACS components"
+      ]
+    },
+    {
+      "id": "EU_MACHINERY_REG",
+      "name": "EU Machinery Regulation 2023/1230",
+      "key_requirements": [
+        "Annex III 1.1.9 — Protection against corruption (cybersecurity EHSR)",
+        "Annex III 1.2.1 — Safety and reliability of control systems",
+        "Annex III 1.3.7 — Risks from moving parts",
+        "Annex III 1.6.1 — Maintenance (including software updates)"
+      ]
+    },
+    {
+      "id": "ISO_10218",
+      "name": "ISO 10218-1/2:2011",
+      "key_requirements": [
+        "Part 1 5.4 — Robot stopping functions",
+        "Part 1 5.10 — Singular protection (collaborative)",
+        "Part 2 5.2 — Robot installation safety",
+        "Part 2 5.11 — Collaborative robot operation"
+      ]
+    },
+    {
+      "id": "ISO_TS_15066",
+      "name": "ISO/TS 15066:2016",
+      "key_requirements": [
+        "5.5 — Power and force limiting",
+        "5.5.4 — Biomechanical limits (contact forces per body region)",
+        "Annex A — Body model and pain onset thresholds"
+      ]
+    },
+    {
+      "id": "ISO_13849",
+      "name": "ISO 13849-1:2023",
+      "key_requirements": [
+        "5.2 — Identification of safety functions",
+        "6.2 — Performance levels (PL a through e)",
+        "7.2 — Diagnostic coverage",
+        "Annex I — Software requirements"
+      ]
+    }
+  ],
+
+  "report_addenda": [
+    {
+      "id": "safety_function_mapping",
+      "title": "Safety Function Threat Mapping",
+      "guidance": "Identify all safety functions (e-stop, speed limiting, force limiting, safety zones, safety-rated monitored stop) defined in ISO 10218 / ISO/TS 15066. For each R3-R5 threat, assess whether it could compromise a safety function. Map to ISO 13849 performance levels — a compromised safety function may need PL upgrade or architectural redesign."
+    },
+    {
+      "id": "iec62443_sl_mapping",
+      "title": "IEC 62443 Security Level Mapping",
+      "guidance": "Map identified threats to IEC 62443 foundational requirements (FR 1-7: identification, use control, system integrity, data confidentiality, data flow, event response, resource availability). Determine target security level (SL-T) based on threat feasibility: very_high feasibility → minimum SL-3, high → SL-2, medium → SL-2, low → SL-1. Show the gap between current security level (SL-C) and target."
+    },
+    {
+      "id": "machinery_reg_ehsr",
+      "title": "EU Machinery Regulation EHSR Compliance",
+      "guidance": "Map cybersecurity threats and controls to the Essential Health and Safety Requirements (EHSRs) of EU Machinery Regulation 2023/1230, focusing on Annex III 1.1.9 (protection against corruption). Show traceability from TARA risk treatment to EHSR compliance. Note: 2023/1230 becomes mandatory 2027-01-20, replacing Directive 2006/42/EC."
+    }
+  ]
+}
