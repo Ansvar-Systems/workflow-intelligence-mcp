@@ -305,7 +305,6 @@ export const TOOL_DEFINITIONS = [
     },
   },
   {
-<<<<<<< HEAD
     name: "request_review",
     description:
       "Pause the workflow and request user review before continuing to the next phase. Call this after wkfl_check_stage_completeness passes for a phase that requires customer approval. The workflow will stop and show a review card to the user.",
@@ -331,7 +330,9 @@ export const TOOL_DEFINITIONS = [
         },
       },
       required: ["phase_id", "phase_name", "summary"],
-=======
+    },
+  },
+  {
     name: "wkfl_get_domain_overlay",
     description:
       "Get domain-specific overlay guidance for workflow adaptation. Returns additional asset categories, MCP tools to consult, impact/feasibility calibration, compliance frameworks, and report addenda. Call during Phase 1 when domain context is detected. Multiple domains can be requested for composite systems (e.g., medical device with robotic actuators). Call without domains to list available overlays.",
@@ -345,7 +346,6 @@ export const TOOL_DEFINITIONS = [
             'Domain IDs to load (e.g., ["medical-devices"] or ["robotics", "medical-devices"]). Omit to list available overlays.',
         },
       },
->>>>>>> 04534af (feat: domain overlay system + TARA validation tests + build fixes)
     },
   },
   {
