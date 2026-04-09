@@ -376,6 +376,44 @@
                 }
               }
             }
+          },
+          "client_questions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": { "type": "string" },
+                "question": { "type": "string" },
+                "blocking": { "type": "boolean" },
+                "priority": { "type": "string", "enum": ["high", "medium", "low"] },
+                "status": { "type": "string", "enum": ["pending", "answered", "assumed", "waived"] },
+                "response": { "type": "string" },
+                "answer_source": { "type": "string", "enum": ["user_attested", "document_evidence", "assumed", "analyst_judgment"] },
+                "affects_phases": { "type": "array", "items": { "type": "string" } }
+              }
+            }
+          },
+          "client_attestations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "question_id": { "type": "string" },
+                "question": { "type": "string" },
+                "response": { "type": "string" },
+                "answer_source": { "type": "string", "enum": ["user_attested", "document_evidence", "assumed", "analyst_judgment"] }
+              }
+            }
+          },
+          "scope_readiness": {
+            "type": "object",
+            "properties": {
+              "overall_status": { "type": "string", "enum": ["ready", "partial", "blocked", "minimal"] },
+              "proceeding_mode": { "type": "string", "enum": ["proceed", "awaiting_client_input", "proceed_with_assumptions"] },
+              "confidence": { "type": "string", "enum": ["high", "medium", "low"] },
+              "blocking_gaps": { "type": "array", "items": { "type": "string" } },
+              "assumptions_made": { "type": "array", "items": { "type": "string" } }
+            }
           }
         },
         "required": [
@@ -1384,6 +1422,50 @@
           }
         }
       }
+    },
+    {
+      "id": "qa_gate",
+      "name": "Quality Assurance Gate",
+      "description": "Self-review checkpoint before report assembly. Catches errors, omissions, and inconsistencies. User can flag corrections.",
+      "stage_state_schema": {
+        "type": "object",
+        "properties": {
+          "qa_findings": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": { "type": "string" },
+                "category": { "type": "string", "enum": ["user_correction", "severity_mismatch", "missing_threat", "enrichment_gap", "cross_ref_broken", "dedup_candidate", "coverage_gap"] },
+                "severity": { "type": "string", "enum": ["blocking", "warning"] },
+                "threat_id": { "type": "string" },
+                "description": { "type": "string" },
+                "remediation": { "type": "string" },
+                "resolved": { "type": "boolean" }
+              }
+            }
+          }
+        }
+      },
+      "completion_criteria": {
+        "required_fields": [
+          {
+            "field": "qa_findings",
+            "rule": "exists",
+            "message": "QA findings array must be present (empty array if no issues found)"
+          }
+        ],
+        "rules": [
+          {
+            "id": "qa_blocking_resolved",
+            "description": "All blocking QA findings must be resolved before report assembly",
+            "severity": "required",
+            "message_template": "Unresolved blocking QA findings: {details}"
+          }
+        ],
+        "soft_warnings": []
+      },
+      "quality_rubric": {}
     },
     {
       "id": "documentation",
