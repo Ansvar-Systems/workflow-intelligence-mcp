@@ -908,6 +908,57 @@ describe("AI TARA validation rules", () => {
     });
   });
 
+  // ── Phase 2: Coverage cross-reference ──────────────────────────────────────
+
+  describe("checkAiTaraStripeAiCoverage cross-reference", () => {
+    it("should fail when an asset from assets array is missing from coverage_matrix", () => {
+      const state = {
+        assets: [
+          { id: "model_weights" },
+          { id: "training_data" },
+          { id: "rag_corpora" },
+        ],
+        coverage_matrix: {
+          model_weights: { S: true, T: true, R: true, I: true, P: true, D: true, E: true, AI: true },
+          training_data: { S: true, T: true, R: true, I: true, P: true, D: true, E: true, AI: true },
+          // rag_corpora missing entirely
+        },
+      };
+      const failures = checkAiTaraStripeAiCoverage(state);
+      expect(failures.some((f) => f.details.includes("rag_corpora"))).toBe(true);
+    });
+
+    it("should pass when all assets are present in coverage_matrix with all 8 categories", () => {
+      const allCats = { S: true, T: true, R: true, I: true, P: true, D: true, E: true, AI: true };
+      const state = {
+        assets: [{ id: "a1" }, { id: "a2" }],
+        coverage_matrix: { a1: allCats, a2: allCats },
+      };
+      const failures = checkAiTaraStripeAiCoverage(state);
+      expect(failures.length).toBe(0);
+    });
+
+    it("should pass when assets array is absent (no cross-reference check)", () => {
+      const state = {
+        coverage_matrix: {
+          asset1: { S: true, T: true, R: true, I: true, P: true, D: true, E: true, AI: true },
+        },
+      };
+      expect(checkAiTaraStripeAiCoverage(state)).toHaveLength(0);
+    });
+
+    it("should report each missing asset separately", () => {
+      const allCats = { S: true, T: true, R: true, I: true, P: true, D: true, E: true, AI: true };
+      const state = {
+        assets: [{ id: "asset_a" }, { id: "asset_b" }, { id: "asset_c" }],
+        coverage_matrix: { asset_a: allCats },
+      };
+      const failures = checkAiTaraStripeAiCoverage(state);
+      expect(failures.some((f) => f.details.includes("asset_b"))).toBe(true);
+      expect(failures.some((f) => f.details.includes("asset_c"))).toBe(true);
+    });
+  });
+
   // ── Null safety ─────────────────────────────────────────────────────────────
 
   describe("null safety", () => {

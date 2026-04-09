@@ -659,6 +659,18 @@
             "items": {
               "type": "string"
             }
+          },
+          "assets": {
+            "type": "array",
+            "description": "Copy of assets from system_definition phase, included for coverage validation cross-reference",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": { "type": "string" },
+                "name": { "type": "string" },
+                "category": { "type": "string" }
+              }
+            }
           }
         },
         "required": [

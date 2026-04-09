@@ -145,6 +145,23 @@ export function checkAiTaraStripeAiCoverage(
       });
     }
   }
+
+  // Cross-reference: every asset from system_definition must appear in matrix
+  const assets = (s as Record<string, unknown>).assets;
+  if (Array.isArray(assets)) {
+    const matrixKeys = new Set(Object.keys(matrix));
+    for (const asset of assets) {
+      const assetId = (asset as Record<string, unknown>)?.id as string | undefined;
+      if (assetId && !matrixKeys.has(assetId)) {
+        failures.push({
+          rule: "ai_tara_stripe_ai_coverage",
+          severity: "required",
+          details: `Asset '${assetId}' from system definition is not present in coverage_matrix`,
+        });
+      }
+    }
+  }
+
   return failures;
 }
 
