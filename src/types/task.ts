@@ -53,6 +53,7 @@ export interface PhaseDefinition {
   id: string;
   name: string;
   description: string;
+  stage_state_schema?: Record<string, unknown>;
   completion_criteria: CompletionCriteria;
   quality_rubric: Record<string, QualityRubricEntry>;
   skip_conditions?: string[];
