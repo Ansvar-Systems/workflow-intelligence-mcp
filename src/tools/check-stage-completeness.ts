@@ -105,8 +105,38 @@ export async function checkStageCompleteness(
     }
   }
 
+  // --- Phase-aware schema selection ---
+  let schema = def.stage_state_schema;
+  const phaseId = args.phase_id as string | undefined;
+  if (phaseId && def.phases) {
+    const phase = def.phases.find((p) => p.id === phaseId);
+    if (phase?.stage_state_schema) {
+      schema = phase.stage_state_schema;
+    }
+  } else if (!phaseId && def.phases?.length && !def.completion_criteria?.rules?.length) {
+    return {
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify({
+            status: "incomplete",
+            missing: [
+              {
+                rule: "phase_id_required",
+                severity: "required",
+                details: `Task '${def.id}' uses per-phase validation. Provide phase_id parameter.`,
+              },
+            ],
+            warnings: [],
+            summary: `Task '${def.id}' requires phase_id for stage completeness checks.`,
+          }),
+        },
+      ],
+    };
+  }
+
   // JSON Schema validation
-  const validate = ajv.compile(def.stage_state_schema);
+  const validate = ajv.compile(schema);
   const valid = validate(stageState);
   if (!valid) {
     const errors = (validate.errors ?? [])
@@ -136,7 +166,6 @@ export async function checkStageCompleteness(
   }
 
   // Run validation engine — phase-aware if phase_id provided and task has phases
-  const phaseId = args.phase_id as string | undefined;
   const result = phaseId && def.phases
     ? evaluatePhaseCompleteness(
         stageState,

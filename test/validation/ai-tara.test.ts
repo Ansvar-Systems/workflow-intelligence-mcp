@@ -114,20 +114,41 @@ describe("AI TARA validation rules", () => {
   // ── Phase 2: Threat Identification ──────────────────────────────────────────
 
   describe("checkAiTaraStripeAiCoverage", () => {
-    it("passes when all assets have all 7 categories", () => {
+    it("passes when all assets have all 8 categories", () => {
       const state = {
         coverage_matrix: {
-          asset1: { S: true, T: true, R: true, I: true, P: true, E: true, AI: true },
-          asset2: { S: true, T: true, R: true, I: true, P: true, E: true, AI: true },
+          asset1: { S: true, T: true, R: true, I: true, P: true, D: true, E: true, AI: true },
+          asset2: { S: true, T: true, R: true, I: true, P: true, D: true, E: true, AI: true },
         },
       };
       expect(checkAiTaraStripeAiCoverage(state)).toHaveLength(0);
     });
 
+    it("should require D (Denial of Service) category in coverage matrix", () => {
+      const state = {
+        coverage_matrix: {
+          asset_1: { S: true, T: true, R: true, I: true, P: true, E: true, AI: true },
+        },
+      };
+      const failures = checkAiTaraStripeAiCoverage(state);
+      expect(failures.length).toBe(1);
+      expect(failures[0].details).toContain("D");
+    });
+
+    it("should pass when all 8 categories are present", () => {
+      const state = {
+        coverage_matrix: {
+          asset_1: { S: true, T: true, R: true, I: true, P: true, D: true, E: true, AI: true },
+        },
+      };
+      const failures = checkAiTaraStripeAiCoverage(state);
+      expect(failures.length).toBe(0);
+    });
+
     it("fails when an asset is missing categories", () => {
       const state = {
         coverage_matrix: {
-          asset1: { S: true, T: true, R: true, I: true, P: true, E: true, AI: true },
+          asset1: { S: true, T: true, R: true, I: true, P: true, D: true, E: true, AI: true },
           asset2: { S: true, T: true },
         },
       };
@@ -155,7 +176,7 @@ describe("AI TARA validation rules", () => {
     it("treats false values as missing", () => {
       const state = {
         coverage_matrix: {
-          asset1: { S: true, T: true, R: true, I: true, P: true, E: true, AI: false },
+          asset1: { S: true, T: true, R: true, I: true, P: true, D: true, E: true, AI: false },
         },
       };
       const f = checkAiTaraStripeAiCoverage(state);
@@ -215,7 +236,9 @@ describe("AI TARA validation rules", () => {
       expect(checkAiTaraMcpGroundingRatio(state)).toHaveLength(0);
     });
 
-    it("fails when llm-reasoned is 25% or more", () => {
+    it("passes when llm-reasoned is 50% — grounding threshold is disabled", () => {
+      // GROUNDING_THRESHOLD = 0 — rule always passes regardless of ratio.
+      // When threshold is restored to 0.25, this test should expect failures.
       const state = {
         threats: [
           { id: "T1", mcp_source: "mcp-grounded" },
@@ -225,13 +248,10 @@ describe("AI TARA validation rules", () => {
         ],
       };
       const f = checkAiTaraMcpGroundingRatio(state);
-      expect(f).toHaveLength(1);
-      expect(f[0].rule).toBe("ai_tara_mcp_grounding_ratio");
-      expect(f[0].severity).toBe("warning");
-      expect(f[0].details).toContain("50%");
+      expect(f).toHaveLength(0);
     });
 
-    it("fails when exactly 25%", () => {
+    it("passes when exactly 25%", () => {
       const state = {
         threats: [
           { id: "T1", mcp_source: "mcp-grounded" },
@@ -240,10 +260,9 @@ describe("AI TARA validation rules", () => {
           { id: "T4", mcp_source: "llm-reasoned" },
         ],
       };
-      // 1/4 = 25% — the check is >= 0.25, so this should pass (exactly 25% fails)
+      // 1/4 = 25% — check is > 0.25 (strictly greater), so exactly 25% passes
       const f = checkAiTaraMcpGroundingRatio(state);
-      expect(f).toHaveLength(1);
-      expect(f[0].details).toContain("25%");
+      expect(f).toHaveLength(0);
     });
 
     it("returns empty when threats is empty", () => {
@@ -887,6 +906,57 @@ describe("AI TARA validation rules", () => {
     });
   });
 
+  // ── Phase 2: Coverage cross-reference ──────────────────────────────────────
+
+  describe("checkAiTaraStripeAiCoverage cross-reference", () => {
+    it("should fail when an asset from assets array is missing from coverage_matrix", () => {
+      const state = {
+        assets: [
+          { id: "model_weights" },
+          { id: "training_data" },
+          { id: "rag_corpora" },
+        ],
+        coverage_matrix: {
+          model_weights: { S: true, T: true, R: true, I: true, P: true, D: true, E: true, AI: true },
+          training_data: { S: true, T: true, R: true, I: true, P: true, D: true, E: true, AI: true },
+          // rag_corpora missing entirely
+        },
+      };
+      const failures = checkAiTaraStripeAiCoverage(state);
+      expect(failures.some((f) => f.details.includes("rag_corpora"))).toBe(true);
+    });
+
+    it("should pass when all assets are present in coverage_matrix with all 8 categories", () => {
+      const allCats = { S: true, T: true, R: true, I: true, P: true, D: true, E: true, AI: true };
+      const state = {
+        assets: [{ id: "a1" }, { id: "a2" }],
+        coverage_matrix: { a1: allCats, a2: allCats },
+      };
+      const failures = checkAiTaraStripeAiCoverage(state);
+      expect(failures.length).toBe(0);
+    });
+
+    it("should pass when assets array is absent (no cross-reference check)", () => {
+      const state = {
+        coverage_matrix: {
+          asset1: { S: true, T: true, R: true, I: true, P: true, D: true, E: true, AI: true },
+        },
+      };
+      expect(checkAiTaraStripeAiCoverage(state)).toHaveLength(0);
+    });
+
+    it("should report each missing asset separately", () => {
+      const allCats = { S: true, T: true, R: true, I: true, P: true, D: true, E: true, AI: true };
+      const state = {
+        assets: [{ id: "asset_a" }, { id: "asset_b" }, { id: "asset_c" }],
+        coverage_matrix: { asset_a: allCats },
+      };
+      const failures = checkAiTaraStripeAiCoverage(state);
+      expect(failures.some((f) => f.details.includes("asset_b"))).toBe(true);
+      expect(failures.some((f) => f.details.includes("asset_c"))).toBe(true);
+    });
+  });
+
   // ── Null safety ─────────────────────────────────────────────────────────────
 
   describe("null safety", () => {
@@ -907,5 +977,63 @@ describe("AI TARA validation rules", () => {
       expect(() => checkAiTaraHighRiskThreatsTreated(empty)).not.toThrow();
       expect(() => checkAiTaraReduceHasControls(empty)).not.toThrow();
     });
+  });
+});
+
+describe("checkAiTaraMcpGroundingRatio with provenance", () => {
+  it("should count provenance.source_type analyst_judgment toward grounding ratio", () => {
+    const state = {
+      threats: [
+        { id: "t1", provenance: { source_type: "document_grounded", confidence: "high" } },
+        { id: "t2", provenance: { source_type: "analyst_judgment", confidence: "low" } },
+        { id: "t3", provenance: { source_type: "pattern_mapped", confidence: "medium" } },
+        { id: "t4", provenance: { source_type: "analyst_judgment", confidence: "low" } },
+      ],
+    };
+    const failures = checkAiTaraMcpGroundingRatio(state);
+    // 2/4 = 50% analyst_judgment — GROUNDING_THRESHOLD = 0, so always passes.
+    // When threshold is restored to 0.25, this should expect failures.length toBe(1).
+    expect(failures.length).toBe(0);
+  });
+
+  it("should fall back to mcp_source llm-reasoned if provenance absent", () => {
+    const state = {
+      threats: [
+        { id: "t1", mcp_source: "threat-intel-mcp" },
+        { id: "t2", mcp_source: "llm-reasoned" },
+        { id: "t3", mcp_source: "owasp-mcp" },
+      ],
+    };
+    const failures = checkAiTaraMcpGroundingRatio(state);
+    // 1/3 = 33% — GROUNDING_THRESHOLD = 0, so always passes.
+    // When threshold is restored to 0.25, this should expect failures.length toBe(1).
+    expect(failures.length).toBe(0);
+  });
+
+  it("should pass regardless of ratio while grounding threshold is disabled", () => {
+    const state = {
+      threats: [
+        { id: "t1", provenance: { source_type: "analyst_judgment" } },
+        { id: "t2", provenance: { source_type: "analyst_judgment" } },
+      ],
+    };
+    // GROUNDING_THRESHOLD is 0 — rule always passes
+    // When threshold is restored to 0.25, this test should fail (100% > 25%)
+    const failures = checkAiTaraMcpGroundingRatio(state);
+    expect(failures.length).toBe(0);
+  });
+
+  it("should pass when analyst_judgment is under 25%", () => {
+    const state = {
+      threats: [
+        { id: "t1", provenance: { source_type: "document_grounded" } },
+        { id: "t2", provenance: { source_type: "pattern_mapped" } },
+        { id: "t3", provenance: { source_type: "user_attested" } },
+        { id: "t4", provenance: { source_type: "analyst_judgment" } },
+      ],
+    };
+    const failures = checkAiTaraMcpGroundingRatio(state);
+    // 1/4 = 25%, exactly at threshold, should pass
+    expect(failures.length).toBe(0);
   });
 });

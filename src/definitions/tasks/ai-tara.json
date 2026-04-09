@@ -5,7 +5,7 @@
   "version": "1.0",
   "standalone": true,
   "used_in_workflows": [],
-  "description": "Threat Analysis and Risk Assessment for AI systems. Adapts ISO 21434 Clause 15 TARA methodology for AI/ML systems \u2014 LLMs, agent frameworks, ML pipelines \u2014 using the STRIPE-AI threat framework (Spoofing, Tampering, Repudiation, Information Disclosure, Poisoning, Elevation of Privilege, AI-Behavior). Seven phases with mandatory user confirmation at each gate: system definition, threat identification, impact assessment, feasibility assessment, risk determination, risk treatment, and documentation.",
+  "description": "Threat Analysis and Risk Assessment for AI systems. Adapts ISO 21434 Clause 15 TARA methodology for AI/ML systems \u2014 LLMs, agent frameworks, ML pipelines \u2014 using the STRIPE-AI threat framework (Spoofing, Tampering, Repudiation, Information Disclosure, Poisoning, Denial of Service, Elevation of Privilege, AI-Behavior). Nine phases with mandatory user confirmation at each gate: system definition, threat identification, domain challenge (2b, conditional), impact assessment, feasibility assessment, risk determination, risk treatment, QA gate (6b), and documentation.",
   "estimated_duration": "45-180 min depending on system complexity",
   "dependencies": [],
   "mcp_tools": [
@@ -27,7 +27,7 @@
         "get_stride_pattern"
       ],
       "when": "threat_identification",
-      "guidance": "Search with category filter matching the specialist's STRIPE-AI category (S/T/R/I/E map to STRIDE categories). Every threat must trace to an MCP pattern or be marked mcp_source: llm-reasoned with lower confidence."
+      "guidance": "Search with category filter matching the specialist's STRIPE-AI category (S/T/R/I/E map to STRIDE categories). Every threat must trace to an MCP pattern or be marked provenance.source_type: analyst_judgment with lower provenance.confidence."
     },
     {
       "mcp": "threat-intel-mcp",
@@ -376,6 +376,126 @@
                 }
               }
             }
+          },
+          "client_questions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "question": {
+                  "type": "string"
+                },
+                "blocking": {
+                  "type": "boolean"
+                },
+                "priority": {
+                  "type": "string",
+                  "enum": [
+                    "high",
+                    "medium",
+                    "low"
+                  ]
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "pending",
+                    "answered",
+                    "assumed",
+                    "waived"
+                  ]
+                },
+                "response": {
+                  "type": "string"
+                },
+                "answer_source": {
+                  "type": "string",
+                  "enum": [
+                    "user_attested",
+                    "document_evidence",
+                    "assumed",
+                    "analyst_judgment"
+                  ]
+                },
+                "affects_phases": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          },
+          "client_attestations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "question_id": {
+                  "type": "string"
+                },
+                "question": {
+                  "type": "string"
+                },
+                "response": {
+                  "type": "string"
+                },
+                "answer_source": {
+                  "type": "string",
+                  "enum": [
+                    "user_attested",
+                    "document_evidence",
+                    "assumed",
+                    "analyst_judgment"
+                  ]
+                }
+              }
+            }
+          },
+          "scope_readiness": {
+            "type": "object",
+            "properties": {
+              "overall_status": {
+                "type": "string",
+                "enum": [
+                  "ready",
+                  "partial",
+                  "blocked",
+                  "minimal"
+                ]
+              },
+              "proceeding_mode": {
+                "type": "string",
+                "enum": [
+                  "proceed",
+                  "awaiting_client_input",
+                  "proceed_with_assumptions"
+                ]
+              },
+              "confidence": {
+                "type": "string",
+                "enum": [
+                  "high",
+                  "medium",
+                  "low"
+                ]
+              },
+              "blocking_gaps": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "assumptions_made": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
           }
         },
         "required": [
@@ -466,7 +586,7 @@
     {
       "id": "threat_identification",
       "name": "STRIPE-AI Threat Identification",
-      "description": "Identify threats using the STRIPE-AI framework: Spoofing (S), Tampering (T), Repudiation (R), Information Disclosure (I), Poisoning (P), Elevation of Privilege (E), and AI-Behavior (AI). Fan-out: delegate to 8 specialists in parallel (6 existing STRIDE + poisoning-analyst + ai-behavior-analyst). Each specialist receives the full system context and asset inventory. Cross-reference MITRE ATLAS, OWASP LLM Top 10, and ATT&CK. For agentic systems: assess tool-use abuse, MCP server compromise, chain-of-thought manipulation. Coverage gate: every asset must have all 7 categories assessed.",
+      "description": "Identify threats using the STRIPE-AI framework: Spoofing (S), Tampering (T), Repudiation (R), Information Disclosure (I), Poisoning (P), Denial of Service (D), Elevation of Privilege (E), and AI-Behavior (AI). Fan-out: delegate to 8 specialists in parallel (6 existing STRIDE + poisoning-analyst + ai-behavior-analyst). Each specialist receives the full system context and asset inventory. Cross-reference MITRE ATLAS, OWASP LLM Top 10, and ATT&CK. For agentic systems: assess tool-use abuse, MCP server compromise, chain-of-thought manipulation. Coverage gate: every asset must have all 8 categories assessed.",
       "stage_state_schema": {
         "type": "object",
         "properties": {
@@ -486,6 +606,7 @@
                     "R",
                     "I",
                     "P",
+                    "D",
                     "E",
                     "AI"
                   ]
@@ -498,6 +619,7 @@
                     "Repudiation",
                     "Information Disclosure",
                     "Poisoning",
+                    "Denial of Service",
                     "Elevation of Privilege",
                     "AI-Behavior"
                   ]
@@ -520,13 +642,52 @@
                 "mcp_source": {
                   "type": "string"
                 },
-                "confidence": {
-                  "type": "string",
-                  "enum": [
-                    "high",
-                    "medium",
-                    "low"
-                  ]
+                "provenance": {
+                  "type": "object",
+                  "properties": {
+                    "source_type": {
+                      "type": "string",
+                      "enum": [
+                        "document_grounded",
+                        "user_attested",
+                        "assumed",
+                        "pattern_mapped",
+                        "analyst_judgment"
+                      ]
+                    },
+                    "confidence": {
+                      "type": "string",
+                      "enum": [
+                        "high",
+                        "medium",
+                        "low"
+                      ]
+                    },
+                    "document_grounded_fields": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "user_attested_fields": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "assumed_fields": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "pattern_mapped_fields": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  }
                 },
                 "atlas_technique_ids": {
                   "type": "array",
@@ -623,6 +784,9 @@
                 "P": {
                   "type": "boolean"
                 },
+                "D": {
+                  "type": "boolean"
+                },
                 "E": {
                   "type": "boolean"
                 },
@@ -654,6 +818,88 @@
             "items": {
               "type": "string"
             }
+          },
+          "assets": {
+            "type": "array",
+            "description": "Copy of assets from system_definition phase, included for coverage validation cross-reference",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "category": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "scale_out_plan": {
+            "type": "object",
+            "properties": {
+              "complexity_level": {
+                "type": "string",
+                "enum": [
+                  "small",
+                  "medium",
+                  "large",
+                  "very_large"
+                ]
+              },
+              "estimated_threat_count": {
+                "type": "integer"
+              },
+              "recommended_batch_size": {
+                "type": "integer"
+              },
+              "reasoning": {
+                "type": "string"
+              }
+            }
+          },
+          "grounding_batches": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "batch_id": {
+                  "type": "string"
+                },
+                "phase_id": {
+                  "type": "string"
+                },
+                "agent_id": {
+                  "type": "string"
+                },
+                "work_type": {
+                  "type": "string",
+                  "enum": [
+                    "impact_assessment",
+                    "feasibility_assessment",
+                    "risk_determination",
+                    "domain_challenge"
+                  ]
+                },
+                "item_ids": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "pending",
+                    "running",
+                    "complete",
+                    "failed"
+                  ]
+                }
+              }
+            }
           }
         },
         "required": [
@@ -679,7 +925,7 @@
         "rules": [
           {
             "id": "ai_tara_stripe_ai_coverage",
-            "description": "Every asset must have all 7 STRIPE-AI categories assessed in coverage_matrix",
+            "description": "Every asset must have all 8 STRIPE-AI categories assessed in coverage_matrix",
             "severity": "required",
             "message_template": "Incomplete STRIPE-AI coverage: {details}"
           },
@@ -691,7 +937,7 @@
           },
           {
             "id": "ai_tara_mcp_grounding_ratio",
-            "description": "Threats with mcp_source 'llm-reasoned' must be less than 25% of total",
+            "description": "Grounding ratio check (currently disabled, threshold=0). When enabled: threats with provenance.source_type 'analyst_judgment' must be less than threshold% of total. See ai-tara.ts GROUNDING_THRESHOLD.",
             "severity": "warning",
             "message_template": "MCP grounding ratio low: {details}"
           },
@@ -700,6 +946,12 @@
             "description": "Poisoning (P) and AI-Behavior (AI) categories must each have at least 1 threat for AI-specific assets",
             "severity": "warning",
             "message_template": "AI-specific categories underrepresented: {details}"
+          },
+          {
+            "id": "large_threat_models_use_batching",
+            "description": "Large threat sets (>15) should use scale_out_plan and grounding_batches for Phases 3-5",
+            "severity": "warning",
+            "message_template": "Large threat set without batching plan: {details}"
           }
         ]
       },
@@ -714,6 +966,84 @@
           }
         }
       }
+    },
+    {
+      "id": "domain_challenge",
+      "name": "Domain Expert Challenge",
+      "description": "Discover domain experts based on system context and delegate for regulatory threat patterns that generic STRIPE-AI analysis may miss. Uses domain overlays for calibration.",
+      "stage_state_schema": {
+        "type": "object",
+        "properties": {
+          "domain_findings": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "source_agent": {
+                  "type": "string"
+                },
+                "domain": {
+                  "type": "string"
+                },
+                "finding_type": {
+                  "type": "string",
+                  "enum": [
+                    "new_threat",
+                    "threat_upgrade",
+                    "regulatory_gap",
+                    "attestation"
+                  ]
+                },
+                "suggested_threat": {
+                  "type": "object"
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "pending",
+                    "merged",
+                    "rejected"
+                  ]
+                },
+                "merged_as_threat_id": {
+                  "type": "string"
+                },
+                "rejection_reason": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "skipped": {
+            "type": "boolean"
+          },
+          "reason": {
+            "type": "string"
+          }
+        }
+      },
+      "completion_criteria": {
+        "required_fields": [
+          {
+            "field": "domain_findings",
+            "rule": "exists",
+            "message": "Domain findings array must be present (empty array if no domain signals detected)"
+          }
+        ],
+        "rules": [
+          {
+            "id": "domain_findings_merged",
+            "description": "All accepted domain findings must be merged into the retained threat set with provenance",
+            "severity": "required",
+            "message_template": "Unmerged domain findings: {details}"
+          }
+        ],
+        "soft_warnings": []
+      },
+      "quality_rubric": {}
     },
     {
       "id": "impact_assessment",
@@ -1337,6 +1667,77 @@
       }
     },
     {
+      "id": "qa_gate",
+      "name": "Quality Assurance Gate",
+      "description": "Self-review checkpoint before report assembly. Catches errors, omissions, and inconsistencies. User can flag corrections.",
+      "stage_state_schema": {
+        "type": "object",
+        "properties": {
+          "qa_findings": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "category": {
+                  "type": "string",
+                  "enum": [
+                    "user_correction",
+                    "severity_mismatch",
+                    "missing_threat",
+                    "enrichment_gap",
+                    "cross_ref_broken",
+                    "dedup_candidate",
+                    "coverage_gap"
+                  ]
+                },
+                "severity": {
+                  "type": "string",
+                  "enum": [
+                    "blocking",
+                    "warning"
+                  ]
+                },
+                "threat_id": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                },
+                "remediation": {
+                  "type": "string"
+                },
+                "resolved": {
+                  "type": "boolean"
+                }
+              }
+            }
+          }
+        }
+      },
+      "completion_criteria": {
+        "required_fields": [
+          {
+            "field": "qa_findings",
+            "rule": "exists",
+            "message": "QA findings array must be present (empty array if no issues found)"
+          }
+        ],
+        "rules": [
+          {
+            "id": "qa_blocking_resolved",
+            "description": "All blocking QA findings must be resolved before report assembly",
+            "severity": "required",
+            "message_template": "Unresolved blocking QA findings: {details}"
+          }
+        ],
+        "soft_warnings": []
+      },
+      "quality_rubric": {}
+    },
+    {
       "id": "documentation",
       "name": "Documentation & Compliance Mapping",
       "description": "Assemble the final TARA report from stored state. Produce: executive summary, AI system model, STRIPE-AI threat catalog, impact assessment matrix, feasibility ratings, risk register, treatment plan, compliance mapping (EU AI Act Art 9, ISO 42001, NIST AI RMF, sector-specific), monitoring plan with KPIs and reassessment triggers, and gaps register. For automotive domain: include ISO 21434 WP-15-* alignment and R155 traceability.",
@@ -1436,7 +1837,14 @@
       }
     }
   ],
-  "prompting_guidance": "WORKFLOW INSTRUCTIONS FOR AI SYSTEM TARA\n\nYou are the AI Risk Assessment specialist. You lead a structured Threat Analysis and Risk Assessment (TARA) for AI systems using the STRIPE-AI methodology \u2014 an extension of STRIDE adapted for AI/ML systems.\n\n## CRITICAL: USER GATES\n\nNEVER advance to the next phase without explicit user confirmation. After completing each phase:\n1. Store state via wkfl_store_state\n2. Present a structured summary of findings\n3. Ask: 'Please review these findings. Let me know if you want to add, remove, or modify anything before we proceed to [next phase].'\n4. Wait for the user to say 'proceed', 'looks good', 'next', or similar\n5. Only then call wkfl_check_stage_completeness and begin the next phase\n\n## RESUME CHECK\n\nOn every turn, call wkfl_list_states first. If prior state exists, load it and resume from where you left off. Never restart a phase that has stored state unless the user explicitly asks to redo it.\n\n## PHASE FLOW\n\n### Phase 1: System Definition (YOU lead \u2014 conversational, NOT a questionnaire)\nAnalyze the user's description and uploaded documents FIRST. Identify what you already know. Only ask about what is genuinely missing \u2014 typically 2-3 targeted follow-up questions, not a survey. The asset enumeration (training data, model weights, prompts, RAG corpora, tool integrations, eval pipelines, session data, output channels) is your completeness checklist, not a list of questions for the user. Identify domain context for overlay loading (automotive, robotics, medical-devices, financial, etc.). If a domain is detected, call wkfl_get_domain_overlay to get domain-specific asset categories, MCP tools, calibration guidance, compliance frameworks, and report addenda. Multiple domains can be composed (e.g., medical-devices + robotics for a surgical robot). Proceed when you have >= 3 assets and sufficient system understanding.\n\n### Phase 2: STRIPE-AI Threats (DELEGATE to 8 specialists in parallel)\nDelegate to ALL 8 specialists simultaneously:\n- spoofing-analyst (S), tampering-analyst (T), repudiation-analyst (R)\n- information-disclosure-analyst (I), denial-of-service-analyst (DoS)\n- privilege-escalation-analyst (E)\n- poisoning-analyst (P) \u2014 NEW: data poisoning, model poisoning, supply chain, adversarial inputs\n- ai-behavior-analyst (AI) \u2014 NEW: hallucination, drift, emergent behavior, prompt injection, jailbreaking\n\nPass each specialist: system_name, assets, model_architecture, data_pipeline, tool_integrations, document_citations.\n\nDomain enrichment via delegation:\nIf a domain overlay was loaded, delegate to relevant domain experts for regulatory threat patterns. For automotive: delegate to an automotive or EU regulations expert. For medical devices: delegate to a healthcare or EU regulations expert. For robotics: delegate to an ICS/OT or EU regulations expert. Pass the overlay's threat_sources guidance as delegation context.\n\nBuild coverage_matrix: every asset x every STRIPE-AI category. Deduplicate semantically similar threats.\n\n### Phase 3: Impact Assessment (DELEGATE to impact-assessor)\nPass full threat list + assets + domain_context + regulatory_regime. The impact-assessor rates each threat across 7 dimensions (Safety, Financial, Privacy, Operational, Reputational, Regulatory, Ethical) on a 1-5 scale, plus cascading effects, blast radius, reversibility, and detection latency.\n\n### Phase 4: Feasibility Assessment (DELEGATE to feasibility-assessor)\nPass full threat list + assets + model_architecture + deployment_model. The feasibility-assessor uses ISO 21434 Annex F method with 6 factors. Sum maps to feasibility rating.\n\n### Phase 5: Risk Determination (DELEGATE to risk-determinator)\nPass threats + impact_matrix + feasibility_ratings + domain_context. Produces risk register with R1-R5 levels. Cross-references EU AI Act classification.\n\n### Phase 6: Risk Treatment (YOU lead, with Security Controls MCP)\nFor each R3-R5 threat: propose treatment strategy (avoid/reduce/transfer/accept). For 'reduce': search Security Controls MCP for matching controls. Categorize controls as: input, model, architecture, data, monitoring, or governance. Calculate residual risk.\n\n### Phase 7: Documentation (YOU assemble via wkfl_export_report)\nCall wkfl_export_report to assemble the final TARA report. Add compliance mapping (EU AI Act Art 9, ISO 42001, NIST AI RMF). Define monitoring plan with KPIs and reassessment triggers.\n\n## ORGANISATION STANDARDS\n\nThe customer may have uploaded standards (ISO 21434, IEC 81001-5-1, IEC 62304, etc.) as organisation documents. These are searchable via document search tools. When the domain overlay references a standard, SEARCH the uploaded documents for that specific clause \u2014 cite the actual standard text, not just the overlay summary. The overlay tells you WHAT to look for; the uploaded standard is the EVIDENCE.\n\n## EVIDENCE RULES\n\nEvery threat must have mcp_source indicating provenance (stride-mcp, threat-intel-mcp, owasp-mcp, cve-mcp, document-index, or llm-reasoned). Threats marked llm-reasoned must be < 25% of total. Document-extracted facts must cite document name and section.\n\n## DOMAIN ADAPTATION\n\nDomain-specific guidance is loaded via wkfl_get_domain_overlay during Phase 1. The overlay provides asset categories, threat sources (MCPs to consult), impact/feasibility calibration, compliance frameworks, and report addenda. Pass overlay calibration guidance to delegate specialists in Phases 3-5. Include overlay compliance frameworks and report addenda in Phase 7 documentation.",
+  "stage_state_schema": {},
+  "completion_criteria": {
+    "required_fields": [],
+    "rules": [],
+    "soft_warnings": []
+  },
+  "quality_rubric": {},
+  "prompting_guidance": "WORKFLOW INSTRUCTIONS FOR AI SYSTEM TARA\n\nYou are the AI Risk Assessment specialist. You lead a structured Threat Analysis and Risk Assessment (TARA) for AI systems using the STRIPE-AI methodology \u2014 an extension of STRIDE adapted for AI/ML systems.\n\n## CRITICAL: USER GATES\n\nNEVER advance to the next phase without explicit user confirmation. After completing each phase:\n1. Store state via wkfl_store_state\n2. Present a structured summary of findings\n3. Ask: 'Please review these findings. Let me know if you want to add, remove, or modify anything before we proceed to [next phase].'\n4. Wait for the user to say 'proceed', 'looks good', 'next', or similar\n5. Only then call wkfl_check_stage_completeness and begin the next phase\n\nUSER GATE PROTOCOL: After every phase, store state, present structured summary, then ask user to proceed/add/correct/refocus. REBUILD PATTERN: on resumed turns, load prior state via wkfl_load_state, merge corrections, re-validate — never restart from zero. PHASE GATES always wait for explicit user confirmation (no timeout). MID-PHASE QUESTIONS: if a specialist returns uncertainty, ask user once; if no answer, record assumption with lowered confidence and proceed.\n\n## RESUME CHECK\n\nOn every turn, call wkfl_list_states first. If prior state exists, load it and resume from where you left off. Never restart a phase that has stored state unless the user explicitly asks to redo it.\n\n## PHASE FLOW\n\n### Phase 1: System Definition (YOU lead \u2014 conversational, NOT a questionnaire)\nAnalyze the user's description and uploaded documents FIRST. Identify what you already know. Only ask about what is genuinely missing \u2014 typically 2-3 targeted follow-up questions, not a survey. The asset enumeration (training data, model weights, prompts, RAG corpora, tool integrations, eval pipelines, session data, output channels) is your completeness checklist, not a list of questions for the user. Identify domain context for overlay loading (automotive, robotics, medical-devices, financial, etc.). If a domain is detected, call wkfl_get_domain_overlay to get domain-specific asset categories, MCP tools, calibration guidance, compliance frameworks, and report addenda. Multiple domains can be composed (e.g., medical-devices + robotics for a surgical robot). Proceed when you have >= 3 assets and sufficient system understanding.\n\n### Phase 2: STRIPE-AI Threats (DELEGATE to 8 specialists in parallel)\nDelegate to ALL 8 specialists simultaneously:\n- spoofing-analyst (S), tampering-analyst (T), repudiation-analyst (R)\n- information-disclosure-analyst (I), denial-of-service-analyst (DoS)\n- privilege-escalation-analyst (E)\n- poisoning-analyst (P) \u2014 NEW: data poisoning, model poisoning, supply chain, adversarial inputs\n- ai-behavior-analyst (AI) \u2014 NEW: hallucination, drift, emergent behavior, prompt injection, jailbreaking\n\nPass each specialist: system_name, assets, model_architecture, data_pipeline, tool_integrations, document_citations.\n\nDomain enrichment via delegation:\nIf a domain overlay was loaded, delegate to relevant domain experts for regulatory threat patterns. For automotive: delegate to an automotive or EU regulations expert. For medical devices: delegate to a healthcare or EU regulations expert. For robotics: delegate to an ICS/OT or EU regulations expert. Pass the overlay's threat_sources guidance as delegation context.\n\nBuild coverage_matrix: every asset x every STRIPE-AI category. Deduplicate semantically similar threats.\n\n### Phase 2b: Domain Expert Challenge (conditional)\nCall wkfl_get_domain_overlay with detected domains, list_delegatable_agents, delegate to 1-5 matched domain experts. Merge accepted findings into threat_identification (rebuild pattern). Skip if no domain signals — store {\"domain_findings\": [], \"skipped\": true}.\n\n### Phase 3: Impact Assessment (DELEGATE to impact-assessor)\nPass full threat list + assets + domain_context + regulatory_regime. The impact-assessor rates each threat across 7 dimensions (Safety, Financial, Privacy, Operational, Reputational, Regulatory, Ethical) on a 1-5 scale, plus cascading effects, blast radius, reversibility, and detection latency.\n\n### Phase 4: Feasibility Assessment (DELEGATE to feasibility-assessor)\nPass full threat list + assets + model_architecture + deployment_model. The feasibility-assessor uses ISO 21434 Annex F method with 6 factors. Sum maps to feasibility rating.\n\n### Phase 5: Risk Determination (DELEGATE to risk-determinator)\nPass threats + impact_matrix + feasibility_ratings + domain_context. Produces risk register with R1-R5 levels. Cross-references EU AI Act classification.\n\n### Phase 6: Risk Treatment (YOU lead, with Security Controls MCP)\nFor each R3-R5 threat: propose treatment strategy (avoid/reduce/transfer/accept). For 'reduce': search Security Controls MCP for matching controls. Categorize controls as: input, model, architecture, data, monitoring, or governance. Calculate residual risk.\n\n### Phase 6b: QA Gate\nSelf-review checkpoint before report assembly. Run wkfl_check_stage_completeness for qa_gate phase. Present qa_findings to user. All blocking findings must be resolved before proceeding to documentation.\n\n### Phase 7: Documentation (YOU assemble via wkfl_export_report)\nCall wkfl_export_report to assemble the final TARA report. Add compliance mapping (EU AI Act Art 9, ISO 42001, NIST AI RMF). Define monitoring plan with KPIs and reassessment triggers.\n\n## ORGANISATION STANDARDS\n\nThe customer may have uploaded standards (ISO 21434, IEC 81001-5-1, IEC 62304, etc.) as organisation documents. These are searchable via document search tools. When the domain overlay references a standard, SEARCH the uploaded documents for that specific clause \u2014 cite the actual standard text, not just the overlay summary. The overlay tells you WHAT to look for; the uploaded standard is the EVIDENCE.\n\n## EVIDENCE RULES\n\nEvery threat must have a provenance object with source_type set to one of: document_grounded (fact extracted from uploaded document), user_attested (user confirmed), assumed (placeholder, must be listed in gaps register), pattern_mapped (matched to MCP pattern from stride-mcp, threat-intel-mcp, owasp-mcp, or cve-mcp), or analyst_judgment (no MCP grounding available). Keep mcp_source to record which MCP tool provided the data (stride-mcp, threat-intel-mcp, owasp-mcp, cve-mcp, document-index). Threats with provenance.source_type analyst_judgment must be < 25% of total. Document-extracted facts must cite document name and section.\n\n## DOMAIN ADAPTATION\n\nDomain-specific guidance is loaded via wkfl_get_domain_overlay during Phase 1. The overlay provides asset categories, threat sources (MCPs to consult), impact/feasibility calibration, compliance frameworks, and report addenda. Pass overlay calibration guidance to delegate specialists in Phases 3-5. Include overlay compliance frameworks and report addenda in Phase 7 documentation.\n\n## BATCHING AND PROJECTION\n\nAfter Phase 2 deduplication, if threat count > 15:\n1. Compute scale_out_plan with recommended_batch_size of 10-12\n2. For Phases 3-5, create grounding_batches entries and delegate each batch separately\n\nOrchestrator projects data before delegating \u2014 specialists receive inline data only:\n- impact-assessor: { threat_id, title, stripe_ai_category, description, asset_id, attack_vector } + assets + domain_context + regulatory_regime\n- feasibility-assessor: { threat_id, title, stripe_ai_category, description, attack_vector, mcp_source } + model_architecture + deployment_model\n- risk-determinator: { threat_id, title, stripe_ai_category, aggregate_impact, feasibility_rating } + domain_context + regulatory_regime\n\nFor <= 15 threats, pass all inline in a single delegation. Merge batch results after all complete.\n\nCOMPACTION: Delegation results exceeding 2000 chars are auto-stored via wkfl_store_state and replaced with a compact summary. Work from summaries for orchestration decisions. Load full result via wkfl_load_state only when detail is needed.",
   "report_sections": [
     "executive_summary",
     "ai_system_model",
