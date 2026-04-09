@@ -23,7 +23,16 @@ export interface AiTaraThreat extends LooseRecord {
   description?: string;
   attack_vector?: string;
   mcp_source?: string;
+  /** @deprecated Use provenance.confidence instead */
   confidence?: string;
+  provenance?: {
+    source_type?: string;
+    confidence?: string;
+    document_grounded_fields?: string[];
+    user_attested_fields?: string[];
+    assumed_fields?: string[];
+    pattern_mapped_fields?: string[];
+  };
   atlas_technique_ids?: string[];
   owasp_llm_refs?: string[];
   cwe_ids?: string[];
@@ -294,7 +303,7 @@ export function buildAiTaraReport(input: AiTaraReportInput): string {
     lines.push("|----|-------|-------|:----------:|------------|");
     for (const t of catThreats) {
       lines.push(
-        `| ${esc(t.id)} | ${esc(t.asset_id)} | ${esc(t.title)} | ${t.confidence ?? "—"} | ${badges(t)} |`,
+        `| ${esc(t.id)} | ${esc(t.asset_id)} | ${esc(t.title)} | ${t.provenance?.confidence ?? t.confidence ?? "—"} | ${badges(t)} |`,
       );
     }
     lines.push("");

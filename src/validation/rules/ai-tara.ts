@@ -194,27 +194,33 @@ export function checkAiTaraNoDuplicateThreatIds(
 }
 
 /**
- * Threats with mcp_source 'llm-reasoned' must be less than 25% of total.
+ * Threats with provenance.source_type 'analyst_judgment' (or mcp_source
+ * 'llm-reasoned' when provenance is absent) must be less than 25% of total.
  */
 export function checkAiTaraMcpGroundingRatio(
   state: Record<string, unknown>,
 ): RuleFailure[] {
-  const s = state as unknown as ThreatIdentificationState;
-  const threats = s.threats ?? [];
-  if (threats.length === 0) return [];
+  const threats = (state as { threats?: unknown[] }).threats;
+  if (!Array.isArray(threats) || threats.length === 0) return [];
 
-  const llmReasoned = threats.filter(
-    (t) => t.mcp_source === "llm-reasoned",
-  ).length;
-  const ratio = llmReasoned / threats.length;
-  if (ratio >= 0.25) {
-    return [
-      {
-        rule: "ai_tara_mcp_grounding_ratio",
-        severity: "warning",
-        details: `${llmReasoned}/${threats.length} threats (${Math.round(ratio * 100)}%) are llm-reasoned — target is < 25%`,
-      },
-    ];
+  let ungrounded = 0;
+  for (const t of threats) {
+    const threat = t as Record<string, unknown>;
+    const prov = threat.provenance as Record<string, unknown> | undefined;
+    if (prov?.source_type === "analyst_judgment") {
+      ungrounded++;
+    } else if (!prov && (threat.mcp_source as string) === "llm-reasoned") {
+      ungrounded++;
+    }
+  }
+
+  const ratio = ungrounded / threats.length;
+  if (ratio > 0.25) {
+    return [{
+      rule: "ai_tara_mcp_grounding_ratio",
+      severity: "warning",
+      details: `${ungrounded}/${threats.length} threats (${(ratio * 100).toFixed(0)}%) lack MCP grounding (analyst_judgment or llm-reasoned). Target: < 25%.`,
+    }];
   }
   return [];
 }

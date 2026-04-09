@@ -252,7 +252,7 @@ describe("AI TARA validation rules", () => {
       expect(f[0].details).toContain("50%");
     });
 
-    it("fails when exactly 25%", () => {
+    it("passes when exactly 25%", () => {
       const state = {
         threats: [
           { id: "T1", mcp_source: "mcp-grounded" },
@@ -261,10 +261,9 @@ describe("AI TARA validation rules", () => {
           { id: "T4", mcp_source: "llm-reasoned" },
         ],
       };
-      // 1/4 = 25% — the check is >= 0.25, so this should pass (exactly 25% fails)
+      // 1/4 = 25% — check is > 0.25 (strictly greater), so exactly 25% passes
       const f = checkAiTaraMcpGroundingRatio(state);
-      expect(f).toHaveLength(1);
-      expect(f[0].details).toContain("25%");
+      expect(f).toHaveLength(0);
     });
 
     it("returns empty when threats is empty", () => {
@@ -979,5 +978,48 @@ describe("AI TARA validation rules", () => {
       expect(() => checkAiTaraHighRiskThreatsTreated(empty)).not.toThrow();
       expect(() => checkAiTaraReduceHasControls(empty)).not.toThrow();
     });
+  });
+});
+
+describe("checkAiTaraMcpGroundingRatio with provenance", () => {
+  it("should count provenance.source_type analyst_judgment toward grounding ratio", () => {
+    const state = {
+      threats: [
+        { id: "t1", provenance: { source_type: "document_grounded", confidence: "high" } },
+        { id: "t2", provenance: { source_type: "analyst_judgment", confidence: "low" } },
+        { id: "t3", provenance: { source_type: "pattern_mapped", confidence: "medium" } },
+        { id: "t4", provenance: { source_type: "analyst_judgment", confidence: "low" } },
+      ],
+    };
+    const failures = checkAiTaraMcpGroundingRatio(state);
+    // 2/4 = 50% analyst_judgment, should warn (>25%)
+    expect(failures.length).toBe(1);
+  });
+
+  it("should fall back to mcp_source llm-reasoned if provenance absent", () => {
+    const state = {
+      threats: [
+        { id: "t1", mcp_source: "threat-intel-mcp" },
+        { id: "t2", mcp_source: "llm-reasoned" },
+        { id: "t3", mcp_source: "owasp-mcp" },
+      ],
+    };
+    const failures = checkAiTaraMcpGroundingRatio(state);
+    // 1/3 = 33%, should warn
+    expect(failures.length).toBe(1);
+  });
+
+  it("should pass when analyst_judgment is under 25%", () => {
+    const state = {
+      threats: [
+        { id: "t1", provenance: { source_type: "document_grounded" } },
+        { id: "t2", provenance: { source_type: "pattern_mapped" } },
+        { id: "t3", provenance: { source_type: "user_attested" } },
+        { id: "t4", provenance: { source_type: "analyst_judgment" } },
+      ],
+    };
+    const failures = checkAiTaraMcpGroundingRatio(state);
+    // 1/4 = 25%, exactly at threshold, should pass
+    expect(failures.length).toBe(0);
   });
 });
