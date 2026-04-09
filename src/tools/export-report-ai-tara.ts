@@ -136,6 +136,7 @@ const STRIPE_AI_LABELS: Record<string, string> = {
   R: "Repudiation",
   I: "Information Disclosure",
   P: "Poisoning",
+  D: "Denial of Service",
   E: "Elevation of Privilege",
   AI: "AI-Behavior",
 };

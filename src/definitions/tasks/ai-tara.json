@@ -5,7 +5,7 @@
   "version": "1.0",
   "standalone": true,
   "used_in_workflows": [],
-  "description": "Threat Analysis and Risk Assessment for AI systems. Adapts ISO 21434 Clause 15 TARA methodology for AI/ML systems \u2014 LLMs, agent frameworks, ML pipelines \u2014 using the STRIPE-AI threat framework (Spoofing, Tampering, Repudiation, Information Disclosure, Poisoning, Elevation of Privilege, AI-Behavior). Seven phases with mandatory user confirmation at each gate: system definition, threat identification, impact assessment, feasibility assessment, risk determination, risk treatment, and documentation.",
+  "description": "Threat Analysis and Risk Assessment for AI systems. Adapts ISO 21434 Clause 15 TARA methodology for AI/ML systems \u2014 LLMs, agent frameworks, ML pipelines \u2014 using the STRIPE-AI threat framework (Spoofing, Tampering, Repudiation, Information Disclosure, Poisoning, Denial of Service, Elevation of Privilege, AI-Behavior). Seven phases with mandatory user confirmation at each gate: system definition, threat identification, impact assessment, feasibility assessment, risk determination, risk treatment, and documentation.",
   "estimated_duration": "45-180 min depending on system complexity",
   "dependencies": [],
   "mcp_tools": [
@@ -466,7 +466,7 @@
     {
       "id": "threat_identification",
       "name": "STRIPE-AI Threat Identification",
-      "description": "Identify threats using the STRIPE-AI framework: Spoofing (S), Tampering (T), Repudiation (R), Information Disclosure (I), Poisoning (P), Elevation of Privilege (E), and AI-Behavior (AI). Fan-out: delegate to 8 specialists in parallel (6 existing STRIDE + poisoning-analyst + ai-behavior-analyst). Each specialist receives the full system context and asset inventory. Cross-reference MITRE ATLAS, OWASP LLM Top 10, and ATT&CK. For agentic systems: assess tool-use abuse, MCP server compromise, chain-of-thought manipulation. Coverage gate: every asset must have all 7 categories assessed.",
+      "description": "Identify threats using the STRIPE-AI framework: Spoofing (S), Tampering (T), Repudiation (R), Information Disclosure (I), Poisoning (P), Denial of Service (D), Elevation of Privilege (E), and AI-Behavior (AI). Fan-out: delegate to 8 specialists in parallel (6 existing STRIDE + poisoning-analyst + ai-behavior-analyst). Each specialist receives the full system context and asset inventory. Cross-reference MITRE ATLAS, OWASP LLM Top 10, and ATT&CK. For agentic systems: assess tool-use abuse, MCP server compromise, chain-of-thought manipulation. Coverage gate: every asset must have all 8 categories assessed.",
       "stage_state_schema": {
         "type": "object",
         "properties": {
@@ -486,6 +486,7 @@
                     "R",
                     "I",
                     "P",
+                    "D",
                     "E",
                     "AI"
                   ]
@@ -498,6 +499,7 @@
                     "Repudiation",
                     "Information Disclosure",
                     "Poisoning",
+                    "Denial of Service",
                     "Elevation of Privilege",
                     "AI-Behavior"
                   ]
@@ -623,6 +625,9 @@
                 "P": {
                   "type": "boolean"
                 },
+                "D": {
+                  "type": "boolean"
+                },
                 "E": {
                   "type": "boolean"
                 },
@@ -679,7 +684,7 @@
         "rules": [
           {
             "id": "ai_tara_stripe_ai_coverage",
-            "description": "Every asset must have all 7 STRIPE-AI categories assessed in coverage_matrix",
+            "description": "Every asset must have all 8 STRIPE-AI categories assessed in coverage_matrix",
             "severity": "required",
             "message_template": "Incomplete STRIPE-AI coverage: {details}"
           },

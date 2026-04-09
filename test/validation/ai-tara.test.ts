@@ -114,20 +114,41 @@ describe("AI TARA validation rules", () => {
   // ── Phase 2: Threat Identification ──────────────────────────────────────────
 
   describe("checkAiTaraStripeAiCoverage", () => {
-    it("passes when all assets have all 7 categories", () => {
+    it("passes when all assets have all 8 categories", () => {
       const state = {
         coverage_matrix: {
-          asset1: { S: true, T: true, R: true, I: true, P: true, E: true, AI: true },
-          asset2: { S: true, T: true, R: true, I: true, P: true, E: true, AI: true },
+          asset1: { S: true, T: true, R: true, I: true, P: true, D: true, E: true, AI: true },
+          asset2: { S: true, T: true, R: true, I: true, P: true, D: true, E: true, AI: true },
         },
       };
       expect(checkAiTaraStripeAiCoverage(state)).toHaveLength(0);
     });
 
+    it("should require D (Denial of Service) category in coverage matrix", () => {
+      const state = {
+        coverage_matrix: {
+          asset_1: { S: true, T: true, R: true, I: true, P: true, E: true, AI: true },
+        },
+      };
+      const failures = checkAiTaraStripeAiCoverage(state);
+      expect(failures.length).toBe(1);
+      expect(failures[0].details).toContain("D");
+    });
+
+    it("should pass when all 8 categories are present", () => {
+      const state = {
+        coverage_matrix: {
+          asset_1: { S: true, T: true, R: true, I: true, P: true, D: true, E: true, AI: true },
+        },
+      };
+      const failures = checkAiTaraStripeAiCoverage(state);
+      expect(failures.length).toBe(0);
+    });
+
     it("fails when an asset is missing categories", () => {
       const state = {
         coverage_matrix: {
-          asset1: { S: true, T: true, R: true, I: true, P: true, E: true, AI: true },
+          asset1: { S: true, T: true, R: true, I: true, P: true, D: true, E: true, AI: true },
           asset2: { S: true, T: true },
         },
       };
@@ -155,7 +176,7 @@ describe("AI TARA validation rules", () => {
     it("treats false values as missing", () => {
       const state = {
         coverage_matrix: {
-          asset1: { S: true, T: true, R: true, I: true, P: true, E: true, AI: false },
+          asset1: { S: true, T: true, R: true, I: true, P: true, D: true, E: true, AI: false },
         },
       };
       const f = checkAiTaraStripeAiCoverage(state);

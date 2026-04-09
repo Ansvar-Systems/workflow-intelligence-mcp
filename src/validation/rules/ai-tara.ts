@@ -16,7 +16,7 @@ const AI_SPECIFIC_ASSET_CATEGORIES = [
   "eval_pipelines",
 ] as const;
 
-const STRIPE_AI_CATEGORIES = ["S", "T", "R", "I", "P", "E", "AI"] as const;
+const STRIPE_AI_CATEGORIES = ["S", "T", "R", "I", "P", "D", "E", "AI"] as const;
 
 const IMPACT_DIMENSIONS = [
   "safety",
@@ -104,7 +104,7 @@ interface ThreatIdentificationState {
 }
 
 /**
- * Every asset must have all 7 STRIPE-AI categories assessed.
+ * Every asset must have all 8 STRIPE-AI categories assessed.
  */
 export function checkAiTaraStripeAiCoverage(
   state: Record<string, unknown>,
