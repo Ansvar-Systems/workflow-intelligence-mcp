@@ -600,7 +600,7 @@ export async function wkflExportReport(
     !isDpia && !isStride && !isTprmTriage && !isTprmAssessment &&
     (taskId === "ai_tara" ||
       reportFormat === "ai_tara" ||
-      (!taskId && !reportFormat && storedKeys.has("feasibility_ratings") && storedKeys.has("impact_matrix") && storedKeys.has("risk_register")));
+      (!taskId && !reportFormat && storedKeys.has("feasibility_assessment") && storedKeys.has("impact_assessment") && storedKeys.has("risk_determination")));
 
   if (isDpia) {
     // Validate completeness before export (same pattern as STRIDE path)
