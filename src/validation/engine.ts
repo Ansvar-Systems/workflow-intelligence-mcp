@@ -116,6 +116,7 @@ import {
   checkAiTaraHighRiskThreatsTreated,
   checkAiTaraReduceHasControls,
 } from "./rules/ai-tara.js";
+import { checkDomainFindingsMerged } from "./rules/ai-tara-domain.js";
 
 // ---------------------------------------------------------------------------
 // Rule registry
@@ -256,6 +257,7 @@ registerStructuralRule("tprm_conditional_has_conditions", checkTprmConditionalHa
 registerStructuralRule("tprm_nogo_has_blocking_findings", checkTprmNogoHasBlockingFindings);
 
 // AI TARA assessment rules
+registerStructuralRule("domain_findings_merged", checkDomainFindingsMerged);
 registerStructuralRule("ai_tara_min_assets", checkAiTaraMinAssets);
 registerStructuralRule("ai_tara_ai_asset_coverage", checkAiTaraAiAssetCoverage);
 registerStructuralRule("ai_tara_stripe_ai_coverage", checkAiTaraStripeAiCoverage);
