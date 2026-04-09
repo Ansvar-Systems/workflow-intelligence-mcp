@@ -17,6 +17,13 @@ export function checkDomainFindingsMerged(
         details: `Domain finding '${finding.id}' has status '${status}' — must be merged or rejected`,
       });
     }
+    if (status === "merged" && !finding.merged_as_threat_id) {
+      failures.push({
+        rule: "domain_findings_merged",
+        severity: "warning" as const,
+        details: `Domain finding '${finding.id}' is merged but missing merged_as_threat_id — audit trail incomplete`,
+      });
+    }
   }
   return failures;
 }

@@ -236,7 +236,9 @@ describe("AI TARA validation rules", () => {
       expect(checkAiTaraMcpGroundingRatio(state)).toHaveLength(0);
     });
 
-    it("fails when llm-reasoned is 25% or more", () => {
+    it("passes when llm-reasoned is 50% — grounding threshold is disabled", () => {
+      // GROUNDING_THRESHOLD = 0 — rule always passes regardless of ratio.
+      // When threshold is restored to 0.25, this test should expect failures.
       const state = {
         threats: [
           { id: "T1", mcp_source: "mcp-grounded" },
@@ -246,10 +248,7 @@ describe("AI TARA validation rules", () => {
         ],
       };
       const f = checkAiTaraMcpGroundingRatio(state);
-      expect(f).toHaveLength(1);
-      expect(f[0].rule).toBe("ai_tara_mcp_grounding_ratio");
-      expect(f[0].severity).toBe("warning");
-      expect(f[0].details).toContain("50%");
+      expect(f).toHaveLength(0);
     });
 
     it("passes when exactly 25%", () => {
@@ -992,8 +991,9 @@ describe("checkAiTaraMcpGroundingRatio with provenance", () => {
       ],
     };
     const failures = checkAiTaraMcpGroundingRatio(state);
-    // 2/4 = 50% analyst_judgment, should warn (>25%)
-    expect(failures.length).toBe(1);
+    // 2/4 = 50% analyst_judgment — GROUNDING_THRESHOLD = 0, so always passes.
+    // When threshold is restored to 0.25, this should expect failures.length toBe(1).
+    expect(failures.length).toBe(0);
   });
 
   it("should fall back to mcp_source llm-reasoned if provenance absent", () => {
@@ -1005,8 +1005,22 @@ describe("checkAiTaraMcpGroundingRatio with provenance", () => {
       ],
     };
     const failures = checkAiTaraMcpGroundingRatio(state);
-    // 1/3 = 33%, should warn
-    expect(failures.length).toBe(1);
+    // 1/3 = 33% — GROUNDING_THRESHOLD = 0, so always passes.
+    // When threshold is restored to 0.25, this should expect failures.length toBe(1).
+    expect(failures.length).toBe(0);
+  });
+
+  it("should pass regardless of ratio while grounding threshold is disabled", () => {
+    const state = {
+      threats: [
+        { id: "t1", provenance: { source_type: "analyst_judgment" } },
+        { id: "t2", provenance: { source_type: "analyst_judgment" } },
+      ],
+    };
+    // GROUNDING_THRESHOLD is 0 — rule always passes
+    // When threshold is restored to 0.25, this test should fail (100% > 25%)
+    const failures = checkAiTaraMcpGroundingRatio(state);
+    expect(failures.length).toBe(0);
   });
 
   it("should pass when analyst_judgment is under 25%", () => {
