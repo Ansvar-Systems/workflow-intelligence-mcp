@@ -1,0 +1,967 @@
+{
+  "id": "linddun_threat_model",
+  "name": "LINDDUN Privacy Threat Model",
+  "category": "threat_modeling",
+  "version": "1.0",
+  "standalone": true,
+  "used_in_workflows": [],
+  "description": "LINDDUN privacy-by-design threat modelling. The orchestrator assesses what the user has provided, runs a dedicated scope-gap analysis after DFD construction, asks only the load-bearing questions that are actually missing, and proceeds with gaps marked explicitly. Enumerates Linking, Identifying, Non-repudiation, Detecting, Data disclosure, Unawareness, and Non-compliance threats per DFD element, then maps each to grounded Privacy Enhancing Technologies (PETs). All findings trace to MCP tool calls from privacy-patterns-mcp or uploaded document citations.",
+  "estimated_duration": "45-120 min depending on system complexity and document volume",
+  "dependencies": [
+    {
+      "task_id": "dfd_construction",
+      "relationship": "requires_output",
+      "required_fields": ["processes", "data_stores", "external_entities", "data_flows", "trust_boundaries"],
+      "description": "DFD Architect constructs the data flow diagram in Phase 1. The orchestrator delegates DFD construction and receives the structured model back."
+    }
+  ],
+  "grounding_mcps": {
+    "has_blocking_gap": false,
+    "required": [
+      {
+        "mcp": "document-index-mcp",
+        "role": "system_facts_from_uploaded_docs"
+      },
+      {
+        "mcp": "workflow-intelligence-mcp",
+        "role": "state_persistence_and_qa_gate"
+      },
+      {
+        "mcp": "eu-regulations-mcp",
+        "role": "gdpr_article_grounding_for_NC_and_U_threats"
+      },
+      {
+        "mcp": "privacy-patterns-mcp",
+        "role": "linddun_threats_and_pet_catalogue"
+      }
+    ],
+    "required_but_missing": [],
+    "optional": [
+      {
+        "mcp": "threat-intel-mcp",
+        "role": "atlas_for_ai_ml_privacy_threats_when_in_scope"
+      },
+      {
+        "mcp": "security-controls-mcp",
+        "role": "control_mapping_for_U_and_NC_categories"
+      }
+    ]
+  },
+  "mcp_tools": [
+    {
+      "mcp": "document-index-mcp",
+      "tools": ["docidx_index_document", "docidx_search", "docidx_get_section", "docidx_get_surrounding", "docidx_list_documents"],
+      "when": "phase_1_scope_and_dfd, phase_2_linddun_enumeration",
+      "guidance": "Index uploaded documents in Phase 1. Search documents for system facts (component names, technologies, data flows, security controls) and cite the source section. Use get_surrounding when a match needs adjacent context. Every system fact extracted from a document must carry a document_citation with doc_id, section_ref, and verbatim_quote."
+    },
+    {
+      "mcp": "privacy-patterns-mcp",
+      "tools": ["search_linddun_threats", "get_linddun_threat", "list_linddun_categories", "get_pets_for_threat", "search_pets", "get_pet"],
+      "when": "phase_2_linddun_enumeration, phase_5_pet_mapping",
+      "guidance": "Each LINDDUN specialist calls search_linddun_threats filtered to their category and the target component type. Record the threat_id as mcp_source on every threat. Threats not grounded by a threat_id get marked as coverage_gap and excluded from retained_threats. Every PET mapping must call get_pets_for_threat and record pet_id for every selected PET. Threats not grounded by a threat_id from the catalogue MUST NOT ship in the report."
+    },
+    {
+      "mcp": "eu-regulations-mcp",
+      "tools": ["search_provisions", "get_provision", "search_regulations"],
+      "when": "phase_2_linddun_enumeration, phase_3_dedup_and_scoring, phase_5_pet_mapping",
+      "guidance": "Use for Non-repudiation, Unawareness, and Non-compliance threats. GDPR Article grounding is mandatory for NC threats (right to be forgotten, processing basis, purpose limitation, etc.). Link GDPR articles to grounded threat explanations so the threat-to-compliance mapping is explicit. For Unawareness threats in data collection, cite GDPR Article 13/14 transparency requirements."
+    },
+    {
+      "mcp": "security-controls-mcp",
+      "tools": ["search_controls", "get_control", "list_frameworks", "get_framework_controls", "map_frameworks"],
+      "when": "phase_3b_threat_enrichment, phase_5_pet_mapping, phase_6_report_assembly",
+      "guidance": "Use for dual mapping of controls to both privacy-enhancing technologies and regulatory controls. One pass over all threats. Use search_controls to find controls matching privacy threats (e.g., encryption for Data Disclosure, anonymization for Identifying). Deduplicate control recommendations across related threats. For NC threats, layer in GDPR compliance controls."
+    },
+    {
+      "mcp": "threat-intel-mcp",
+      "tools": ["search_atlas_techniques", "get_atlas_technique_details", "search_atlas_case_studies"],
+      "when": "phase_2_linddun_enumeration, phase_3b_threat_enrichment",
+      "guidance": "Use ATLAS techniques only when AI/ML components are actually in scope. Map AI/ML privacy threats (model extraction, membership inference, data poisoning) to ATLAS for enrichment. Do not attach ATLAS without explicit tool calls."
+    },
+    {
+      "mcp": "visualization-mcp",
+      "tools": ["generate_heatmap", "generate_risk_matrix"],
+      "when": "phase_6_report_assembly",
+      "guidance": "Generate a LINDDUN coverage heatmap (component x category) and risk matrix (severity distribution) for the report. Non-fatal — if visualization fails, the report is still complete."
+    },
+    {
+      "mcp": "workflow-intelligence-mcp",
+      "tools": ["wkfl_store_state", "wkfl_load_state", "wkfl_list_states", "wkfl_export_report", "wkfl_get_task_definition", "wkfl_check_stage_completeness"],
+      "when": "all_phases",
+      "guidance": "Store state after each phase completion. Key format: phase_{phase_id} for phase results, specialist_{category}_{component_id} for per-specialist results. Use check_stage_completeness to validate phase gates. Call wkfl_export_report in Phase 6 to assemble the final deliverable."
+    }
+  ],
+  "prompting_guidance": "You are leading a LINDDUN privacy threat model. The user's prompt and uploaded documents set the scope — there is no fixed questionnaire.\n\n**Core rules:**\n1. Assess what you know vs. what you need. Ask specific questions about what is actually missing. Do not present a form.\n2. Run an evidence-manifest check before DFD or LINDDUN work. Refuse to proceed on unresolved document/system mismatches.\n3. Run a dedicated scope-gap analysis immediately after Phase 1. Batch questions into a single round where possible. Ask only load-bearing questions that change the threat model.\n4. Never block on missing information indefinitely. If the user does not answer, record the gap, state the assumption, lower confidence, and proceed.\n5. Every threat must trace to privacy-patterns-mcp via threat_id (mcp_source field). Threats not grounded by a threat_id are logged as coverage_gap and MUST NOT be added to retained_threats. This is the No-Silent-Fallbacks gate.\n6. Every system fact from an uploaded document must cite the source section (document_citations).\n7. Every user-provided clarification must be stored as client_questions/client_attestations with answer provenance. Distinguish document_evidence, user_attested, and assumed facts.\n8. Privacy threats link to GDPR compliance for NC and U categories. Regulation mapping happens within this workflow for LINDDUN-specific requirements.\n9. Delegate DFD construction to dfd-architect, LINDDUN enumeration to the 7 category specialists (L/I/N/D/DI/U/NC), domain challenge to domain experts, enrichment to MCP-grounding specialists, and PET mapping to dedicated privacy specialists. You orchestrate, you do not analyze.\n10. Detect the domain (healthcare, automotive, ICS/OT, financial, AI/ML) from user input and add domain experts to the fan-out alongside LINDDUN specialists.\n11. Store state after each phase via wkfl_store_state. Use wkfl_check_stage_completeness to validate before proceeding.\n12. Mid-phase questions are allowed: if a specialist returns uncertainty, pause to ask the user, then resume.\n13. The report must include a Gaps and Assumptions Register — every unknown, every assumption, impact if wrong.\n14. Every retained threat must carry a threat_id from privacy-patterns-mcp. Coverage gaps surface as catalogue_gap entries with the threat description, category, target element, and search terms tried.\n15. When retained threats or architecture size grows large, record a scale_out_plan and shard enrichment/calibration work into grounding_batches rather than overloading one agent prompt.\n16. Every threat must have impact_index (1-5) and likelihood_index (1-5) using the calibration criteria below. risk_score = impact_index * likelihood_index. Severity must match the derived band (1-4 Low, 5-9 Medium, 10-15 High, 16-25 Critical) unless severity_override_rationale explains the deviation. Store the methodology in risk_scoring_methodology and include it as a report section.\n17. Phase 5b is mandatory. Run wkfl_check_stage_completeness for the full linddun_threat_model task. For each required rule failure, create a qa_finding with category and remediation action. Fix blocking findings. Proceed to Phase 6 only when all blocking findings are resolved. Blocking Rule A: refuse report assembly if any entry in retained_threats has mcp_source != threat_id or threat_id not present — no exceptions, this is the No-Silent-Fallbacks gate. Blocking Rule B: refuse report assembly if any PET reference in the report has a pet_id that doesn't resolve in privacy-patterns-mcp.\n\n**Phase flow:**\n- Phase 0: Build an evidence manifest from authorized documents. Confirm system identity, document coverage, and mismatch flags before further work.\n- Phase 1: Build scope and DFD from user input + documents. Delegate to dfd-architect. Enumerate entry points. Proceed when >= 2 components and >= 1 data flow exist.\n- Phase 1b: Run scope-gap analysis. Assess readiness (ready / partial / blocked / minimal), identify blocking gaps, generate up to 5 batched client questions, and capture answers or assumptions with provenance.\n- Phase 2: Fan out per LINDDUN category (Linking, Identifying, Non-repudiation, Detecting, Data disclosure, Unawareness, Non-compliance) to specialists with full system context. Build coverage matrix. Every component must have all 7 categories assessed.\n- Phase 2b: Run domain challenge for system-specific blind spots and red flags.\n- Phase 3: Deduplicate similar threats. Preserve a retained threat list and dedup_log.\n- Phase 3b: Enrich retained threats with GDPR articles (NC/U threats mandatory), data flow impact analysis, citations, and grounded metadata from privacy-patterns-mcp.\n- Phase 3c: Calibrate business risk, likelihood, and residual privacy impact using impact_index * likelihood_index scoring methodology.\n- Phase 4a: Synthesize attack paths from retained threats, trust boundaries, and data flows, focusing on data lifecycle (collection, processing, storage, sharing, deletion).\n- Phase 4b: Generate verification tests and detection opportunities linked to retained threats.\n- Phase 5: Map PETs using privacy-patterns-mcp. Every high/critical threat must have >= 1 PET. Each PET must carry pet_id traceable back to the catalogue.\n- Phase 5b: Run quality assurance review. Fix blocking findings. Proceed only when the QA gate passes. Blocking Rules A & B mandate threat_id and pet_id presence.\n- Phase 6: Assemble report from stored state via wkfl_export_report, including business risk rollups, traceability, remediation priorities, attack paths, and verification tests.",
+  "domain_vocabulary": {
+    "healthcare": ["PHI", "HIPAA", "HL7", "FHIR", "medical_device", "FDA", "IEC_81001", "clinical", "EHR", "EMR", "patient_consent"],
+    "automotive": ["CAN_bus", "UDS", "ISO_21434", "UN_R155", "TISAX", "V2X", "ECU", "OBD", "driver_behavior", "telematics"],
+    "ics_ot": ["SCADA", "Modbus", "OPC_UA", "PLC", "DCS", "HMI", "Purdue", "IEC_62443", "industrial", "operator_identity"],
+    "financial": ["PCI_DSS", "SWIFT", "PSD2", "payment", "banking", "settlement", "AML", "KYC", "transaction_data"],
+    "ai_ml": ["PyTorch", "TensorFlow", "LLM", "model_serving", "ML_pipeline", "ONNX", "inference", "training_data", "model_extraction", "membership_inference"],
+    "cloud": ["AWS", "Azure", "GCP", "S3", "Lambda", "EKS", "Kubernetes", "serverless", "IAM", "cloud_native", "data_residency"],
+    "maritime": ["IMO", "BIMCO", "vessel", "port", "AIS", "ECDIS", "GMDSS", "crew_data"],
+    "aviation": ["EASA", "ICAO", "DO_326A", "avionics", "ACARS", "ADS_B", "crew_records"],
+    "defense": ["CMMC", "ITAR", "DFARS", "FedRAMP", "classified", "CUI"],
+    "telecom": ["5G", "3GPP", "EECC", "SIM", "roaming", "SS7", "Diameter", "CDR", "location_data"],
+    "supply_chain": ["SBOM", "SLSA", "CycloneDX", "SPDX", "dependency", "vendor_risk"],
+    "energy": ["NERC_CIP", "smart_grid", "IEC_62351", "substation", "AMI", "DER", "consumption_data"],
+    "privacy": ["GDPR", "CCPA", "LGPD", "data_protection", "DPA", "cross_border_transfer", "data_subject_rights"],
+    "cryptography": ["HSM", "PKI", "PQC", "TLS", "key_management", "FIPS_140", "X509"]
+  },
+  "domain_expert_hints": {
+    "healthcare": ["healthcare-expert", "privacy-expert", "us-compliance-expert"],
+    "automotive": ["automotive-expert", "ot-security-expert"],
+    "ics_ot": ["ot-security-expert", "energy-expert", "critical-infra-expert"],
+    "financial": ["financial-services-expert", "banking-expert", "dora-expert"],
+    "ai_ml": ["ai-security-expert", "ai-act-expert", "privacy-expert"],
+    "cloud": ["cloud-security-expert", "iam-expert", "devsecops-expert"],
+    "maritime": ["maritime-expert", "ot-security-expert"],
+    "aviation": ["aviation-expert", "defense-aerospace-expert"],
+    "defense": ["defense-aerospace-expert", "crypto-expert"],
+    "telecom": ["telecom-expert", "critical-infra-expert", "privacy-expert"],
+    "supply_chain": ["supply-chain-expert", "tprm-expert", "devsecops-expert"],
+    "energy": ["energy-expert", "ot-security-expert", "critical-infra-expert"],
+    "privacy": ["privacy-expert", "gdpr-expert"],
+    "cryptography": ["crypto-expert"]
+  },
+  "stage_state_schema": {
+    "type": "object",
+    "properties": {
+      "system_name": { "type": "string" },
+      "system_purpose": { "type": "string" },
+      "components": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "string" },
+            "name": { "type": "string" },
+            "type": { "type": "string", "enum": ["process", "data_store", "external_entity"] },
+            "trust_zone": { "type": "string" },
+            "technology": { "type": "string" },
+            "confidence": { "type": "string", "enum": ["confirmed", "inferred", "ambiguous"] }
+          },
+          "required": ["id", "name", "type"]
+        }
+      },
+      "data_flows": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "string" },
+            "from": { "type": "string" },
+            "to": { "type": "string" },
+            "data": { "type": "string" },
+            "protocol": { "type": "string" },
+            "encrypted": { "type": ["boolean", "string"] },
+            "authenticated": { "type": "string" },
+            "crosses_boundary": { "type": "boolean" }
+          },
+          "required": ["id", "from", "to"]
+        }
+      },
+      "trust_boundaries": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "string" },
+            "name": { "type": "string" },
+            "from_zone": { "type": "string" },
+            "to_zone": { "type": "string" },
+            "flows": { "type": "array", "items": { "type": "string" } }
+          },
+          "required": ["id", "name"]
+        }
+      },
+      "actors": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "string" },
+            "name": { "type": "string" },
+            "type": { "type": "string", "enum": ["user", "admin", "service", "external_system"] },
+            "trust_level": { "type": "string", "enum": ["trusted", "semi_trusted", "untrusted"] }
+          },
+          "required": ["id", "name"]
+        }
+      },
+      "existing_controls": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "string" },
+            "name": { "type": "string" },
+            "type": { "type": "string" },
+            "applies_to": { "type": "array", "items": { "type": "string" } }
+          },
+          "required": ["id", "name"]
+        }
+      },
+      "deployment_environment": {
+        "type": "object",
+        "properties": {
+          "type": { "type": "string", "enum": ["cloud", "on_prem", "hybrid", "unknown"] },
+          "provider": { "type": "string" },
+          "details": { "type": "string" }
+        }
+      },
+      "evidence_manifest": {
+        "type": "object",
+        "properties": {
+          "authorized_documents": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "doc_id": { "type": "string" },
+                "title": { "type": "string" },
+                "role": { "type": "string" },
+                "coverage_tags": {
+                  "type": "array",
+                  "items": { "type": "string" }
+                }
+              },
+              "required": ["doc_id", "title"]
+            }
+          },
+          "system_identity": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "aliases": {
+                "type": "array",
+                "items": { "type": "string" }
+              },
+              "evidence_doc_ids": {
+                "type": "array",
+                "items": { "type": "string" }
+              }
+            },
+            "required": ["name"]
+          },
+          "document_coverage": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "dimension": { "type": "string" },
+                "status": { "type": "string", "enum": ["covered", "partial", "missing"] },
+                "supporting_doc_ids": {
+                  "type": "array",
+                  "items": { "type": "string" }
+                },
+                "notes": { "type": "string" }
+              },
+              "required": ["dimension", "status"]
+            }
+          },
+          "mismatch_flags": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "extraction_confidence": { "type": "string", "enum": ["high", "medium", "low"] }
+        },
+        "required": ["authorized_documents", "system_identity", "document_coverage"]
+      },
+      "scale_out_plan": {
+        "type": "object",
+        "properties": {
+          "complexity_level": { "type": "string", "enum": ["small", "medium", "large", "very_large"] },
+          "estimated_component_count": { "type": "integer" },
+          "estimated_threat_count": { "type": "integer" },
+          "recommended_batch_size": { "type": "integer" },
+          "parallel_workstreams": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "reasoning": { "type": "string" }
+        }
+      },
+      "grounding_batches": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "batch_id": { "type": "string" },
+            "phase_id": { "type": "string" },
+            "agent_id": { "type": "string" },
+            "work_type": { "type": "string", "enum": ["domain_challenge", "enrichment", "risk_calibration", "attack_path", "verification_test", "pet_mapping"] },
+            "item_ids": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "status": { "type": "string", "enum": ["pending", "running", "complete", "failed"] },
+            "source_tools": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "notes": { "type": "string" }
+          },
+          "required": ["batch_id", "phase_id", "work_type", "item_ids", "status"]
+        }
+      },
+      "gaps": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "string" },
+            "phase": { "type": "string" },
+            "type": { "type": "string", "enum": ["coverage_gap", "catalogue_gap", "pet_coverage_gap", "data_gap"] },
+            "description": { "type": "string" },
+            "blocking": { "type": "boolean" },
+            "question_id": { "type": "string" },
+            "resolution_status": { "type": "string", "enum": ["open", "answered", "assumed", "waived"] },
+            "assumption": { "type": "string" },
+            "impact_if_wrong": { "type": "string" }
+          },
+          "required": ["id", "phase", "description"]
+        }
+      },
+      "scope_readiness": {
+        "type": "object",
+        "properties": {
+          "overall_status": { "type": "string", "enum": ["ready", "partial", "blocked", "minimal"] },
+          "proceeding_mode": { "type": "string", "enum": ["proceed", "awaiting_client_input", "proceed_with_assumptions"] },
+          "confidence": { "type": "string", "enum": ["high", "medium", "low"] },
+          "summary": { "type": "string" },
+          "blocking_gaps": { "type": "array", "items": { "type": "string" } },
+          "clarifications_needed": { "type": "array", "items": { "type": "string" } },
+          "dimensions_confirmed": { "type": "array", "items": { "type": "string" } },
+          "dimensions_missing": { "type": "array", "items": { "type": "string" } }
+        },
+        "required": ["overall_status", "proceeding_mode", "summary"]
+      },
+      "client_questions": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "string" },
+            "question": { "type": "string" },
+            "context": { "type": "string" },
+            "rationale": { "type": "string" },
+            "blocking": { "type": "boolean" },
+            "priority": { "type": "string", "enum": ["high", "medium", "low"] },
+            "response_type": { "type": "string", "enum": ["text", "single_choice", "multi_choice", "boolean", "table"] },
+            "choices": { "type": "array", "items": { "type": "string" } },
+            "affects_fields": { "type": "array", "items": { "type": "string" } },
+            "status": { "type": "string", "enum": ["pending", "answered", "assumed", "waived"] },
+            "response": { "type": "string" },
+            "response_summary": { "type": "string" },
+            "answer_source": { "type": "string", "enum": ["user_attested", "document_evidence", "assumed", "analyst_judgment"] },
+            "impact_if_unanswered": { "type": "string" },
+            "asked_in_phase": { "type": "string" }
+          },
+          "required": ["id", "question", "blocking", "response_type", "status"]
+        }
+      },
+      "client_attestations": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "question_id": { "type": "string" },
+            "question": { "type": "string" },
+            "response": { "type": "string" },
+            "impact": { "type": "string" },
+            "answer_source": { "type": "string", "enum": ["user_attested", "document_evidence", "assumed", "analyst_judgment"] }
+          },
+          "required": ["question", "response", "answer_source"]
+        }
+      },
+      "document_citations": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "document": { "type": "string" },
+            "doc_id": { "type": "string" },
+            "section": { "type": "string" },
+            "verbatim_quote": { "type": "string" },
+            "evidence_type": { "type": "string", "enum": ["document_evidence", "user_reported", "assumed"] }
+          },
+          "required": ["document", "evidence_type"]
+        }
+      },
+      "threats": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "string" },
+            "linddun_category": { "type": "string", "enum": ["Linking", "Identifying", "Non-repudiation", "Detecting", "Data disclosure", "Unawareness", "Non-compliance"] },
+            "component_id": { "type": "string" },
+            "title": { "type": "string" },
+            "description": { "type": "string" },
+            "threat_id": { "type": "string" },
+            "mcp_source": { "type": "string" },
+            "confidence": { "type": "string", "enum": ["high", "medium", "low"] },
+            "privacy_impact_score": { "type": "number" },
+            "privacy_impact_rationale": { "type": "string" },
+            "severity": { "type": "string", "enum": ["critical", "high", "medium", "low", "informational"] },
+            "business_risk_tier": { "type": "string", "enum": ["critical", "high", "medium", "low", "informational"] },
+            "business_risk_label": { "type": "string" },
+            "business_impact": { "type": "string" },
+            "business_impact_severity": { "type": "string", "enum": ["critical", "high", "medium", "low", "informational"] },
+            "likelihood": { "type": "string" },
+            "likelihood_rationale": { "type": "string" },
+            "priority_score": { "type": "number" },
+            "impact_index": { "type": "integer", "minimum": 1, "maximum": 5 },
+            "likelihood_index": { "type": "integer", "minimum": 1, "maximum": 5 },
+            "affected_components": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "affected_flows": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "affected_trust_boundaries": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "gdpr_articles": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "data_lifecycle_stage": { "type": "string", "enum": ["collection", "processing", "storage", "sharing", "deletion", "multiple"] },
+            "existing_controls": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "recommended_pets": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "pet_id": { "type": "string" },
+                  "pet_name": { "type": "string" },
+                  "effectiveness": { "type": "string", "enum": ["High", "Medium", "Low"] },
+                  "implementation_guidance": { "type": "string" }
+                },
+                "required": ["pet_id", "pet_name"]
+              }
+            },
+            "residual_risk": { "type": "string", "enum": ["critical", "high", "medium", "low", "informational"] },
+            "residual_risk_rationale": { "type": "string" },
+            "attack_path_refs": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "verification_test_refs": {
+              "type": "array",
+              "items": { "type": "string" }
+            }
+          },
+          "required": ["id", "linddun_category", "title", "threat_id", "mcp_source"]
+        }
+      },
+      "coverage_matrix": {
+        "type": "object",
+        "properties": {
+          "component_ids": { "type": "array", "items": { "type": "string" } },
+          "linddun_categories": { "type": "array", "items": { "type": "string" } },
+          "assessed_pairs": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "component_id": { "type": "string" },
+                "linddun_category": { "type": "string" },
+                "status": { "type": "string", "enum": ["assessed", "deferred", "out_of_scope"] },
+                "threat_ids": { "type": "array", "items": { "type": "string" } }
+              },
+              "required": ["component_id", "linddun_category", "status"]
+            }
+          }
+        }
+      },
+      "enrichment_coverage": {
+        "type": "object",
+        "properties": {
+          "total_threats": { "type": "integer" },
+          "threats_with_pet_mapping": { "type": "integer" },
+          "threats_with_gdpr_articles": { "type": "integer" },
+          "threats_with_mcp_source": { "type": "integer" },
+          "enrichment_ratio": { "type": "number" }
+        }
+      },
+      "qa_findings": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "string" },
+            "category": { "type": "string", "enum": ["blocking", "warning", "info"] },
+            "finding": { "type": "string" },
+            "affected_items": { "type": "array", "items": { "type": "string" } },
+            "remediation": { "type": "string" },
+            "status": { "type": "string", "enum": ["open", "resolved", "deferred"] }
+          },
+          "required": ["id", "category", "finding"]
+        }
+      }
+    }
+  },
+  "phases": [
+    {
+      "id": "phase_0_evidence_manifest",
+      "name": "Evidence Manifest",
+      "description": "Build a scoped evidence manifest from authorized documents before DFD or LINDDUN work. Confirm the intended system identity, enumerate the authorized documents used for this run, assess which architecture dimensions are covered, and stop if unresolved mismatch flags exist.",
+      "completion_criteria": {
+        "required_fields": [
+          {
+            "field": "evidence_manifest",
+            "rule": "exists",
+            "message": "Evidence manifest is required before proceeding"
+          }
+        ],
+        "rules": [
+          {
+            "id": "evidence_manifest_ready",
+            "description": "Evidence manifest must confirm authorized scope and contain no unresolved mismatch flags",
+            "severity": "required",
+            "message_template": "Evidence manifest is incomplete or has unresolved mismatch flags"
+          }
+        ],
+        "soft_warnings": []
+      },
+      "quality_rubric": {}
+    },
+    {
+      "id": "phase_1_scope_and_dfd",
+      "name": "Scope and DFD Construction",
+      "description": "Build scope and Data Flow Diagram from user input + documents. Delegate to dfd-architect. Enumerate entry points, actors, trust boundaries, and existing controls. Proceed when >= 2 components and >= 1 data flow exist.",
+      "completion_criteria": {
+        "required_fields": [
+          {
+            "field": "components",
+            "rule": "min_count",
+            "value": 2,
+            "message": "At least 2 components must be defined"
+          },
+          {
+            "field": "data_flows",
+            "rule": "min_count",
+            "value": 1,
+            "message": "At least 1 data flow must be defined"
+          }
+        ],
+        "rules": [
+          {
+            "id": "dfd_completeness",
+            "description": "DFD must include components, data flows, and trust boundaries",
+            "severity": "required",
+            "message_template": "DFD is incomplete"
+          },
+          {
+            "id": "entry_points_enumerated",
+            "description": "API endpoints, file uploads, message queue consumers, and external-facing services must be enumerated",
+            "severity": "required",
+            "message_template": "Entry points not enumerated"
+          }
+        ],
+        "soft_warnings": []
+      },
+      "quality_rubric": {}
+    },
+    {
+      "id": "phase_1b_scope_gap_analysis",
+      "name": "Scope Gap Analysis",
+      "description": "Assess whether the current scope is ready for LINDDUN analysis. Record scope_readiness, identify blocking vs non-blocking gaps, generate at most 5 load-bearing client_questions in one batch, and capture any user answers as client_attestations. Every blocking gap must route to either a client question or an explicit assumption.",
+      "completion_criteria": {
+        "required_fields": [
+          {
+            "field": "scope_readiness",
+            "rule": "exists",
+            "message": "Scope readiness assessment is required before LINDDUN fan-out"
+          }
+        ],
+        "rules": [
+          {
+            "id": "scope_readiness_recorded",
+            "description": "scope_readiness must declare overall_status, proceeding_mode, and a summary",
+            "severity": "required",
+            "message_template": "Scope readiness is missing required metadata"
+          },
+          {
+            "id": "blocking_client_questions_resolved",
+            "description": "Blocking client questions must be answered or explicitly downgraded to assumptions before proceeding",
+            "severity": "required",
+            "message_template": "Blocking client questions are still unresolved"
+          },
+          {
+            "id": "blocking_gaps_have_resolution_path",
+            "description": "Every blocking gap must link to a client question or an explicit assumption",
+            "severity": "required",
+            "message_template": "Blocking gap has no resolution path"
+          },
+          {
+            "id": "client_question_traceability",
+            "description": "Answered or assumed questions should record answer provenance",
+            "severity": "warning",
+            "message_template": "Client question traceability is incomplete"
+          }
+        ],
+        "soft_warnings": []
+      },
+      "quality_rubric": {
+        "client_questions": {
+          "per_item": {
+            "question": {
+              "min_words": 4,
+              "severity": "warning",
+              "message": "Client question '{id}' is too terse. Ask a concrete, answerable question."
+            },
+            "rationale": {
+              "min_words": 4,
+              "severity": "warning",
+              "message": "Client question '{id}' lacks rationale. Explain why the answer changes the threat model."
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "phase_2_linddun_enumeration",
+      "name": "LINDDUN Enumeration",
+      "description": "Fan out per LINDDUN category (Linking, Identifying, Non-repudiation, Detecting, Data disclosure, Unawareness, Non-compliance) with full system context. Each specialist receives the complete component inventory, data flows, trust boundaries, relevant document citations, and any scope clarifications captured in Phase 1b. Build a coverage matrix tracking which component x category pairs are assessed. Domain experts join if the domain warrants it. Mid-phase questions allowed when specialists return uncertainty. Every retained threat MUST carry a threat_id from privacy-patterns-mcp. Threats without threat_id are logged as coverage_gap entries and excluded from retained_threats.",
+      "completion_criteria": {
+        "required_fields": [
+          {
+            "field": "threats",
+            "rule": "min_count",
+            "value": 1,
+            "message": "At least 1 threat must be identified"
+          },
+          {
+            "field": "coverage_matrix",
+            "rule": "exists",
+            "message": "LINDDUN coverage matrix is required"
+          }
+        ],
+        "rules": [
+          {
+            "id": "linddun_coverage_complete",
+            "description": "Every component must have all 7 LINDDUN categories assessed",
+            "severity": "required",
+            "message_template": "Component '{component_id}' is missing assessment for '{category}'"
+          },
+          {
+            "id": "mcp_grounding_complete",
+            "description": "Every retained threat must have a threat_id from privacy-patterns-mcp. Threats without threat_id are NOT added to retained_threats — they are logged as coverage_gap entries instead.",
+            "severity": "required",
+            "message_template": "Threat without privacy-patterns-mcp grounding must be logged as coverage_gap, not retained"
+          },
+          {
+            "id": "document_evidence_has_citation_details",
+            "description": "Document-backed evidence should include a document reference, section, and verbatim quote",
+            "severity": "warning",
+            "message_template": "Document-backed evidence is missing citation detail"
+          },
+          {
+            "id": "large_threat_models_use_batching",
+            "description": "Large retained threat sets should record scale_out_plan or grounding_batches so enrichment/calibration can be sharded across agents",
+            "severity": "warning",
+            "message_template": "Large threat model has no batching metadata"
+          }
+        ],
+        "soft_warnings": []
+      },
+      "quality_rubric": {}
+    },
+    {
+      "id": "phase_2b_domain_challenge",
+      "name": "Domain Challenge",
+      "description": "Run domain-specific expert review. Detect system domain (healthcare, financial, automotive, AI/ML, etc.) and invoke domain experts to identify blind spots, domain-specific red flags, privacy regulations specific to the domain, and missing threat categories. Document any gaps found.",
+      "completion_criteria": {
+        "required_fields": [],
+        "rules": [
+          {
+            "id": "domain_expertise_applied",
+            "description": "Domain experts must be engaged if system domain is detectable",
+            "severity": "warning",
+            "message_template": "Domain challenge was not run or domain could not be determined"
+          }
+        ],
+        "soft_warnings": []
+      },
+      "quality_rubric": {}
+    },
+    {
+      "id": "phase_3_dedup_and_scoring",
+      "name": "Deduplication and Threat Scoring",
+      "description": "Deduplicate similar threats. Preserve a retained_threats list and a dedup_log. Score each threat using impact_index (1-5) and likelihood_index (1-5). Assign severity band based on risk_score = impact_index * likelihood_index (1-4=Low, 5-9=Medium, 10-15=High, 16-25=Critical).",
+      "completion_criteria": {
+        "required_fields": [
+          {
+            "field": "threats",
+            "rule": "min_count",
+            "value": 1,
+            "message": "At least 1 threat must remain after deduplication"
+          }
+        ],
+        "rules": [
+          {
+            "id": "dedup_log_complete",
+            "description": "Dedup log must document which threats were merged and why",
+            "severity": "warning",
+            "message_template": "Dedup decisions not documented"
+          },
+          {
+            "id": "threat_scoring_complete",
+            "description": "Every threat must have impact_index and likelihood_index",
+            "severity": "required",
+            "message_template": "Threat missing scoring data"
+          }
+        ],
+        "soft_warnings": []
+      },
+      "quality_rubric": {}
+    },
+    {
+      "id": "phase_3b_threat_enrichment",
+      "name": "Threat Enrichment",
+      "description": "Enrich retained threats with GDPR article mappings (mandatory for Non-repudiation, Unawareness, Non-compliance), data lifecycle stage analysis, citations, and grounded metadata from privacy-patterns-mcp. For Non-compliance threats, mandatory GDPR articles include Article 5 (lawfulness), Article 6 (processing basis), Article 17 (right to erasure), Article 21 (right to object), Article 32 (security). For Unawareness threats, mandatory citations include Article 13/14 (transparency).",
+      "completion_criteria": {
+        "required_fields": [
+          {
+            "field": "threats",
+            "rule": "exists",
+            "message": "Threats must exist for enrichment"
+          }
+        ],
+        "rules": [
+          {
+            "id": "nc_threats_have_gdpr_articles",
+            "description": "Non-compliance threats must cite specific GDPR articles",
+            "severity": "required",
+            "message_template": "Non-compliance threat missing GDPR article"
+          },
+          {
+            "id": "u_threats_have_transparency_articles",
+            "description": "Unawareness threats must cite GDPR Articles 13/14 or equivalent",
+            "severity": "required",
+            "message_template": "Unawareness threat missing transparency requirement"
+          },
+          {
+            "id": "enrichment_ratio_target",
+            "description": "At least 80% of threats should have full enrichment",
+            "severity": "warning",
+            "message_template": "Enrichment coverage below 80%"
+          }
+        ],
+        "soft_warnings": []
+      },
+      "quality_rubric": {}
+    },
+    {
+      "id": "phase_3c_risk_calibration",
+      "name": "Risk Calibration",
+      "description": "Calibrate business risk, likelihood, and residual privacy impact. Document the risk_scoring_methodology (impact_index * likelihood_index). Perform likelihood calibration using historical context, threat landscape data, and domain knowledge. Assign business_risk_tier based on combined impact to confidentiality, integrity, availability, and privacy.",
+      "completion_criteria": {
+        "required_fields": [
+          {
+            "field": "threats",
+            "rule": "exists",
+            "message": "Threats must exist for calibration"
+          }
+        ],
+        "rules": [
+          {
+            "id": "risk_scoring_methodology_documented",
+            "description": "Risk scoring methodology must be recorded in state",
+            "severity": "required",
+            "message_template": "Risk scoring methodology not documented"
+          },
+          {
+            "id": "severity_matches_risk_score",
+            "description": "Severity must correspond to L*I band unless severity_override_rationale explains deviation",
+            "severity": "required",
+            "message_template": "Severity does not match risk score"
+          }
+        ],
+        "soft_warnings": []
+      },
+      "quality_rubric": {}
+    },
+    {
+      "id": "phase_4a_attack_path_synthesis",
+      "name": "Attack Path Synthesis",
+      "description": "Synthesize attack paths from retained threats, trust boundaries, data flows, and data lifecycle stages (collection, processing, storage, sharing, deletion). Focus on how an attacker could achieve each LINDDUN threat outcome. Map paths to affected components and flows.",
+      "completion_criteria": {
+        "required_fields": [],
+        "rules": [
+          {
+            "id": "attack_path_coverage",
+            "description": "Each high/critical threat should have >= 1 attack path",
+            "severity": "warning",
+            "message_template": "High/critical threat missing attack path"
+          }
+        ],
+        "soft_warnings": []
+      },
+      "quality_rubric": {}
+    },
+    {
+      "id": "phase_4b_verification_test_generation",
+      "name": "Verification Test Generation",
+      "description": "Generate verification tests and detection opportunities linked to retained threats. Focus on detection strategies, monitoring opportunities, and testing methods for each threat category.",
+      "completion_criteria": {
+        "required_fields": [],
+        "rules": [
+          {
+            "id": "verification_test_coverage",
+            "description": "Each high/critical threat should have >= 1 verification test",
+            "severity": "warning",
+            "message_template": "High/critical threat missing verification test"
+          }
+        ],
+        "soft_warnings": []
+      },
+      "quality_rubric": {}
+    },
+    {
+      "id": "phase_5_pet_mapping",
+      "name": "Privacy Enhancing Technologies (PET) Mapping",
+      "description": "Map Privacy Enhancing Technologies using privacy-patterns-mcp. Call get_pets_for_threat for each retained threat. Filter by effectiveness: 'High' first, fall back to 'Medium' if no High-effectiveness PETs apply. Every PET in the report MUST carry a pet_id traceable back to privacy-patterns-mcp. If a retained threat has zero PET mappings at any effectiveness level, log a pet_coverage_gap entry; the threat ships in the report with the gap noted. Every high/critical threat must have >= 1 PET.",
+      "completion_criteria": {
+        "required_fields": [
+          {
+            "field": "threats",
+            "rule": "exists",
+            "message": "Threats must exist for PET mapping"
+          }
+        ],
+        "rules": [
+          {
+            "id": "pet_mapping_complete",
+            "description": "Every retained threat must have >= 1 PET option or a documented pet_coverage_gap",
+            "severity": "warning",
+            "message_template": "Threat missing PET options and no gap documented"
+          },
+          {
+            "id": "pet_ids_traceable",
+            "description": "Every PET must carry a pet_id from privacy-patterns-mcp",
+            "severity": "required",
+            "message_template": "PET missing pet_id — cannot resolve to catalogue"
+          },
+          {
+            "id": "critical_threats_have_pets",
+            "description": "Every critical threat must have >= 1 recommended PET",
+            "severity": "required",
+            "message_template": "Critical threat has no recommended PETs"
+          }
+        ],
+        "soft_warnings": []
+      },
+      "quality_rubric": {}
+    },
+    {
+      "id": "phase_5b_quality_assurance",
+      "name": "Quality Assurance Review",
+      "description": "Self-review checkpoint before report assembly. Run wkfl_check_stage_completeness for the full linddun_threat_model task. For each required rule that fails, create a qa_finding, fix the underlying data, and re-validate. This phase exists because enrichment, calibration, and PET mapping happen across multiple agent delegations — inconsistencies accumulate and must be caught before report generation. **Blocking Rule A:** refuse report assembly if any entry in retained_threats has mcp_source != threat_id or threat_id not present — no exceptions, this is the No-Silent-Fallbacks gate. **Blocking Rule B:** refuse report assembly if any PET reference in the report has a pet_id that doesn't resolve in privacy-patterns-mcp.",
+      "completion_criteria": {
+        "required_fields": [
+          {
+            "field": "qa_findings",
+            "rule": "exists",
+            "message": "QA review must be completed before report assembly"
+          },
+          {
+            "field": "enrichment_coverage",
+            "rule": "exists",
+            "message": "Enrichment coverage must be computed"
+          }
+        ],
+        "rules": [
+          {
+            "id": "qa_blocking_resolved",
+            "description": "All blocking QA findings must be resolved",
+            "severity": "required",
+            "message_template": "Blocking QA finding unresolved"
+          },
+          {
+            "id": "threat_template_completeness",
+            "description": "Every threat must have complete attribute template including threat_id and mcp_source",
+            "severity": "required",
+            "message_template": "Threat missing required fields"
+          },
+          {
+            "id": "no_silent_fallback_gate_a",
+            "description": "BLOCKING: Every retained threat must have threat_id from privacy-patterns-mcp. Refuse report assembly if any threat has mcp_source != threat_id or threat_id not present.",
+            "severity": "required",
+            "message_template": "Threat missing threat_id or mcp_source mismatch — refusing report assembly"
+          },
+          {
+            "id": "no_silent_fallback_gate_b",
+            "description": "BLOCKING: Every PET reference must have pet_id that resolves in privacy-patterns-mcp. Refuse report assembly if any pet_id fails to resolve.",
+            "severity": "required",
+            "message_template": "PET pet_id does not resolve — refusing report assembly"
+          },
+          {
+            "id": "severity_matches_risk_score",
+            "description": "Severity must match L*I band",
+            "severity": "required",
+            "message_template": "Severity-risk mismatch"
+          },
+          {
+            "id": "severity_inflation_check",
+            "description": "Warn on >20% Critical",
+            "severity": "warning",
+            "message_template": "Severity inflation"
+          },
+          {
+            "id": "critical_low_likelihood_flag",
+            "description": "Flag Critical + low likelihood",
+            "severity": "warning",
+            "message_template": "Critical with low likelihood"
+          },
+          {
+            "id": "enrichment_ratio_sufficient",
+            "description": "At least 80% of threats should have full enrichment",
+            "severity": "warning",
+            "message_template": "Enrichment ratio below 80%"
+          }
+        ],
+        "soft_warnings": []
+      },
+      "quality_rubric": {}
+    },
+    {
+      "id": "phase_6_report_assembly",
+      "name": "Report Assembly",
+      "description": "Assemble final report from stored state via wkfl_export_report. Include business risk rollups, threat-to-PET traceability, GDPR article mappings, remediation priorities, attack paths, verification tests, gaps and assumptions register, and coverage matrix. Every claim must trace to an MCP tool call or uploaded document citation. The report is the authoritative deliverable.",
+      "completion_criteria": {
+        "required_fields": [
+          {
+            "field": "report",
+            "rule": "exists",
+            "message": "Report must be assembled before workflow completion"
+          }
+        ],
+        "rules": [
+          {
+            "id": "report_completeness",
+            "description": "Report must include all required sections: threats, PETs, GDPR mappings, attack paths, tests, gaps register",
+            "severity": "required",
+            "message_template": "Report is missing required sections"
+          },
+          {
+            "id": "traceability_present",
+            "description": "Every threat and PET must be traceable to MCP tool calls or document citations",
+            "severity": "required",
+            "message_template": "Report contains ungrounded claims"
+          }
+        ],
+        "soft_warnings": []
+      },
+      "quality_rubric": {}
+    }
+  ]
+}
